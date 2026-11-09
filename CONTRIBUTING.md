@@ -3,7 +3,8 @@
 Thank you for helping people use ekPanel.
 
 1. **Small fix?** Use the "Edit page" link at the bottom of any page, or open an issue.
-2. **New page or bigger change?** Fork, create a branch from `main`, and open a pull request.
+2. **New page or bigger change?** Fork, create a branch from `dev`, and open a pull request to `dev`. The
+   site is published from `pub`, which changes only through pull requests from `dev`.
 3. Follow [WRITING.md](WRITING.md): check what you write against the panel's code, keep
    steps numbered and short, explain terms, and say what is not there yet.
 4. Run `npm run build` before you open the pull request; it fails on broken pages.
@@ -14,4 +15,4 @@ language folder added in `astro.config.mjs`) and translate it. Keep commands, pa
 panel's labels unchanged.
 
 Everyone taking part follows the
-[code of conduct](https://github.com/ekPanel/.github/blob/main/CODE_OF_CONDUCT.md).
+[code of conduct](https://github.com/ekPanel/.github/blob/HEAD/CODE_OF_CONDUCT.md).

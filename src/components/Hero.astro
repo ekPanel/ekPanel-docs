@@ -1,0 +1,152 @@
+---
+/**
+ * The home page's opening: the headline, the tagline and the buttons from the page's
+ * frontmatter on the left, and the few commands that install ekPanel on the right.
+ * The commands live in src/data/home.ts.
+ */
+import { LinkButton } from '@astrojs/starlight/components';
+import { quickstart } from '~/data/home';
+import { project } from '~/data/project';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+const lang = Astro.currentLocale === 'bn' ? 'bn' : 'en';
+const qs = quickstart[lang];
+---
+
+<div class="ek-hero">
+	<div class="ek-hero-text">
+		{
+			project.stage === 'early' && (
+				<p class="ek-pill">
+					<span class="ek-dot" aria-hidden="true" />
+					{lang === 'bn' ? 'শুরুর পর্যায়ে · এখনো release হয়নি' : 'Early development · no release yet'}
+				</p>
+			)
+		}
+		<h1 id="_top" set:html={title} />
+		{tagline && <p class="ek-tagline" set:html={tagline} />}
+		{
+			actions.length > 0 && (
+				<div class="ek-actions">
+					{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+						<LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+							{text}
+						</LinkButton>
+					))}
+				</div>
+			)
+		}
+	</div>
+	<figure class="ek-terminal" aria-label={qs.label}>
+		<figcaption>
+			<span class="ek-lights" aria-hidden="true"><i /><i /><i /></span>
+			{qs.label}
+		</figcaption>
+		<pre><code>{qs.lines.map((l) => (l.startsWith('#') ? <span class="ek-comment">{l}{'\n'}</span> : <span><span class="ek-prompt">$ </span>{l}{'\n'}</span>))}</code></pre>
+	</figure>
+</div>
+
+<style>
+	.ek-hero {
+		display: grid;
+		gap: 2.5rem;
+		align-items: center;
+		padding-block: 2.5rem 1rem;
+	}
+	@media (min-width: 64rem) {
+		.ek-hero {
+			grid-template-columns: 1.05fr 1fr;
+			gap: 3.5rem;
+			padding-block: 4.5rem 2rem;
+		}
+	}
+	.ek-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.25rem 0.75rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 999px;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-2);
+		background: var(--sl-color-gray-7, transparent);
+	}
+	.ek-dot {
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 50%;
+		background: var(--ek-amber);
+	}
+	h1 {
+		margin-top: 1.25rem;
+		font-size: clamp(2.4rem, 5.5vw, 3.6rem);
+		line-height: 1.05;
+		font-weight: 700;
+		letter-spacing: -0.035em;
+		color: var(--sl-color-white);
+	}
+	:global(:root:lang(bn)) h1 {
+		letter-spacing: 0;
+		line-height: 1.2;
+	}
+	.ek-tagline {
+		margin-top: 1.25rem;
+		max-width: 36rem;
+		font-size: 1.15rem;
+		line-height: 1.65;
+		color: var(--sl-color-gray-2);
+	}
+	.ek-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 2rem;
+	}
+	.ek-terminal {
+		margin: 0;
+		overflow: hidden;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.9rem;
+		background: var(--ek-code-bg);
+		box-shadow: var(--ek-shadow-lg);
+	}
+	figcaption {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.7rem 1rem;
+		border-bottom: 1px solid var(--sl-color-gray-5);
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	.ek-lights {
+		display: inline-flex;
+		gap: 0.35rem;
+	}
+	.ek-lights i {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 50%;
+		background: var(--sl-color-gray-5);
+	}
+	pre {
+		margin: 0;
+		padding: 1.1rem 1.25rem 1.3rem;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		font-family: var(--sl-font-mono);
+		font-size: 0.85rem;
+		line-height: 1.75;
+		color: var(--ek-code-fg);
+		background: transparent;
+		border: 0;
+	}
+	.ek-prompt {
+		color: var(--sl-color-accent);
+		user-select: none;
+	}
+	.ek-comment {
+		color: var(--sl-color-gray-3);
+	}
+</style>

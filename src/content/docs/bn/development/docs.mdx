@@ -74,7 +74,7 @@ import { Aside, Steps, Tabs, TabItem, FileTree } from '@astrojs/starlight/compon
 
 ## একটা page লিখুন
 
-আগে [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/main/WRITING.md) পড়ুন। সংক্ষেপে:
+আগে [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/HEAD/WRITING.md) পড়ুন। সংক্ষেপে:
 
 - **সত্য সবার আগে।** Code আজ যা করে সেটাই বর্ণনা করুন। কোনো feature নিয়ে লেখার আগে main repository check
   করুন। Plan করা কোনো feature-কে কখনো এমনভাবে বর্ণনা করবেন না যেন সেটা আছে: "not yet" বলুন আর
@@ -164,9 +164,10 @@ Sidebar প্রতিটা page-এর `title` দেখায়। নত�
 
 ## Site কীভাবে publish হয়
 
-`.github/workflows/deploy.yml` `main`-এ প্রতিটা push-এ Node.js 22 দিয়ে site build করে আর GitHub Pages-এ
-publish করে, এই address-এ: https://ekpanel.github.io/ekPanel-docs/ । Pull request-ও build হয় (কিন্তু publish হয় না), তাই
-merge হওয়ার আগেই ভাঙা page ধরা পড়ে। প্রতিটা page-এর "last updated" date আসে Git history থেকে।
+ekPanel-এর সব repository-র মতো docs-এরও দুটো branch: `dev`, যেখানে সব পরিবর্তন যায়, আর `pub`, যা শুধু
+`dev` থেকে pull request দিয়ে বদলায়। `.github/workflows/deploy.yml` `pub`-এ প্রতিটা push-এ Node.js 26 দিয়ে site
+build করে আর GitHub Pages-এ publish করে, এই address-এ: https://ekpanel.github.io/ekPanel-docs/ । `dev`-এ push আর
+pull request-ও build হয় (কিন্তু publish হয় না), তাই publish হওয়ার আগেই ভাঙা page ধরা পড়ে। প্রতিটা page-এর "last updated" date আসে Git history থেকে।
 
 Project-এর নিজস্ব domain না হওয়া পর্যন্ত site `/ekPanel-docs`-এর নিচে serve হয়; এজন্যই `astro.config.mjs`
 `base` set করে।

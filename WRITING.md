@@ -34,7 +34,9 @@ The site is built so that changes stay small:
 | add a sidebar group | a folder, and one line in `src/sidebar.mjs` |
 | change the project's status, links or supported systems | `src/data/project.ts`: every page that shows them follows |
 | change the home page cards | `src/data/home.ts` (English and Bangla side by side) |
-| change colours or fonts | the tokens at the top of `src/styles/ekpanel.css` |
+| change colours or fonts | the tokens at the top of `src/styles/ekpanel.css` (fonts are loaded in `astro.config.mjs`) |
+| change the home page's opening or its install commands | `src/components/Hero.astro`; the commands are `quickstart` in `src/data/home.ts` |
+| change how page titles look (title with its description as a lead) | `src/components/PageTitle.astro` |
 | move the site to its own domain | `site` and `base` in `astro.config.mjs`; links follow by themselves |
 | add a language | `locales` in `astro.config.mjs`, a folder under `src/content/docs/`, the group names in `src/sidebar.mjs`, the texts in `src/data/`, and (if Starlight has no translation of its own interface for it) a file in `src/content/i18n/` like `bn.json` |
 

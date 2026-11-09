@@ -14,9 +14,9 @@ export const project = {
 		org: 'https://github.com/ekPanel',
 		repo: 'https://github.com/ekPanel/ekpanel',
 		docsRepo: 'https://github.com/ekPanel/ekPanel-docs',
-		plan: 'https://github.com/ekPanel/ekpanel/blob/dev/PLAN.md',
-		changelog: 'https://github.com/ekPanel/ekpanel/blob/dev/CHANGELOG.md',
-		codeOfConduct: 'https://github.com/ekPanel/.github/blob/main/CODE_OF_CONDUCT.md',
+		plan: 'https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md',
+		changelog: 'https://github.com/ekPanel/ekpanel/blob/HEAD/CHANGELOG.md',
+		codeOfConduct: 'https://github.com/ekPanel/.github/blob/HEAD/CODE_OF_CONDUCT.md',
 		email: 'ekpanelbd@gmail.com',
 	},
 	/** What the installer accepts (deploy/install.sh in the main repo). */
