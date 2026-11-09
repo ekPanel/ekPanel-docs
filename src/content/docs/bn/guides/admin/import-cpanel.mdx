@@ -1,6 +1,6 @@
 ---
 title: cPanel থেকে ইমপোর্ট
-description: একটা cPanel account-এর full backup থেকে তার website আর file, password-সহ MySQL database, আর cron job নিয়ে আসুন।
+description: একটা cPanel account-এর full backup থেকে তার website আর file, password-সহ MySQL database আর mailbox, তার mail, cron job আর DNS zone নিয়ে আসুন।
 sidebar:
   order: 6
 ---
@@ -8,21 +8,25 @@ sidebar:
 import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 একটা পুরো cPanel account তার full backup (`cpmove` file) থেকে আপনার কোনো server-এ নিয়ে আসতে পারেন: file-সহ তার website,
-একই নাম, user আর password-সহ তার MySQL database, আর তার cron job। কী আনবেন তা আপনি বেছে নেন, panel সেটা set up করে, আর
-শেষে একটা report বলে দেয় কী এসেছে আর কী আসেনি। Domain নতুন server-এ point না করা পর্যন্ত visitor-দের জন্য কিছুই বদলায় না।
+একই নাম, user আর password-সহ তার MySQL database, একই mailbox, password আর mail-সহ তার email, তার cron job, আর তার DNS
+zone। কী আনবেন তা আপনি বেছে নেন, panel সেটা set up করে, আর শেষে একটা report বলে দেয় কী এসেছে আর কী আসেনি। Domain নতুন
+server-এ point না করা পর্যন্ত visitor-দের জন্য কিছুই বদলায় না।
 
 ## শুরু করার আগে
 
 - আপনি **admin**। Customer-রা এই পাতা দেখেন না; তবে আপনি কোনো customer-এর জন্য account ইমপোর্ট করতে পারেন।
 - **Server connected**: এটা [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায় **অনলাইন** (Online)
-  দেখায়। Website-গুলো এই server-এই চলবে।
+  দেখায়। Website আর mailbox-গুলো এই server-এই থাকবে।
 - **Server-এ যথেষ্ট খালি disk জায়গা আছে**: backup file, আর সাথে unpack করার পরে তার ভেতরের সবকিছু, মানে account-এর
-  file আর database। cPanel-এর home পাতায় দুটোর size-ই দেখায়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন; panel নিজে এটা
-  check করে না।
+  file, database আর mail। cPanel-এর home পাতায় এগুলোর size দেখায়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন; panel নিজে
+  এটা check করে না।
 - **আপনি server-এ file কপি করতে পারেন**, SSH দিয়ে (`scp` বা FileZilla-র মতো কোনো SFTP program), `root` হিসেবে বা `sudo`
   আছে এমন user হিসেবে।
+- **Email** আনতে হলে server-এ [email চালু](/guides/dns/email/#turn-on-email-for-a-server) থাকতে হবে।
+- **DNS zone** আনতে হলে [ekPanel-এর name server set up করা](/guides/dns/name-servers/#set-up-the-name-servers) থাকতে
+  হবে। সেটা না থাকলেও বাকি সব আনতে পারবেন, আর zone আপনার DNS host-এই রেখে দিতে পারবেন।
 - কোনো customer-এর জন্য ইমপোর্ট করলে, তাঁর [package](/guides/admin/customers/)-এ server-টা থাকতে হবে, আর যত website,
-  database আর cron job আনছেন তার জায়গা থাকতে হবে।
+  database, cron job, mail domain আর mailbox আনছেন তার জায়গা থাকতে হবে।
 
 ## cPanel-এ backup বানান
 
@@ -53,8 +57,8 @@ scp cpmove-USER.tar.gz root@203.0.113.20:/srv/ekpanel/imports/
 **cPanel থেকে ইমপোর্ট** (Import from cPanel) পাতা তার জন্য `scp` লাইনটা দেখায়, সাথে একটা copy button।
 
 <Aside type="caution">
-Backup-এ account-এর সব file আর তার database-গুলোর password hash থাকে। যতক্ষণ দরকার শুধু ততক্ষণই রাখুন, আর
-[ইমপোর্টের পরে মুছে ফেলুন](#after-the-import)।
+Backup-এ account-এর সব file আর সব mail থাকে, সাথে তার database আর mailbox-গুলোর password hash। যতক্ষণ দরকার শুধু
+ততক্ষণই রাখুন, আর [ইমপোর্টের পরে মুছে ফেলুন](#after-the-import)।
 </Aside>
 
 ## Backup পড়ুন
@@ -78,6 +82,8 @@ Backup-এ account-এর সব file আর তার database-গুলোর 
 
 ## কী আনবেন বেছে নিন
 
+যা যা আনা যায়, শুরুতে সবগুলোতেই tick দেওয়া থাকে। যা চান না, তার tick তুলে দিন।
+
 <Steps>
 
 1. **ওয়েবসাইট** (Websites)-এর নিচে যে website-গুলো আনবেন, সেগুলোতে tick দিন। প্রতিটার পাশে লেখা থাকে **মূল ডোমেইন**
@@ -95,26 +101,48 @@ Backup-এ account-এর সব file আর তার database-গুলোর 
 4. Account-এ cron job থাকলে, তাদের সংখ্যাসহ box-টা (যেমন **3টা ক্রন জব**) সবগুলো একসাথে আনে। এগুলো মূল website-এ যায়,
    তাই মূল website-এ tick থাকলেই শুধু এটায় tick দেওয়া যায়।
 
-5. **কার জন্য** (For)-এ বেছে নিন যা আনছেন তার মালিক কে: **অ্যাডমিনদের (কোনো প্যাকেজ নয়)** (Administrators (no package))
+5. **ইমেইল** (Email)-এর নিচে যে mail domain-গুলো আনবেন, সেগুলোতে tick দিন। প্রতিটার পাশে একটা লাইন দেখায়, যেমন
+   "2টা মেইলবক্স, 3টা ফরওয়ার্ডার, 34টা মেইল (5.2 MB)", কয়টা mailbox নতুন password পাবে ("1টা নতুন পাসওয়ার্ড পাবে"),
+   আর mailbox-গুলোর নাম। একটা domain তার সব mailbox, forwarder আর mail নিয়েই আসে; আলাদা করে mailbox বাছা যায় না।
+   Server-এ email চালু না থাকলে section-টা বলে "এই সার্ভারে ইমেইল চালু নেই। মেইলবক্স আনতে আগে ইমেইল চালু করুন
+   (ইমেইল → সার্ভার)।", আর tick দেওয়া যায় না।
+
+6. **DNS জোন** (DNS zones)-এর নিচে যে zone-গুলো আনবেন, সেগুলোতে tick দিন। প্রতিটার record-এর সংখ্যা দেখায়।
+   "ekPanel-এর নেম সার্ভারে বানানো হবে। এখানকার ওয়েবসাইট আর ইমেইলের রেকর্ড ekPanel নিজে বানায়; cPanel-এর নিজের নামগুলো
+   বাদ যায়; বাকি সব থাকে।" ekPanel-এর name server না থাকলে section-টা বলে zone আনা যাবে না, সেগুলো আপনার DNS host-এই
+   রাখুন।
+
+7. **কার জন্য** (For)-এ বেছে নিন যা আনছেন তার মালিক কে: **অ্যাডমিনদের (কোনো প্যাকেজ নয়)** (Administrators (no package))
    বা কোনো customer।
 
-6. **এখনো ইমপোর্ট হয় না** (Not imported yet) box-টা পড়ে **ইমপোর্ট করুন** (Import)-এ click করুন।
+8. **এখনো ইমপোর্ট হয় না** (Not imported yet) box দেখালে (certificate আর `MAILTO`-এর মতো cron setting-এর জন্য) সেটা পড়ুন।
+   তারপর **ইমপোর্ট করুন** (Import)-এ click করুন।
 
 </Steps>
 
 যে website-এর domain panel-এর অন্য কোনো website বা app আগে থেকেই ব্যবহার করছে, সেটায় **আগে থেকেই আছে** (Already here)
-লেখা থাকে; যে database-এর নাম (বা user) server-এ আগে থেকে আছে, সেটাতেও। এগুলোতে tick দেওয়া যায় না। **ইমপোর্ট করুন**
-button-এর পাশের লাইনটা আপনার বেছে নেওয়া জিনিস গোনে, যেমন "3টা ওয়েবসাইট, 2টা ডেটাবেস"।
+লেখা থাকে; যে database-এর নাম (বা user) server-এ আগে থেকে আছে, panel-এ যে mail domain-এর email আগে থেকেই আছে, আর panel-এ
+যে zone আগে থেকেই আছে, সেগুলোতেও। এগুলোতে tick দেওয়া যায় না। **ইমপোর্ট করুন** button-এর পাশের লাইনটা আপনার বেছে নেওয়া
+জিনিস গোনে, যেমন "3টা ওয়েবসাইট, 2টা ডেটাবেস, 2টা মেইল ডোমেইন, 2টা জোন"।
 
-**ইমপোর্ট করুন**-এ click করলে panel সাথে সাথে website আর database বানিয়ে ফেলে, তারপর একটা task সেগুলো ভরে: "ওয়েবসাইট আর
-ডেটাবেস তৈরি হচ্ছে, তারপর ফাইল আর ডেটা কপি হবে। এই পেজ ছেড়ে গেলেও ইমপোর্ট চলতে থাকবে।" চলার সময় প্রতিটা পাতার নিচের
-task box-এ এটা "cPanel অ্যাকাউন্ট _user_ ইমপোর্ট" নামে দেখায়।
+কোনো **customer**-এর জন্য ইমপোর্ট করলে panel আরও check করে:
+
+- প্রতিটা mail domain customer-এর কোনো website (বা app)-এর domain, বা এখন যে website আনছেন তার domain;
+- প্রতিটা zone-এর ভেতরে customer-এর কোনো website (বা app), বা এখন যে website আনছেন সেটা আছে;
+- কোনো zone অন্য কোনো account-এর zone-এর ভেতরে পড়ে না, বা তাকে ঘিরে রাখে না;
+- Package-এ mail domain আর mailbox-এর জায়গা আছে। Package-এ **মেইলবক্সের আকার** (Mailbox size) দেওয়া থাকলে প্রতিটা
+  mailbox cPanel-এর quota-র বদলে সেই size পায়।
+
+**ইমপোর্ট করুন**-এ click করলে panel সাথে সাথে website, database, mail domain, mailbox আর zone বানিয়ে ফেলে, তারপর একটা
+task সেগুলো ভরে: "ওয়েবসাইট, ডেটাবেস আর ইমেইল তৈরি হচ্ছে, তারপর ফাইল, ডেটা আর মেইল কপি হবে। এই পেজ ছেড়ে গেলেও ইমপোর্ট চলতে থাকবে।"
+চলার সময় প্রতিটা পাতার নিচের task box-এ এটা "cPanel অ্যাকাউন্ট _user_ ইমপোর্ট" নামে দেখায়।
 
 ## ইমপোর্টে কী হয়
 
 একটা test VM-এ একটা ছোট account (MySQL database-সহ একটা PHP 8.2 website, একটা parked domain, একটা symbolic link আর
-একটা cron job) পড়ে ইমপোর্ট করতে প্রায় 5 second লেগেছে, আর server-এ আগে PHP 8.2 install করতে হলে 51 second। বড় account-এ
-সময় লাগে তার file unpack হতে যতক্ষণ লাগে।
+একটা cron job) পড়ে ইমপোর্ট করতে প্রায় 5 second লেগেছে, আর server-এ আগে PHP 8.2 install করতে হলে 51 second। Email (2টা
+mailbox, 34টা mail) আর একটা DNS zone-সহ একই রকম account-এ লেগেছে প্রায় 15 second। বড় account-এ সময় লাগে তার file
+unpack হতে আর mail কপি হতে যতক্ষণ লাগে।
 
 ### Website আর file
 
@@ -124,9 +152,10 @@ task box-এ এটা "cPanel অ্যাকাউন্ট _user_ ইমপ�
   থাকলে সেটা শুধু নিজের folder পায়; বাকিটা পায় মূল website।
 - cPanel home folder-এর অন্য file আর folder, যেগুলো কোনো document root-এর মধ্যে পড়ে না (script, private folder), সেগুলো
   যায় **মূল website-এর** home folder-এ, তার `public_html`-এর পাশে। মূল website না আনলে এগুলো বাদ পড়ে।
-- বাদ পড়ে: cPanel-এর নিজের folder (`mail`, `etc`, `.cpanel`, `tmp`, `logs`, `access-logs`, `ssl`, `.trash`,
-  `public_ftp`, `.htpasswds`, `.softaculous` আর এরকম আরও), home folder-এর অন্য dotfile আর dotfolder (`.well-known` ছাড়া),
-  website-এর বাইরে point করা symbolic link, আর pipe-এর মতো বিশেষ file। Report-এ এগুলোর হিসাব থাকে।
+- চুপচাপ বাদ পড়ে: cPanel-এর নিজের folder (`mail`, `etc`, `.cpanel`, `tmp`, `logs`, `access-logs`, `ssl`, `.trash`,
+  `.softaculous` আর এরকম আরও)। এগুলোর ভেতরের mail আলাদাভাবে ইমপোর্ট হয় (দেখুন [Email](#email))।
+- আরও বাদ পড়ে, আর report-এ এগুলোর হিসাব থাকে: `public_ftp` আর `.htpasswds`-এর মতো অন্য folder, home folder-এর অন্য
+  dotfile আর dotfolder (`.well-known` ছাড়া), website-এর বাইরে point করা symbolic link, আর pipe-এর মতো বিশেষ file।
 
 ### Database
 
@@ -163,15 +192,87 @@ Website-এ এখনো পুরোনো folder-এর নাম থাকল
 - `MAILTO=…`-এর মতো settings লাইন ইমপোর্ট হয় না; report-এ সেগুলোর তালিকা থাকে। ekPanel এর বদলে প্রতিটা job-এর output তার
   পাতায় রাখে। দেখুন [Cron job](/guides/websites/cron/)।
 
+### Email
+
+আপনার বেছে নেওয়া প্রতিটা mail domain server-এর mail server-এ একটা [mail domain](/guides/dns/email/) হয়, সাথে:
+
+- **Mailbox**: backup-এর `etc/<domain>/passwd`-এ যত mailbox আছে সব, একই নামে।
+  - **Password**: cPanel SHA-512 crypt hash রাখে, আর ইমপোর্ট সেই hash-টাই রাখে, তাই mail program আর webmail **একই
+    password**-এ চলে। পুরোনো ধরনের hash (যেমন MD5-crypt) রাখা যায় না: mailbox-টা একটা random password পায়, আর report-এ
+    তার নাম থাকে। Mailbox-এর পাতায় **নতুন পাসওয়ার্ড** (New password) দিয়ে নতুন password বানিয়ে তার user-কে জানান।
+  - **Size**: `etc/<domain>/quota` থেকে নেওয়া quota, বা customer-এর package-এ **মেইলবক্সের আকার** (Mailbox size)
+    দেওয়া থাকলে সেটা।
+  - যে mailbox-এর নাম ekPanel নেয় না, সেটা বাদ পড়ে, আর report-এ তা বলা থাকে।
+- **Forwarder**, backup-এর `va/<domain>` থেকে:
+  - যে address অন্য address-এ পাঠায়, সেটা একটা [forwarder](/guides/dns/email/#forwarders) হয়;
+  - যে address একই সাথে mailbox আর forwarder, সেটা হয় [একটা copy forward করা](/guides/dns/email/#forwarding-and-auto-replies)
+    mailbox, যে নিজেও একটা copy রাখে;
+  - catch-all লাইন (`*: info@example.com`) ওই mailbox-কে domain-এর [catch-all](/guides/dns/email/#catch-all) বানায়।
+    এখানে catch-all অবশ্যই domain-এর একটা mailbox হতে হয়: forwarder বা অন্য কোথাও পাঠানো catch-all set হয় না, report-এ লেখা থাকে;
+  - যে লাইন mail কোনো program-এ (`|/home/user/script.php`) বা file-এ পাঠায়, বা ফিরিয়ে দেয় (`:fail:`, `:blackhole:`),
+    সেগুলো ইমপোর্ট হয় না, report-এ তালিকা থাকে;
+  - cPanel-এর default লাইন `*: <cPanel user>`, যা অজানা address-এর mail account-এর নিজের mailbox-এ পাঠায়, বাদ পড়ে:
+    catch-all set না করলে ekPanel অজানা address-এর mail ফিরিয়ে দেয়।
+
+### Mailbox-এর ভেতরের mail
+
+- প্রতিটা mailbox-এর folder-এর (`mail/<domain>/<name>/`, cPanel-এর Maildir) সব mail mail server, Stalwart-এ কপি হয়:
+  inbox আর সব folder, পড়া, উত্তর দেওয়া, flag দেওয়া আর draft চিহ্ন-সহ, আর প্রতিটা mail কখন এসেছিল সেই সময়-সহ।
+- **Sent**, **Drafts**, **Trash**, **Junk** (বা **Spam**) আর **Archive** যায় mail server-এর নিজের ওই ধরনের folder-এ।
+  অন্য folder একই নামে বানানো হয়, ভেতরের folder-ও (`Work.Projects` হয় **Work**-এর ভেতরে **Projects**), আর অন্য ভাষার
+  নামও ঠিক থাকে।
+- Mail program-এ মুছে ফেলা হিসেবে চিহ্ন দেওয়া (সরানোর অপেক্ষায় থাকা) mail বাদ পড়ে।
+- 100 MB-এর বড় mail কপি হয় না। Report এগুলো "মেইল কপি করা যায়নি"-তে গোনে।
+- Dovecot-এর **mdbox** format-এ রাখা mailbox (cPanel-এর নতুন একটা option) পড়া যায় না। Mailbox-টা খালি অবস্থায় বানানো
+  হয়, আর report-এ তা বলা থাকে। ওই mail কোনো mail program বা `imapsync`-এর মতো tool দিয়ে সরান।
+
+একটা test VM-এ 2টা mailbox-এর 34টা mail, 4টা folder-এ, কিছু বাংলায় লেখা, ঠিকঠাক এসেছে। পুরোনো cPanel password দিয়ে IMAP-এ
+sign in করা গেছে, আর folder, না-পড়া আর flag দেওয়া চিহ্ন আগের মতোই ছিল।
+
+### DNS zone
+
+আপনার বেছে নেওয়া প্রতিটা zone (backup-এর `dnszones/<zone>.db` থেকে) ekPanel-এর name server-এ বানানো হয়, **কার জন্য**
+(For)-এ যাকে বেছে নিয়েছেন তার নামে। Domain-এর registrar ekPanel-এর name server-এ point না করা পর্যন্ত কিছুই বদলায় না
+(দেখুন [ইমপোর্টের পরে](#after-the-import))।
+
+বাদ পড়ে, কারণ ekPanel এগুলো নিজে বানায় বা এগুলো cPanel-এর নিজের:
+
+- `SOA` record আর domain-এর নিজের `NS` record;
+- cPanel-এর নিজের নাম: `cpanel`, `whm`, `webmail`, `webdisk`, `cpcalendars`, `cpcontacts`, `autodiscover`, `autoconfig`,
+  `_cpanel-dcv-test-record`, আর `_autodiscover`, `_caldav`, `_carddav`, `_imap`, `_pop3` আর `_submission` SRV record;
+- panel-এর website আর app-এর `A`, `AAAA` আর `CNAME` record (এখন যেগুলো আনছেন সেগুলোসহ)। ekPanel এগুলো
+  [নিজে বানায়](/guides/dns/name-servers/#records-made-automatically), server-এর দিকে point করে;
+- Domain-এর email-ও আনলে, বা সেটা আগে থেকেই panel-এ থাকলে: তার `MX`, SPF, DKIM (`*._domainkey`), DMARC আর TLS reporting
+  record। ekPanel নতুন করে বানায়, নতুন DKIM key-সহ।
+
+বাকি সব থাকে: অন্য `A` record, অন্য service-এ যাওয়া `CNAME`, verification-এর `TXT` record, `CAA`, `SRV`, আর কোনো subdomain
+অন্য name server-কে দেওয়ার `NS` record।
+
+Report আরও জানায়:
+
+- **যে record-গুলো এখনো পুরোনো cPanel server-এর দিকে**, যেমন `ftp.example.com`: "যে রেকর্ডগুলো এখনো পুরোনো সার্ভারের (…)
+  দিকে: …"। এগুলো রাখা হয়; [zone editor](/guides/dns/name-servers/#the-zone-editor)-এ বদলান বা মুছুন।
+- **যে `MX` record এখন email ছাড়াই এখানে point করে।** Zone আনলেন কিন্তু তার email আনলেন না, তাহলে তার `MX` record থেকে
+  যায়। `MX` domain-এর নিজের দিকে point করলে (cPanel-এর default), mail এই server-এ আসবে, যেখানে ওই domain-এর email নেই।
+  Email-ও আনুন, বা `MX` record বদলান।
+- **যে record ekPanel রাখতে পারে না** (valid না), আর zone file-এর যে লাইনগুলো পড়া যায়নি, যেমন ekPanel-এ নেই এমন ধরনের
+  record।
+
+একটা test VM-এ ইমপোর্ট করা zone-এর `MX` ekPanel-এর mail host name-এর দিকে point করেছে, SPF, DKIM আর DMARC ছিল ekPanel-এর,
+আর পুরোনো DKIM key চলে গেছে। একটা Google verification `TXT` record, একটা `CAA` record আর অন্য service-এ যাওয়া একটা `CNAME`
+থেকে গেছে, cPanel-এর নামগুলো বাদ পড়েছে, আর `ftp` (পুরোনো server-এর দিকে point করা) রাখা হয়েছে আর report-এ তালিকায় এসেছে।
+
 ### Report
 
-Task শেষ হলে পাতায় দেখায় **ইমপোর্ট শেষ** (Import finished), সাথে website, database, file-এর সংখ্যা আর size, আর cron
-job-এর সংখ্যা, তারপর:
+Task শেষ হলে পাতায় দেখায় **ইমপোর্ট শেষ** (Import finished), সাথে website, database, file-এর সংখ্যা আর size, cron job-এর
+সংখ্যা, **ইমেইল** (Email; domain-গুলো, তারপর "_n_টা মেইলবক্স, _n_টা ফরওয়ার্ডার, _n_টা মেইল", আর কিছু কপি না হলে
+"_n_টা মেইল কপি করা যায়নি") আর **DNS জোন** (DNS zones), তারপর:
 
 - "_n_টা ফাইলে পুরোনো হোম ফোল্ডারের পাথ বদলানো হয়েছে", তালিকাসহ;
+- "এই মেইলবক্সগুলোর পাসওয়ার্ড নতুন: …";
 - নতুন password পাওয়া database-গুলো;
-- **ইমপোর্ট হয়নি** (Not imported): যা বাদ পড়েছে সব, যেমন email account, DNS zone, certificate, cPanel-এর folder আর
-  website-এর বাইরে point করা link।
+- **ইমপোর্ট হয়নি** (Not imported): যা বাদ পড়েছে সব, যেমন certificate, যে mail domain আর zone-এ tick দেননি, forwarding
+  লাইন, পুরোনো server-এর দিকে point করা record, অন্য folder আর website-এর বাইরে point করা link।
 
 ## ইমপোর্টের পরে
 
@@ -187,19 +288,37 @@ job-এর সংখ্যা, তারপর:
    Browser-এ website খুলে কয়েকটা পাতা, একটা login আর একটা form চালিয়ে দেখুন। Browser certificate নিয়ে সতর্ক করবে: DNS
    server-এ point করলে তবেই server আসল certificate পায়। কাজ শেষে লাইনটা মুছে দিন।
 
-2. **যা ইমপোর্ট হয়নি তা নতুন করে বানান**: email account [Email](/guides/dns/email/)-এ, আর DNS zone
-   [DNS](/guides/dns/name-servers/)-এ (বা আপনার বর্তমান DNS host-এই রেখে দিন)।
+2. **Mailbox user-দের নতুন password জানান।** Report-এ যে mailbox-গুলোর নাম আছে, প্রতিটার পাতায় একটা নতুন password বানিয়ে
+   তার user-কে দিন। বাকি সব mailbox-এর password আগের মতোই থাকে।
 
-3. **Domain-গুলো server-এ point করুন।** প্রতিটা domain-এর, আর extra domain-গুলোর, `A` record (আর থাকলে `AAAA`) বদলে
-   server-এর address দিন। Domain সেখানে point করলে certificate নিজে থেকেই নেওয়া হয়।
+3. **Domain-গুলো server-এ point করুন।**
+   - **Zone এনে থাকলে**: আগে report-এ পুরোনো server-এর দিকে point করা যে record-গুলোর তালিকা আছে, সেগুলো ঠিক করুন। তারপর
+     প্রতিটা domain-এর registrar-এ name server বদলে ekPanel-এর গুলো দিন। দেখুন
+     [Registrar-এ name server set করুন](/guides/dns/name-servers/#set-the-name-servers-at-the-registrar)।
+   - **Zone না আনলে**: আপনার বর্তমান DNS host-এ প্রতিটা domain-এর, আর extra domain-গুলোর, `A` record (আর থাকলে `AAAA`)
+     বদলে server-এর address দিন। Email সরিয়ে থাকলে `MX`, SPF, DKIM আর DMARC record-ও বদলে mail domain-এর পাতায় দেখানো
+     record-গুলো দিন (দেখুন [DNS record](/guides/dns/email/#dns-records))।
 
-4. Server থেকে **backup মুছে ফেলুন**:
+   Domain সেখানে point করলে certificate নিজে থেকেই নেওয়া হয়।
+
+4. **Mail program আবার connect করুন।** Domain-এর `MX` এখানে point করলে নতুন mail ইমপোর্ট করা mailbox-গুলোতে আসে। যে mail
+   program server হিসেবে `mail.<domain>` ব্যবহার করত, তাকে এখন নতুন **মেইল হোস্ট নাম** (Mail host name) দিতে হবে: সেটা
+   mail domain-এর পাতায় **মেইল অ্যাপ আর ওয়েবমেইল** (Mail apps and webmail)-এর নিচে দেখায় (দেখুন
+   [Mail app settings](/guides/dns/email/#mail-app-settings))। User নাম আর password একই থাকে। Webmail পাবেন
+   `https://<mail host name>/`-এ।
+
+5. Server থেকে **backup মুছে ফেলুন**:
 
    ```bash
    sudo rm /srv/ekpanel/imports/cpmove-USER.tar.gz
    ```
 
 </Steps>
+
+<Aside type="tip" title="Backup-এর পরে আসা mail">
+Backup বানানোর পরে, আর `MX` record এখানে point করার আগে, যে mail পুরোনো cPanel server-এ আসে, সেটা backup-এ থাকে না। DNS
+বদলানো শেষ না হওয়া পর্যন্ত পুরোনো account রেখে দিন, তারপর ওই mail কোনো mail program বা `imapsync`-এর মতো tool দিয়ে সরান।
+</Aside>
 
 <Aside type="caution" title="এখানে .htaccess file কোনো কাজ করে না">
 ekPanel-এর web server (Caddy) `.htaccess` file পড়ে না। WordPress, Laravel আর এরকম software-এর "সব request `index.php`-এ
@@ -220,25 +339,25 @@ Website-এর home folder (`/home/<account>`) website-এর নিজের ac
 
 | Endpoint | যা করে |
 | --- | --- |
-| `POST /api/v1/imports/inspect` | Backup পড়ে। Body: `{"server_id": "…", "file": "cpmove-USER.tar.gz"}`। ভেতরে কী আছে তা জানায়, সাথে `taken_domains`, `taken_databases` আর `php_versions`। |
-| `POST /api/v1/imports` | ইমপোর্ট করে। Body: `{"server_id", "file", "owner_id", "sites": ["example.com"], "php": {"example.com": "8.2"}, "databases": ["olduser_wp"], "cron": true}`। `202` আর একটা [task](/reference/api/#tasks-following-slow-work) দিয়ে উত্তর দেয়; তার `result`-এ report থাকে। |
+| `POST /api/v1/imports/inspect` | Backup পড়ে। Body: `{"server_id": "…", "file": "cpmove-USER.tar.gz"}`। ভেতরে কী আছে তা জানায় (`domains`, `databases`, `cron`, `mail`, `zones`, `old_ip` …), সাথে `taken_domains`, `taken_databases`, `php_versions`, `new_password_databases`, `mail_enabled`, `taken_mail`, `new_password_mailboxes`, `name_servers` আর `taken_zones`। Password hash কখনো পাঠানো হয় না। |
+| `POST /api/v1/imports` | ইমপোর্ট করে। Body: `{"server_id", "file", "owner_id", "sites": ["example.com"], "php": {"example.com": "8.2"}, "databases": ["olduser_wp"], "cron": true, "mail": ["example.com"], "zones": ["example.com"]}`। `202` আর একটা [task](/reference/api/#tasks-following-slow-work) দিয়ে উত্তর দেয়; তার `result`-এ report থাকে। |
 
 Admin-দের জন্য `owner_id` খালি রাখুন। [ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
 
 ```bash
 ekctl api POST imports/inspect --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz"}'
-ekctl api POST imports --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz","owner_id":"","sites":["example.com"],"databases":["olduser_wp"],"cron":true}'
+ekctl api POST imports --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz","owner_id":"","sites":["example.com"],"databases":["olduser_wp"],"cron":true,"mail":["example.com"],"zones":["example.com"]}'
 ```
 
 ## সীমা আর যা এখনো নেই
 
-cPanel account-এর এই অংশগুলো **এখনো ইমপোর্ট হয় না**। এগুলো পরিকল্পনায় আছে; দেখুন [roadmap](/project/roadmap/)।
+cPanel account-এর এই অংশগুলো **ইমপোর্ট হয় না**:
 
-- **Email account আর mail।** [Email](/guides/dns/email/)-এ mailbox নতুন করে বানান, আর mail আপনার mail program দিয়ে বা
-  `imapsync`-এর মতো tool দিয়ে সরান।
-- **DNS zone।** Record-গুলো [DNS](/guides/dns/name-servers/)-এ যোগ করুন, বা zone বর্তমান DNS host-এই রেখে শুধু `A` আর
-  `AAAA` record বদলান।
-- **SSL certificate।** Domain server-এ point করলে নতুন certificate নেওয়া হয়।
+- **SSL certificate**, ইচ্ছা করেই: domain server-এ point করলে নতুন certificate নেওয়া হয়।
+- **Autoresponder, mail filter, mailing list আর cPanel-এর spam settings।** Mailbox-এর পাতায়
+  [auto-reply](/guides/dns/email/#forwarding-and-auto-replies) set up করুন। ekPanel-এ এখনো mailing list নেই।
+- **Account-এর নিজের default mailbox** (cPanel user-এর নিজের mail, কোনো domain-এর নিচে না)।
+- **Dovecot-এর mdbox format-এ রাখা mail** (দেখুন [Mailbox-এর ভেতরের mail](#mail-in-the-mailboxes))।
 
 এছাড়া:
 
@@ -248,7 +367,8 @@ cPanel account-এর এই অংশগুলো **এখনো ইমপো�
 - FTP account আর cPanel-এর নিজের settings ইমপোর্ট হয় না। cPanel-এ বানানো redirect আর password দেওয়া folder থাকে
   `.htaccess` file-এ, যা ekPanel পড়ে না (দেখুন [ইমপোর্টের পরে](#after-the-import))।
 - একটা backup একটা server-এ ইমপোর্ট হয়।
-- cPanel-এর মতো করে বানানো একটা ছোট backup দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল cPanel server-এর backup দিয়ে না।
+- cPanel-এর মতো করে বানানো ছোট backup দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল cPanel server-এর backup দিয়ে না,
+  আর বাইরের আসল mail দিয়েও না। অন্য panel-এর importer আছে [roadmap](/project/roadmap/)-এ।
 
 ## সমস্যা সমাধান
 
@@ -260,12 +380,20 @@ cPanel account-এর এই অংশগুলো **এখনো ইমপো�
 | "সার্ভারের এজেন্ট যুক্ত নেই।" | Server offline। দেখুন [Server offline হলে](/guides/admin/servers/#when-a-server-goes-offline)। |
 | "এখানে অন্য ওয়েবসাইট বা অ্যাপ আগে থেকেই ব্যবহার করছে: …" | Panel-এর অন্য কোনো website বা app domain-টা ব্যবহার করছে। Website-টা থেকে tick তুলে দিন, বা আগে অন্যটা মুছুন। |
 | "সার্ভারে আগে থেকেই … নামের ডেটাবেস বা ইউজার আছে।" | Database-টা থেকে tick তুলে দিন, server-এর ওই database বা user মুছুন বা নাম বদলান, বা অন্য server-এ ইমপোর্ট করুন। |
-| "আপনার প্যাকেজে আর ওয়েবসাইট যোগ করা যাবে না।" (বা ডেটাবেস, ক্রন জব) | Customer-এর package-এর limit বাড়ান, বা কম জিনিস আনুন। |
+| "…-এর ইমেইল এখানে আগে থেকেই আছে।" | Domain-টার email আগে থেকেই panel-এ আছে, বা এটা server-এর mail host name। এটা থেকে tick তুলে দিন। |
+| "ekPanel-এ … জোন আগে থেকেই আছে।" | Zone-টা থেকে tick তুলে দিন, আর আগের zone-টা [zone editor](/guides/dns/name-servers/#the-zone-editor)-এ হাতে বদলান। |
+| "…-এর ইমেইলের জন্য এই গ্রাহকের ওই ডোমেইনে একটা ওয়েবসাইট লাগবে। ওয়েবসাইটটাও আনুন।" | ওই domain-এর website-এও tick দিন, বা email admin-দের জন্য ইমপোর্ট করুন। |
+| "… জোনের জন্য এই গ্রাহকের ওই ডোমেইনে একটা ওয়েবসাইট লাগবে। ওয়েবসাইটটাও আনুন।" | ওই zone-এর ভেতরের কোনো website-এও tick দিন, বা zone admin-দের জন্য ইমপোর্ট করুন। |
+| "এই domain অন্য account-এর domain-এর ভেতরে, বা সেটাকে ধারণ করে।" | অন্য কোনো মালিকের zone এর ভেতরে বা এটাকে ঘিরে আছে। Zone-টা থেকে tick তুলে দিন, বা সেই মালিকের জন্য ইমপোর্ট করুন। |
+| "এই সার্ভারে ইমেইল চালু নেই। আগে চালু করুন।" | Server-এ [email চালু করুন](/guides/dns/email/#turn-on-email-for-a-server), তারপর backup আবার পড়ুন। |
+| "আগে ekPanel-এর name server চালু করুন (DNS পাতায়)।" | [Name server set up করুন](/guides/dns/name-servers/#set-up-the-name-servers), বা zone বাদ দিন। |
+| "আপনার প্যাকেজে আর ওয়েবসাইট যোগ করা যাবে না।" (বা ডেটাবেস, ক্রন জব, মেইল ডোমেইন, মেইলবক্স) | Customer-এর package-এর limit বাড়ান, বা কম জিনিস আনুন। |
 | "এই প্যাকেজ ওই সার্ভার ব্যবহার করতে পারে না।" | Customer-এর package-এ server-টা যোগ করুন, বা অন্য server বেছে নিন। |
-| "অন্তত একটা ওয়েবসাইট বা ডেটাবেস বেছে নিন।" | অন্তত একটায় tick দিন। |
+| "অন্তত একটা ওয়েবসাইট, ডেটাবেস, মেইল ডোমেইন বা DNS জোন বেছে নিন।" | অন্তত একটা website, database, mail domain বা zone-এ tick দিন। |
 
-**ইমপোর্ট ব্যর্থ হয়েছে।** পাতায় **ইমপোর্ট ব্যর্থ হয়েছে** (The import failed) আর কারণ দেখায়। "এর জন্য প্যানেল যে ওয়েবসাইট
-আর ডেটাবেস বানিয়েছিল সেগুলো তালিকায় থেকে গেছে। আবার চেষ্টার আগে সেগুলো মুছে ফেলুন।" তারপর backup আবার পড়ে ইমপোর্ট করুন।
+**ইমপোর্ট ব্যর্থ হয়েছে।** পাতায় **ইমপোর্ট ব্যর্থ হয়েছে** (The import failed) আর কারণ দেখায়। "এর জন্য প্যানেল যে ওয়েবসাইট,
+ডেটাবেস, মেইল ডোমেইন আর DNS জোন বানিয়েছিল সেগুলো তালিকায় থেকে গেছে। আবার চেষ্টার আগে সেগুলো মুছে ফেলুন।" সেগুলো
+ওয়েবসাইট, ডেটাবেস, **ইমেইল** (Email) আর **DNS**-এ মুছুন, তারপর backup আবার পড়ে ইমপোর্ট করুন।
 
 **কোনো website database error দেখায়।** Report-এ নতুন password পাওয়া database আছে কিনা দেখুন, আর নতুন password-টা
 website-এর settings-এ বসান। কোনো database ইমপোর্ট না হয়ে থাকলে সেটা আলাদা করে আবার ইমপোর্ট করুন: backup আবার পড়ে শুধু
@@ -273,6 +401,13 @@ website-এর settings-এ বসান। কোনো database ইমপো�
 
 **কোনো website ভুল file বা পুরোনো path দেখায়।** `/home/<cPanel user>/`-এর যে path ইমপোর্ট বদলায়নি সেগুলো খুঁজুন: 1 MB-এর
 বড় file-এ, অন্য ধরনের file-এ, বা database-এ।
+
+**কোনো mail program sign in করতে পারছে না।** Report-এ নতুন password পাওয়া mailbox আছে কিনা দেখুন। Program-টা user নাম
+হিসেবে পুরো address আর server হিসেবে নতুন mail host name ব্যবহার করছে কিনা দেখুন (দেখুন
+[Mail app settings](/guides/dns/email/#mail-app-settings))।
+
+**কিছু mail কপি করা যায়নি।** এগুলো 100 MB-এর বড় mail, খালি file, বা mail server যে mail নেয়নি। দরকার হলে পুরোনো server
+থেকে mail program দিয়ে সরান।
 
 ## সম্পর্কিত
 

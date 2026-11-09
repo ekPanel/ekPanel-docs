@@ -272,8 +272,9 @@ has not been tried yet.
   manages follows. Tested with two VMs and an S3 test server.
 - <Badge text="next release" variant="note" /> Importing a cPanel account from its full backup
   (`cpmove` file): websites with their files, MySQL databases with the same names, users and
-  passwords, and cron jobs, with a report of what was and was not imported. Email, DNS zones
-  and certificates are not imported yet.
+  passwords, mailboxes with their passwords, forwarders and mail, cron jobs, and DNS zones on
+  ekPanel's name servers, with a report of what was and was not imported. Certificates are not
+  imported: new ones are issued once the domains point to the server. Tried in a test VM.
 
 ## API and command line
 
@@ -305,7 +306,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Importers | aaPanel, plain WordPress from another host, Coolify; from cPanel backups, also email, DNS zones and certificates |
+| Importers | aaPanel, plain WordPress from another host, Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |

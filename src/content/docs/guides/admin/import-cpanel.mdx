@@ -1,6 +1,6 @@
 ---
 title: Import from cPanel
-description: Bring a cPanel account over from its full backup, with its websites and files, MySQL databases with their passwords, and cron jobs.
+description: Bring a cPanel account over from its full backup, with its websites and files, MySQL databases and mailboxes with their passwords, its mail, cron jobs and DNS zones.
 sidebar:
   order: 6
 ---
@@ -9,23 +9,27 @@ import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components'
 
 You can bring a whole cPanel account over to one of your servers from its full backup (the
 `cpmove` file): its websites with their files, its MySQL databases with the same names, users
-and passwords, and its cron jobs. You choose what to import, the panel sets it up, and a report
-tells you what came over and what did not. Nothing changes for visitors until you point the
-domains at the new server.
+and passwords, its email with the same mailboxes, passwords and mail, its cron jobs, and its
+DNS zones. You choose what to import, the panel sets it up, and a report tells you what came
+over and what did not. Nothing changes for visitors until you point the domains at the new
+server.
 
 ## Before you start
 
 - You are an **administrator**. Customers do not see this page; you can import an account
   for a customer.
 - **The server is connected**: it is [added to the panel](/start/add-server/) and shows
-  **Online** on the **Servers** page. The websites will run on this server.
+  **Online** on the **Servers** page. The websites and mailboxes will be on this server.
 - **The server has enough free disk space** for the backup file plus everything in it once
-  unpacked: the account's files and its databases. cPanel shows both sizes on its home page.
-  Check **Disk** on the server's page; the panel does not check this for you.
+  unpacked: the account's files, its databases and its mail. cPanel shows these sizes on its
+  home page. Check **Disk** on the server's page; the panel does not check this for you.
 - **You can copy files to the server** over SSH (with `scp` or an SFTP program such as
   FileZilla), as `root` or a user with `sudo`.
+- To import **email**, the server has [email turned on](/guides/dns/email/#turn-on-email-for-a-server).
+- To import **DNS zones**, [ekPanel's name servers are set up](/guides/dns/name-servers/#set-up-the-name-servers).
+  Without them, you can still import everything else and keep the zones at your DNS host.
 - To import for a customer, their [package](/guides/admin/customers/) must allow the server and
-  have room for the websites, databases and cron jobs you bring over.
+  have room for the websites, databases, cron jobs, mail domains and mailboxes you bring over.
 
 ## Make the backup in cPanel
 
@@ -59,8 +63,9 @@ name. The **Import from cPanel** page shows the `scp` line for the server you ch
 copy button.
 
 <Aside type="caution">
-The backup holds every file of the account and the password hashes of its databases. Keep it
-only as long as you need it, and [delete it after the import](#after-the-import).
+The backup holds every file and every message of the account, and the password hashes of its
+databases and mailboxes. Keep it only as long as you need it, and
+[delete it after the import](#after-the-import).
 </Aside>
 
 ## Read the backup
@@ -84,6 +89,8 @@ the size of its home folder.
 
 ## Choose what to import
 
+Everything that can be imported starts ticked. Untick what you do not want.
+
 <Steps>
 
 1. Under **Websites**, tick the websites to import. Each one is marked **Main domain**,
@@ -104,27 +111,52 @@ the size of its home folder.
    all of them. They go to the main website, so it can only be ticked when the main website is
    ticked too.
 
-5. In **For**, choose who owns what you import: **Administrators (no package)** or a customer.
+5. Under **Email**, tick the mail domains to import. Each one shows a line such as
+   "2 mailboxes, 3 forwarders, 34 messages (5.2 MB)", how many mailboxes get new passwords
+   ("1 gets a new password"), and the mailbox names. A domain comes with all its mailboxes,
+   forwarders and mail; you cannot pick single mailboxes. If the server has no email, the
+   section says "This server has no email. Turn on email for it (Email → Servers) to import
+   mailboxes." and cannot be ticked.
 
-6. Read the **Not imported yet** box, then click **Import**.
+6. Under **DNS zones**, tick the zones to import. Each one shows its number of records. "Made
+   on ekPanel's name servers. Records for the websites and email here are made by ekPanel;
+   cPanel's own names are left out; everything else is kept." Without ekPanel's name servers,
+   the section says zones cannot be imported, and to keep them at your DNS host.
+
+7. In **For**, choose who owns what you import: **Administrators (no package)** or a customer.
+
+8. If a **Not imported yet** box shows (for certificates and cron settings such as `MAILTO`),
+   read it. Then click **Import**.
 
 </Steps>
 
 Websites whose domain is already used by a website or app on the panel are marked
-**Already here**, and so are databases whose name (or user) the server already has. They cannot
-be ticked. The line next to the **Import** button counts what you chose, such as
-"3 websites, 2 databases".
+**Already here**, and so are databases whose name (or user) the server already has, mail
+domains that already have email on the panel, and zones the panel already has. They cannot be
+ticked. The line next to the **Import** button counts what you chose, such as
+"3 websites, 2 databases, 2 mail domains, 2 zones".
 
-Clicking **Import** makes the websites and databases in the panel at once, then a task fills
-them: "The websites and databases are being set up, then the files and data are copied in. You
-can leave this page; the import goes on." While it runs, the tasks box at the bottom of every
-page shows it as "Import cPanel account _user_".
+When you import for a **customer**, the panel also checks:
+
+- each mail domain is the domain of one of the customer's websites (or apps), or of a website
+  you import now;
+- each zone has one of the customer's websites (or apps), or a website you import now, inside it;
+- no zone lies inside, or around, a zone of another account;
+- the package has room for the mail domains and mailboxes. If the package sets a
+  **Mailbox size**, every mailbox gets that size instead of its cPanel quota.
+
+Clicking **Import** makes the websites, databases, mail domains, mailboxes and zones in the
+panel at once, then a task fills them: "The websites, databases and email are being set up,
+then the files, data and mail are copied in. You can leave this page; the import goes on." While it runs, the
+tasks box at the bottom of every page shows it as "Import cPanel account _user_".
 
 ## What the import does
 
 In a test VM, a small account (a PHP 8.2 website with a MySQL database, a parked domain, a
 symbolic link and a cron job) was read and imported in about 5 seconds, or 51 seconds when the
-server had to install PHP 8.2 first. A large account takes as long as its files take to unpack.
+server had to install PHP 8.2 first. The same kind of account with email (2 mailboxes, 34
+messages) and a DNS zone took about 15 seconds. A large account takes as long as its files
+take to unpack and its mail takes to copy.
 
 ### Websites and files
 
@@ -136,10 +168,12 @@ server had to install PHP 8.2 first. A large account takes as long as its files 
 - Other files and folders in the cPanel home folder, outside every document root (scripts,
   private folders), go to the **main website's** home folder, next to its `public_html`. If you
   did not import the main website, they are left out.
-- Left out: cPanel's own folders (`mail`, `etc`, `.cpanel`, `tmp`, `logs`, `access-logs`,
-  `ssl`, `.trash`, `public_ftp`, `.htpasswds`, `.softaculous` and similar), other dotfiles and
-  dotfolders in the home folder (except `.well-known`), symbolic links that point outside the
-  website, and special files such as pipes. The report counts them.
+- Left out without a word: cPanel's own folders (`mail`, `etc`, `.cpanel`, `tmp`, `logs`,
+  `access-logs`, `ssl`, `.trash`, `.softaculous` and similar). The mail in them is imported on
+  its own (see [Email](#email)).
+- Also left out, and counted in the report: other folders such as `public_ftp` and
+  `.htpasswds`, other dotfiles and dotfolders in the home folder (except `.well-known`),
+  symbolic links that point outside the website, and special files such as pipes.
 
 ### Databases
 
@@ -180,15 +214,103 @@ them with the website's own tools, such as `wp search-replace` for WordPress.
 - Settings lines such as `MAILTO=…` are not imported; the report lists them. ekPanel keeps
   each job's output on its page instead. See [Cron jobs](/guides/websites/cron/).
 
+### Email
+
+Each mail domain you chose becomes a [mail domain](/guides/dns/email/) on the server's mail
+server, with:
+
+- **Mailboxes**: every mailbox listed in the backup's `etc/<domain>/passwd`, with the same
+  name.
+  - **Passwords**: cPanel keeps SHA-512 crypt hashes, and the import keeps the hash, so mail
+    programs and webmail work with the **same password**. Older hashes (such as MD5-crypt)
+    cannot be kept: the mailbox gets a random password, and the report lists it. Make a new
+    one with **New password** on the mailbox's page and tell its user.
+  - **Size**: the quota from `etc/<domain>/quota`, or the package's **Mailbox size** for a
+    customer whose package sets one.
+  - A mailbox whose name ekPanel does not accept is left out, and the report says so.
+- **Forwarders**, from the backup's `va/<domain>`:
+  - an address that forwards to other addresses becomes a [forwarder](/guides/dns/email/#forwarders);
+  - an address that is both a mailbox and a forwarder becomes that mailbox
+    [forwarding a copy](/guides/dns/email/#forwarding-and-auto-replies), keeping a copy itself;
+  - the catch-all line (`*: info@example.com`) makes that mailbox the domain's
+    [catch-all](/guides/dns/email/#catch-all). Here a catch-all must be one of the domain's
+    mailboxes: one that pointed at a forwarder or elsewhere is left unset, and the report says so;
+  - lines that pass mail to a program (`|/home/user/script.php`), into a file, or refuse it
+    (`:fail:`, `:blackhole:`) are not imported, and the report lists them;
+  - cPanel's default line `*: <cPanel user>`, which sends unknown addresses to the account's
+    own mailbox, is dropped: ekPanel refuses mail to unknown addresses unless you set a catch-all.
+
+### Mail in the mailboxes
+
+- Every message in each mailbox's folder (`mail/<domain>/<name>/`, cPanel's Maildir) is copied
+  into the mail server, Stalwart: the inbox and every folder, with the read, answered, flagged
+  and draft marks and the time each message arrived.
+- **Sent**, **Drafts**, **Trash**, **Junk** (or **Spam**) and **Archive** go into the mail
+  server's own folders of that kind. Other folders are made with the same names, nested ones
+  too (`Work.Projects` becomes **Projects** inside **Work**), and names in other languages are
+  kept.
+- Messages marked as deleted in a mail program (waiting to be removed) are left out.
+- Messages larger than 100 MB are not copied. The report counts them under "messages could not
+  be copied".
+- Mailboxes kept in Dovecot's **mdbox** format (a newer cPanel option) cannot be read. The
+  mailbox is made, empty, and the report says so. Move that mail with a mail program or a tool
+  such as `imapsync`.
+
+In a test VM, 2 mailboxes with 34 messages in 4 folders, some in Bangla, came over. Signing in
+over IMAP with the old cPanel password worked, and the folders, unread and flagged marks were
+the same as before.
+
+### DNS zones
+
+Each zone you chose (from the backup's `dnszones/<zone>.db`) is made on ekPanel's name servers,
+owned by whoever you chose in **For**. Nothing changes until the domain's registrar points at
+ekPanel's name servers (see [After the import](#after-the-import)).
+
+Left out, because ekPanel makes them itself or they belong to cPanel:
+
+- the `SOA` record and the domain's own `NS` records;
+- cPanel's own names: `cpanel`, `whm`, `webmail`, `webdisk`, `cpcalendars`, `cpcontacts`,
+  `autodiscover`, `autoconfig`, `_cpanel-dcv-test-record`, and the `_autodiscover`, `_caldav`,
+  `_carddav`, `_imap`, `_pop3` and `_submission` SRV records;
+- the `A`, `AAAA` and `CNAME` records of websites and apps on the panel (the ones you import
+  now included). ekPanel [makes them](/guides/dns/name-servers/#records-made-automatically),
+  pointing at the server;
+- when the domain's email is imported too, or is already on the panel: its `MX`, SPF, DKIM
+  (`*._domainkey`), DMARC and TLS reporting records. ekPanel makes new ones, with a new DKIM key.
+
+Everything else is kept: other `A` records, `CNAME` records to other services, verification
+`TXT` records, `CAA`, `SRV`, and `NS` records that hand a subdomain to other name servers.
+
+The report also tells you about:
+
+- **Records that still point at the old cPanel server**, such as `ftp.example.com`: "Records
+  that still point at the old server (…): …". They are kept; change or delete them in the
+  [zone editor](/guides/dns/name-servers/#the-zone-editor).
+- **An `MX` record that now points here without email.** If you import a zone but not its
+  email, its `MX` records stay. When the `MX` points at the domain itself (cPanel's default),
+  mail would come to this server, which has no email for the domain. Import the email too, or
+  change the `MX` record.
+- **Records ekPanel cannot keep** (not valid), and lines of the zone file it could not read,
+  such as record types ekPanel does not have.
+
+In a test VM, the imported zone's `MX` pointed at ekPanel's mail host name, SPF, DKIM and DMARC
+were ekPanel's, and the old DKIM key was gone. A Google verification `TXT` record, a `CAA`
+record and a `CNAME` to another service stayed, cPanel's names were dropped, and `ftp` (pointing
+at the old server) was kept and listed in the report.
+
 ### The report
 
 When the task ends, the page shows **Import finished** with the websites, the databases, the
-number and size of the files, and the number of cron jobs, then:
+number and size of the files, the number of cron jobs, **Email** (the domains, then
+"_n_ mailboxes, _n_ forwarders, _n_ messages", and "_n_ messages could not be copied" if any)
+and **DNS zones**, then:
 
 - "The old home folder's path was changed in _n_ files", with the list;
+- "These mailboxes have new passwords: …";
 - the databases with new passwords;
-- **Not imported**: everything that was left out, such as email accounts, DNS zones,
-  certificates, cPanel's folders and links that point outside a website.
+- **Not imported**: everything that was left out, such as certificates, mail domains and zones
+  you did not tick, forwarding lines, records that point at the old server, other folders and
+  links that point outside a website.
 
 ## After the import
 
@@ -206,20 +328,39 @@ number and size of the files, and the number of cron jobs, then:
    about the certificate: the server gets a real one only once DNS points to it. Remove the
    line when you are done.
 
-2. **Recreate what was not imported**: email accounts under [Email](/guides/dns/email/), and the
-   DNS zones under [DNS](/guides/dns/name-servers/) (or keep them at your current DNS host).
+2. **Tell mailbox users about new passwords.** For each mailbox the report lists, make a new
+   password on its page and give it to its user. All other mailboxes keep their password.
 
-3. **Point the domains at the server.** Change each domain's `A` record (and `AAAA`, if you have
-   one), and those of the extra domains, to the server's address. Certificates are issued by
-   themselves once the domains point there.
+3. **Point the domains at the server.**
+   - If you **imported the zones**: first fix the records the report lists as pointing at the
+     old server. Then, at each domain's registrar, replace the name servers with ekPanel's. See
+     [Set the name servers at the registrar](/guides/dns/name-servers/#set-the-name-servers-at-the-registrar).
+   - If you **did not**: at your current DNS host, change each domain's `A` record (and
+     `AAAA`, if you have one), and those of the extra domains, to the server's address. If you
+     moved the email, also change the `MX`, SPF, DKIM and DMARC records to the ones shown on
+     the mail domain's page (see [DNS records](/guides/dns/email/#dns-records)).
 
-4. **Delete the backup** from the server:
+   Certificates are issued by themselves once the domains point there.
+
+4. **Reconnect mail programs.** Once the domain's `MX` points here, new mail arrives in the
+   imported mailboxes. Mail programs that used `mail.<domain>` as their server must use the
+   new **mail host name** instead: it is shown under **Mail apps and webmail** on the mail
+   domain's page (see [Mail app settings](/guides/dns/email/#mail-app-settings)). User name and
+   password stay the same. Webmail is at `https://<mail host name>/`.
+
+5. **Delete the backup** from the server:
 
    ```bash
    sudo rm /srv/ekpanel/imports/cpmove-USER.tar.gz
    ```
 
 </Steps>
+
+<Aside type="tip" title="Mail that arrives after the backup">
+Mail that reaches the old cPanel server after you made the backup, and before the `MX` record
+points here, is not in the backup. Keep the old account until DNS has switched, then move those
+messages with a mail program or a tool such as `imapsync`.
+</Aside>
 
 <Aside type="caution" title=".htaccess files do nothing here">
 ekPanel's web server (Caddy) does not read `.htaccess` files. The usual "send every request to
@@ -243,26 +384,26 @@ Customers' tokens cannot.
 
 | Endpoint | What it does |
 | --- | --- |
-| `POST /api/v1/imports/inspect` | Read a backup. Body: `{"server_id": "…", "file": "cpmove-USER.tar.gz"}`. Answers with what is inside, and with `taken_domains`, `taken_databases` and `php_versions`. |
-| `POST /api/v1/imports` | Import. Body: `{"server_id", "file", "owner_id", "sites": ["example.com"], "php": {"example.com": "8.2"}, "databases": ["olduser_wp"], "cron": true}`. Answers `202` with a [task](/reference/api/#tasks-following-slow-work); its `result` holds the report. |
+| `POST /api/v1/imports/inspect` | Read a backup. Body: `{"server_id": "…", "file": "cpmove-USER.tar.gz"}`. Answers with what is inside (`domains`, `databases`, `cron`, `mail`, `zones`, `old_ip` …), and with `taken_domains`, `taken_databases`, `php_versions`, `new_password_databases`, `mail_enabled`, `taken_mail`, `new_password_mailboxes`, `name_servers` and `taken_zones`. Password hashes are never sent. |
+| `POST /api/v1/imports` | Import. Body: `{"server_id", "file", "owner_id", "sites": ["example.com"], "php": {"example.com": "8.2"}, "databases": ["olduser_wp"], "cron": true, "mail": ["example.com"], "zones": ["example.com"]}`. Answers `202` with a [task](/reference/api/#tasks-following-slow-work); its `result` holds the report. |
 
 Leave `owner_id` empty for administrators. With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
 
 ```bash
 ekctl api POST imports/inspect --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz"}'
-ekctl api POST imports --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz","owner_id":"","sites":["example.com"],"databases":["olduser_wp"],"cron":true}'
+ekctl api POST imports --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz","owner_id":"","sites":["example.com"],"databases":["olduser_wp"],"cron":true,"mail":["example.com"],"zones":["example.com"]}'
 ```
 
 ## Limits and what is not there yet
 
-These parts of a cPanel account are **not imported yet**. They are planned; see the
-[roadmap](/project/roadmap/).
+These parts of a cPanel account are **not imported**:
 
-- **Email accounts and mail.** Recreate the mailboxes under [Email](/guides/dns/email/) and move
-  the mail with your mail program, or with a tool such as `imapsync`.
-- **DNS zones.** Add the records under [DNS](/guides/dns/name-servers/), or keep the zone at
-  your current DNS host and change only the `A` and `AAAA` records.
-- **SSL certificates.** New ones are issued once the domains point to the server.
+- **SSL certificates**, on purpose: new ones are issued once the domains point to the server.
+- **Autoresponders, mail filters, mailing lists and cPanel's spam settings.** Set up
+  [auto-replies](/guides/dns/email/#forwarding-and-auto-replies) on the mailbox's page. ekPanel
+  has no mailing lists yet.
+- **The account's own default mailbox** (the cPanel user's mail, not under a domain).
+- **Mail in Dovecot's mdbox format** (see [Mail in the mailboxes](#mail-in-the-mailboxes)).
 
 Also:
 
@@ -274,8 +415,9 @@ Also:
   folders made in cPanel live in `.htaccess` files, which ekPanel does not read (see
   [After the import](#after-the-import)).
 - One backup is imported to one server.
-- Tried in a test VM with a small backup built like cPanel's, not yet with backups from many
-  real cPanel servers.
+- Tried in a test VM with small backups built like cPanel's, not yet with backups from many
+  real cPanel servers, and not with real outside mail. Importers for other panels are on the
+  [roadmap](/project/roadmap/).
 
 ## Troubleshooting
 
@@ -287,13 +429,21 @@ Also:
 | "The server's agent is not connected." | The server is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
 | "Already used by another website or app here: …" | Another website or app on the panel uses that domain. Untick the website, or delete the other one first. |
 | "The server already has a database or user named …" | Untick the database, delete or rename that database or user on the server, or import to another server. |
-| "Your package allows no more websites." (or databases, cron jobs) | Raise the customer's package limits, or import less. |
+| "Email is set up here already for …" | The domain already has email on the panel, or it is the server's mail host name. Untick it. |
+| "ekPanel already has the zone …" | Untick the zone, and change the existing zone by hand in the [zone editor](/guides/dns/name-servers/#the-zone-editor). |
+| "Email for … needs a website with that domain for this customer. Import the website too." | Tick the website with that domain too, or import the email for an administrator. |
+| "The zone … needs a website on that domain for this customer. Import the website too." | Tick a website in that zone too, or import the zone for an administrator. |
+| "This domain is inside, or contains, another account's domain." | Another owner has a zone inside or around this one. Untick the zone, or import for that owner. |
+| "This server has no email. Turn it on first." | [Turn on email](/guides/dns/email/#turn-on-email-for-a-server) for the server, then read the backup again. |
+| "Set up ekPanel's name servers first (DNS page)." | [Set up the name servers](/guides/dns/name-servers/#set-up-the-name-servers), or leave the zones out. |
+| "Your package allows no more websites." (or databases, cron jobs, mail domains, mailboxes) | Raise the customer's package limits, or import less. |
 | "This package cannot use that server." | Add the server to the customer's package, or choose another server. |
-| "Choose at least one website or database." | Tick at least one. |
+| "Choose at least one website, database, mail domain or DNS zone." | Tick at least one website, database, mail domain or zone. |
 
-**The import failed.** The page shows **The import failed** with the reason. "Websites and
-databases the panel made for it are still listed. Delete them before you try again." Then
-read the backup again and import.
+**The import failed.** The page shows **The import failed** with the reason. "Websites,
+databases, mail domains and DNS zones the panel made for it are still listed. Delete them before
+you try again." Delete them under **Websites**, **Databases**, **Email** and **DNS**, then read
+the backup again and import.
 
 **A website shows a database error.** Check the report for databases with new passwords, and
 put the new password into the website's settings. If a database was not imported, import it
@@ -302,6 +452,14 @@ again on its own: read the backup again and tick only that database.
 **A website shows the wrong files or old paths.** Look for paths to `/home/<cPanel user>/` that
 the import did not change: in files larger than 1 MB, in files of other types, or in the
 database.
+
+**A mail program cannot sign in.** Check the report for mailboxes with new passwords. Check
+that the program uses the whole address as its user name and the new mail host name as its
+server (see [Mail app settings](/guides/dns/email/#mail-app-settings)).
+
+**Messages could not be copied.** These are messages larger than 100 MB, empty files, or
+messages the mail server refused. Move them from the old server with a mail program if you
+need them.
 
 ## Related
 

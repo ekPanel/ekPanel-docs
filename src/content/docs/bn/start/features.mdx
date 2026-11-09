@@ -266,8 +266,9 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   নতুন S3 backup থেকে অন্য server-এ আবার বানানো। Panel যে DNS চালায় তা পেছনে যায়। দুটো VM আর একটা S3 test server দিয়ে
   test করা।
 - <Badge text="পরের release" variant="note" /> একটা cPanel account তার full backup (`cpmove` file) থেকে ইমপোর্ট করা:
-  file-সহ website, একই নাম, user আর password-সহ MySQL database, আর cron job, সাথে কী এসেছে আর কী আসেনি তার report।
-  Email, DNS zone আর certificate এখনো ইমপোর্ট হয় না।
+  file-সহ website, একই নাম, user আর password-সহ MySQL database, password, forwarder আর mail-সহ mailbox, cron job, আর
+  ekPanel-এর name server-এ DNS zone, সাথে কী এসেছে আর কী আসেনি তার report। Certificate ইমপোর্ট হয় না: domain server-এ
+  point করলে নতুন certificate নেওয়া হয়। Test VM-এ চালিয়ে দেখা।
 
 ## API আর command line
 
@@ -297,7 +298,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| Importer | aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify; cPanel backup থেকে email, DNS zone আর certificate-ও |
+| Importer | aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
