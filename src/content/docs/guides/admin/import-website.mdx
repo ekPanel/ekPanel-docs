@@ -1,0 +1,411 @@
+---
+title: Import a website archive
+description: Bring one website over from any host, or from aaPanel's backups, as an archive of its files with its database dump. WordPress keeps its database password.
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+You can bring one website over to one of your servers from an archive of its files (`.zip`,
+`.tar.gz` or `.tar`), with a dump of its database if it has one: a WordPress site from shared
+hosting, any other PHP or static website, or a website from aaPanel's own backups. The panel
+finds the website inside the archive, makes the website and its database, copies the files in
+and loads the dump. WordPress keeps its database password. Nothing changes for visitors until
+you point the domain at the new server.
+
+<Aside type="tip">
+To bring a whole cPanel account (several websites, email, cron jobs and DNS zones) from its full
+backup, use [Import from cPanel](/guides/admin/import-cpanel/) instead.
+</Aside>
+
+## Before you start
+
+- You are an **administrator**. Customers do not see this page; you can import a website for a
+  customer.
+- **The server is connected**: it is [added to the panel](/start/add-server/) and shows
+  **Online** on the **Servers** page. The website and its database will be on this server.
+- **The server has enough free disk space** for the archive and the dump, plus the website's
+  files and database once unpacked. Check **Disk** on the server's page; the panel does not
+  check this for you.
+- **You can copy files to the server** over SSH (with `scp` or an SFTP program such as
+  FileZilla), as `root` or a user with `sudo`.
+- **The website's database is MySQL or MariaDB.** PostgreSQL dumps cannot be imported.
+- To import for a customer, their [package](/guides/admin/customers/) must allow the server and
+  the PHP version, and have room for one more website and, if you make a database, one more
+  database.
+
+## Make the archive
+
+You need the website's files as **one archive**, and, if the website uses a database, a
+**dump** of it: a `.sql` file with the database's tables and rows, or the same file compressed
+as `.sql.gz`. The panel accepts `.zip`, `.tar.gz`, `.tgz` and `.tar` archives.
+
+### From aaPanel
+
+aaPanel's own backups work as they are; you do not unpack or rename them. In aaPanel, make a
+backup of the website (on the **Website** page) and of its database (on the **Databases**
+page). aaPanel keeps them on its server:
+
+| Backup | Folder | File name |
+| --- | --- | --- |
+| Website | `/www/backup/site/` | `web_<domain>_<date>.tar.gz`, such as `web_example.com_20250101_120000.tar.gz` |
+| Database | `/www/backup/database/` | `db_<name>_<date>.sql.gz` |
+
+ekPanel reads the domain from the website backup's file name, so keep the name as aaPanel wrote
+it. From the aaPanel server, you can copy both straight to the new server:
+
+```bash
+scp /www/backup/site/web_example.com_20250101_120000.tar.gz \
+    /www/backup/database/db_example_20250101_120000.sql.gz \
+    root@203.0.113.20:/srv/ekpanel/imports/
+```
+
+### From any other host
+
+1. **The files.** Pack the website's folder (often `public_html`, `htdocs` or `www`) into one
+   archive. In the host's file manager, compress the folder to a `.zip` and download it. Over
+   SSH:
+
+   ```bash
+   tar -czf example.com.tar.gz public_html
+   ```
+
+   Name the archive after the domain, such as `example.com.zip` or `example.com.tar.gz`, and the
+   panel fills in the domain for you.
+
+2. **The database.** In phpMyAdmin, choose the database, open **Export** and save it in the SQL
+   format. Over SSH:
+
+   ```bash
+   mysqldump -u DBUSER -p DBNAME | gzip > example.com.sql.gz
+   ```
+
+   Replace `DBUSER` and `DBNAME` with the database's user and name (for WordPress, they are
+   `DB_USER` and `DB_NAME` in `wp-config.php`).
+
+The dump can also be inside the archive: the panel finds `.sql` and `.sql.gz` files anywhere in
+it.
+
+<Aside type="caution" title="Dump one database">
+Make the dump of the one database only. A dump made with `mysqldump --databases` still works:
+ekPanel leaves out its `CREATE DATABASE` and `USE` lines, so the tables go into the new
+database. A dump of several databases (`--all-databases`) would put them all into this one. A
+dump in another format (such as `.zip` or `.bz2`) must be unpacked to `.sql` first.
+</Aside>
+
+## Put the files on the server
+
+The server's agent only reads files in one folder: `/srv/ekpanel/imports/` (the agent makes it,
+readable only by root). This is the same folder as for cPanel backups. Copy the archive, and the
+dump if it is a separate file, there from your computer:
+
+```bash
+scp example.com.zip example.com.sql.gz root@203.0.113.20:/srv/ekpanel/imports/
+```
+
+Replace `203.0.113.20` with the server's address and the file names with yours. The **Import**
+page shows the `scp` line for the server you choose, with a copy button. File names must not
+contain a folder or start with a dot.
+
+<Aside type="caution">
+The archive and the dump hold every file and all the data of the website, and a WordPress
+archive holds its database password in `wp-config.php`. Keep them only as long as you need them,
+and [delete them after the import](#after-the-import).
+</Aside>
+
+## Read the archive
+
+<Steps>
+
+1. In the sidebar, under **Administration**, click **Import**. You can also press `Ctrl+K` and
+   type "Import".
+
+2. Click the **Website archive** tab ("One website from a .zip or .tar.gz, with its database
+   dump").
+
+3. In **Server**, choose the server you copied the files to.
+
+4. In **Archive file name**, enter the archive's file name only, without a folder:
+   `example.com.zip`, not `/srv/ekpanel/imports/example.com.zip`. Under the field, "In the
+   folder now: …" names up to five archives in the folder, newest first, and the field offers
+   them as you type. Dumps are not listed here: you choose one in the next step.
+
+5. Click **Read archive**. "Reading the backup. A large one can take a few minutes."
+
+</Steps>
+
+The panel then shows **2. Choose how to set it up**, with what it found:
+
+- **The website's type**, as a badge: **WordPress** when the website's folder has
+  `wp-config.php`, **PHP** when it has any `.php` file, **Static** otherwise.
+- **The number and size of the website's files**, such as "312 files, 48.2 MB".
+- **Website folder in the archive**, such as `backup/public_html/`, or "the top". The website's
+  folder is the shallowest folder with `wp-config.php`; without one, the shallowest folder with
+  an `index.php`, `index.html` or `index.htm`; without one either, the one folder everything in
+  the archive is in, or else the top of the archive.
+
+## Choose how to set it up
+
+<Steps>
+
+1. In **Domain**, enter the website's domain. It is filled in when the panel can tell it: from
+   aaPanel's file name (`web_<domain>_<date>.tar.gz`), from the website's folder when it is named
+   like a domain, or from the archive's name (`example.com.zip`). One import makes one website.
+   If the domain is already used on the panel, the field says "Another website or app here uses
+   this domain."
+
+2. In **Website type**, choose **PHP**, with its PHP version (8.5, 8.4, 8.3, 8.2, 8.1 or 7.4;
+   it starts at 8.4), or **Static** for a website of HTML files only. WordPress and other PHP
+   applications need **PHP**. See [Kinds of website](/guides/websites/websites/#kinds-of-website).
+
+3. **Make a database for it** is ticked for WordPress, and when the panel found a dump in the
+   archive or in the folder. Untick it for a website without a database. The line under it says
+   what happens to the password:
+   - WordPress: "WordPress keeps its database password: the database is made with it, and
+     wp-config.php gets the name and user below and localhost."
+   - WordPress whose `wp-config.php` has no password: "wp-config.php has no database password,
+     so the database gets a new one: put it in wp-config.php."
+   - Any other website: "The database gets a new password, shown once when the import starts:
+     put it in the website's settings."
+
+4. In **Database dump**, choose the dump to load: "_name_ in the archive (_size_)", "_name_
+   next to it (_size_)" for a file in the import folder, or **None (an empty database)**. It
+   starts at the first dump in the archive, or else the newest dump in the folder. Every dump in
+   the folder is listed, not only the website's own, so check that you choose the right one.
+
+5. In **Database name** and **User name**, keep or change the names. For WordPress they start
+   as `DB_NAME` and `DB_USER` from `wp-config.php`. Left empty (**Automatic**), the name is made
+   from the domain, such as `example_3f9a`, and the user gets the same name. Names use lowercase
+   letters, digits and `_`, start with a letter and have at most 32 characters. If the server
+   already has a database or user with WordPress's names, the panel says "This server already
+   has a database or user with this name: choose another; wp-config.php will get it."
+
+6. In **For**, choose who owns the website and database: **Administrators (no package)** or a
+   customer.
+
+7. For WordPress, read "WordPress keeps its address from its database: import it under the same
+   domain, or change the address afterwards (Settings → General)." Then click **Import**.
+
+</Steps>
+
+Clicking **Import** makes the website and the database in the panel at once, then a task fills
+them. While it runs, the page shows **Importing…**, and the tasks box at the bottom of every
+page shows "Import a website archive". You can leave the page; the import goes on.
+
+When the database gets a new password, the page shows it once: "The database's password, shown
+only now:", with a copy button. Copy it before you leave the page. If you lose it, make a new one
+on the database's page (see [Reset a password](/guides/data/databases/#reset-a-password)).
+
+## What the import does
+
+The task sets up the website and the database on the server (installing the PHP version first
+if the server does not have it), then unpacks the archive into the website and loads the dump
+into the database.
+
+### Files
+
+- The website gets a Linux account of its own, with a name made from the domain (as for any new
+  website). The files in the website's folder go to its `public_html`, and the panel's
+  placeholder page there is removed. The files belong to the website's account.
+- Files in the archive outside the website's folder are left out, and the report counts them:
+  "_n_ files outside the website's folder in the archive".
+- **The dump you choose from inside the archive is loaded into the database and never copied
+  into the website**, even when it was in the website's folder, where anyone could download it.
+- Symbolic links are kept when they point inside the website's home folder. Links that point
+  outside it, or use an absolute path, are left out and counted ("links that point outside the
+  website"), and so are special files such as pipes.
+- aaPanel locks each website to its old folder with an `open_basedir` line in the website's
+  `.user.ini` (such as `open_basedir=/www/wwwroot/example.com/`). That path does not exist here
+  and would stop the website, so the import removes `open_basedir` lines from the `.user.ini` at
+  the top of the website, keeps the rest of the file, and the report says "open_basedir in
+  .user.ini (it named the old server's folder; PHP here limits the website itself)".
+- A `.zip` made on Windows keeps no file permissions; its files become readable (`644`).
+- Paths inside files are **not** changed, unlike in the cPanel import. If the website's code or
+  settings name its old folder (such as `/home/olduser/public_html` or `/www/wwwroot/example.com`),
+  change them to the new one, `/home/<account>/public_html`.
+
+- Database dumps (`.sql`, `.sql.gz`) in the website's folder are never copied into the website,
+  where anyone could download them: the one you choose is loaded, the others are left out and
+  counted in the report.
+
+### The database
+
+- The database is a MariaDB database on the same server as the website, with its own user and
+  the same owner.
+- The dump is loaded into it with the `mysql` client, as `utf8mb4`. Tables keep their names,
+  WordPress's table prefix (such as `wp_`) included.
+- With **None (an empty database)**, the database is made empty.
+- If you untick **Make a database for it** and the archive holds dumps, the report lists each
+  one: "Database dump _name_: no database was made for it".
+
+### WordPress
+
+- **Password.** The server's agent reads `DB_PASSWORD` from `wp-config.php` and makes its MySQL
+  password hash. Only the hash goes to the panel; the password itself never leaves the server.
+  The database is made with that hash, so WordPress's password stays the same.
+- **wp-config.php.** The import changes `DB_NAME` and `DB_USER` to the new database's name and
+  user, and `DB_HOST` to `'localhost'`. This matters when the old host kept databases on a
+  separate server (such as `mysql.oldhost.example`). `DB_PASSWORD` and the table prefix stay as
+  they were.
+- **Other names.** If you changed the database name or user (for example because the server
+  already had them), `wp-config.php` gets the names you chose.
+- **No password.** If `wp-config.php` has no `DB_PASSWORD`, the database gets a new password,
+  shown once when the import starts. Put it into `DB_PASSWORD` in `wp-config.php`.
+- **Address.** WordPress keeps its address (`siteurl` and `home`) in its database. Under the
+  same domain, the website works as before. Under another domain, change the address afterwards
+  in WordPress under **Settings → General**, or with WP-CLI, which also changes links in posts:
+
+  ```bash
+  wp search-replace 'https://old.example.com' 'https://example.com'
+  ```
+
+- If you untick **Make a database for it**, `wp-config.php` is left as it was.
+
+### Other websites with a database
+
+The database gets a new password, shown once when the import starts. Put the database's name,
+user, that password and the host `localhost` into the website's configuration (for example
+`.env` for Laravel, or `configuration.php` for Joomla). See
+[Connect from your website or app](/guides/data/databases/#connect-from-your-website-or-app).
+
+### The report
+
+When the task ends, the page shows **Import finished** with **Websites**, **Databases**,
+**Files** (the number and size of the files copied) and **Cron jobs** (always 0 for an archive),
+then **Not imported**: files outside the website's folder, links that point outside the website,
+`open_basedir` lines and unused dumps.
+
+In a test VM, a WordPress-style `.zip` from another host (its files in `backup/public_html`, its
+dump in `backup/database.sql`, and `DB_HOST` on a separate database server) served its
+database's Bangla text with the old password and `DB_HOST` set to `localhost`, and the dump was
+not published in the website. An aaPanel pair (`web_aa.example.test_…tar.gz` and
+`db_aa_…sql.gz`) got its domain from the file name, became a static website with its database,
+and the database's new password was shown once.
+
+## After the import
+
+<Steps>
+
+1. **Check the website before you switch DNS.** Point the domain at the new server on your
+   computer only, by adding a line to its `hosts` file (`/etc/hosts` on Linux and macOS,
+   `C:\Windows\System32\drivers\etc\hosts` on Windows):
+
+   ```text
+   203.0.113.20  example.com www.example.com
+   ```
+
+   Open the website in your browser and try a few pages, a login and a form. Your browser warns
+   about the certificate: the server gets a real one only once DNS points to it. Remove the
+   line when you are done.
+
+2. **Add what an archive does not bring**: [extra domains](/guides/websites/websites/#domains-and-extra-domains)
+   (such as `www.example.com`) on the website's page, [cron jobs](/guides/websites/cron/),
+   [email](/guides/dns/email/) and redirects.
+
+3. **Point the domain at the server.** At your DNS host, change the domain's `A` record (and
+   `AAAA`, if you have one), and those of its extra domains, to the server's address. If you use
+   ekPanel's [built-in name servers](/guides/dns/name-servers/#add-a-domain), add the domain there
+   and set them at the registrar. The certificate is issued by itself once the domain points
+   there.
+
+4. **Delete the archive and the dump** from the server:
+
+   ```bash
+   sudo rm /srv/ekpanel/imports/example.com.zip /srv/ekpanel/imports/example.com.sql.gz
+   ```
+
+</Steps>
+
+<Aside type="caution" title=".htaccess files do nothing here">
+ekPanel's web server (Caddy) does not read `.htaccess` files. WordPress's pretty links keep
+working, but other rules (redirects, blocked folders, password protection, `php_value` lines)
+are ignored. See [.htaccess files do nothing here](/guides/admin/import-cpanel/#after-the-import)
+in the cPanel guide for what to do instead.
+</Aside>
+
+## With the API
+
+An administrator's [API token](/guides/security/api-tokens/) with the `sites` scope can import.
+Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `GET /api/v1/imports/files?server_id=…` | The files in the server's import folder that an import can use, newest first: `name`, `kind` (`archive` for `.tar.gz`, `.tgz` and `.tar`, `zip`, or `dump` for `.sql` and `.sql.gz`), `bytes` and `modified`. |
+| `POST /api/v1/imports/site/inspect` | Read an archive. Body: `{"server_id": "…", "archive": "example.com.zip"}`. Answers with `root` (the website's folder, `""` for the top), `files`, `bytes`, `kind` (`wordpress`, `php` or `static`), `domain` (when it could tell), `wordpress` (`db_name`, `db_user`, `db_host`, `table_prefix`), `dumps` (each with `name` and `bytes`), `keeps_password`, `domain_taken`, `database_taken` and `php_versions`. Password hashes are never sent. |
+| `POST /api/v1/imports/site` | Import. Body: `{"server_id", "archive", "domain", "kind": "php", "php_version": "8.4", "owner_id", "dump": "example.com.sql.gz", "database": {"name": "", "user": ""}}`. Use `dump` for a dump in the import folder, or `dump_in_archive` with a name from `dumps`, not both. A database is made when `database`, `dump` or `dump_in_archive` is set; empty names are made from the domain (for WordPress, `wp-config.php`'s names are used when `database` is left out). Optional `aliases` lists extra domains. Answers `202` with `task` (a [task](/reference/api/#tasks-following-slow-work) whose `result` holds the report) and, when the database got a new password, `database_password`, shown only in this answer. |
+
+Leave `owner_id` empty for administrators. With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api GET 'imports/files?server_id=<server id>'
+ekctl api POST imports/site/inspect --data '{"server_id":"<server id>","archive":"example.com.zip"}'
+ekctl api POST imports/site --data '{"server_id":"<server id>","archive":"example.com.zip","domain":"example.com","kind":"php","php_version":"8.4","owner_id":"","dump":"example.com.sql.gz","database":{"name":"","user":""}}'
+```
+
+## Limits and what is not there yet
+
+- **One website per archive**, with at most one database. For several websites, import several
+  archives.
+- **No extra domains, cron jobs, email, DNS zones or certificates** come from an archive. Set
+  them up on the panel; certificates are issued once the domain points to the server.
+- **Only MySQL and MariaDB dumps** (`.sql`, `.sql.gz`) are loaded, into MariaDB. PostgreSQL
+  dumps are not.
+- **The website's folder is chosen by the panel.** If it chose the wrong one, make an archive
+  that holds only the website.
+- **Paths are not changed**, in files or in the database. See [Files](#files).
+- **`.htaccess` files are not read** (see [After the import](#after-the-import)).
+- **WordPress multisite on subdomains** needs each subdomain added by hand as an
+  [extra domain](/guides/websites/websites/#domains-and-extra-domains); wildcard domains are not
+  possible.
+- Tried in a test VM with archives built like these hosts', not yet with many real ones.
+  An importer for Coolify is on the [roadmap](/project/roadmap/).
+
+## Troubleshooting
+
+| Message | What to do |
+| --- | --- |
+| "Choose a .zip, .tar.gz or .tar archive in /srv/ekpanel/imports on the server." | Enter only the archive's file name, ending in `.zip`, `.tar.gz`, `.tgz` or `.tar`. A dump is not an archive: choose it in **Database dump**. |
+| "No backup with that name is in /srv/ekpanel/imports on this server. Check the file name and the server." | The file is on another server or has another name. Check with `sudo ls -l /srv/ekpanel/imports/` on the server you chose. |
+| "This file is not a cPanel full backup, or it is damaged. Make a full account backup in cPanel and copy it again." | For a website archive, this means the archive is empty or cannot be read: the copy is incomplete (compare its size with the original), or the file is not really a `.zip` or `.tar.gz`. Make the archive again and copy it again. |
+| "Enter a domain name such as example.com." | Enter the domain without `https://` or a path. |
+| "Already used by another website or app here: …" | Another website or app on the panel uses that domain. Choose another domain, or delete the other one first. |
+| "Choose one .sql or .sql.gz database dump." | Choose one dump that ends in `.sql` or `.sql.gz`. In the API, set `dump` or `dump_in_archive`, not both. |
+| "Use lowercase letters, digits and _ for the database name and user." | Change the names: lowercase letters, digits and `_`, starting with a letter, at most 32 characters. WordPress names with capitals or dashes must be changed here; `wp-config.php` gets the new ones. |
+| "The server already has a database or user named …." | Enter another database name and user. For WordPress, `wp-config.php` gets them. |
+| "Your package allows no more websites." (or databases) | Raise the customer's package limits, or untick **Make a database for it**. |
+| "This package cannot use that server." | Add the server to the customer's package, or choose another server. |
+| "The package does not include this PHP version." | Choose a PHP version the customer's package allows. |
+| "The server's agent is not connected." | The server is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+
+**The import failed.** The page shows **The import failed** with the reason, such as an error
+from loading the dump. The website and database the panel made for it are still listed: delete
+them under **Websites** and **Databases**, fix the cause, then read the archive again and import.
+
+**WordPress shows "Error establishing a database connection".** Check that **Make a database
+for it** was ticked and that the report lists the database. If `wp-config.php` had no password,
+put the new one into `DB_PASSWORD`. If you lost it, make a new one on the database's page.
+
+**WordPress sends you to the old domain.** It keeps its address in its database: change it (see
+[WordPress](#wordpress)).
+
+**The website shows the wrong files, or the panel's page.** Check **Website folder in the
+archive** when you read it: the panel may have chosen another folder with an `index.php` or
+`wp-config.php`. Make an archive that holds only the website, delete the website the import
+made, and import again.
+
+**The database is empty after the import.** The dump may hold several databases
+(`--all-databases`), or only the structure. Make the dump again from the one database (see
+[Make the archive](#make-the-archive)).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Import from cPanel" href="/guides/admin/import-cpanel/" description="A whole cPanel account from its full backup." />
+	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="WordPress" href="/guides/websites/wordpress/" />
+	<LinkCard title="Databases" href="/guides/data/databases/" description="Passwords, users and connecting." />
+	<LinkCard title="Files" href="/guides/websites/files/" />
+	<LinkCard title="Customers and packages" href="/guides/admin/customers/" />
+	<LinkCard title="REST API" href="/reference/api/" />
+</CardGrid>

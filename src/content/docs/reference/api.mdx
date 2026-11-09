@@ -445,6 +445,7 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Moving databases | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a database](/guides/data/move-database/#with-the-api-or-ekctl). |
 | Moving customers | `POST /customers/{id}/move`. See [Move a customer](/guides/admin/move-customer/#with-the-api-or-ekctl). |
 | Importing from cPanel | `POST /imports/inspect`, `POST /imports` (scope `sites`). See [Import from cPanel](/guides/admin/import-cpanel/#with-the-api). |
+| Importing a website archive | `GET /imports/files?server_id=…` (the files in a server's import folder), `POST /imports/site/inspect`, `POST /imports/site` (scope `sites`). See [Import a website archive](/guides/admin/import-website/#with-the-api). |
 
 ## Protection against cross-site requests
 

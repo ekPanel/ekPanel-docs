@@ -12,7 +12,8 @@ install করে ব্যবহার করতে পারেন। **Phase 
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
 description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-ও তাই: একটা website, app, database বা একজন customer-এর এক server-এর সবকিছু অন্য
 server-এ সরানো, আর server চলে গেলে একটা website তার backup থেকে অন্য server-এ আবার বানানো। 4d, importer, শুরু হয়েছে: একটা পুরো cPanel account তার full backup থেকে
-import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে।
+import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে, আর aaPanel বা অন্য যেকোনো
+host থেকে একটা একটা করে website, তার file-এর archive আর database dump থেকে। বাকি আছে শুধু Coolify-এর importer।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -150,9 +151,10 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 
 - cPanel backup: website, file, MySQL database, mail-সহ email, cron job আর DNS zone <Badge text="শেষ" variant="success" />।
   Certificate ইচ্ছা করেই import হয় না: domain server-এ point করলে নতুন certificate নেওয়া হয়
-- aaPanel-এর site আর database; অন্য host থেকে সাধারণ WordPress
+- aaPanel-এর site আর database; অন্য host থেকে সাধারণ WordPress (বা যেকোনো website), website archive import দিয়ে
+  <Badge text="শেষ" variant="success" />
 - Coolify-এর application আর service
-- কী import হয়েছে আর কী হয়নি, তার একটা report (cPanel-এর জন্য শেষ)
+- কী import হয়েছে আর কী হয়নি, তার একটা report (cPanel আর website archive-এর জন্য শেষ)
 
 ### 4e. Reseller আর white-label
 

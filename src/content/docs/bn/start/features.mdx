@@ -242,7 +242,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) · [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -269,6 +269,10 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   file-সহ website, একই নাম, user আর password-সহ MySQL database, password, forwarder আর mail-সহ mailbox, cron job, আর
   ekPanel-এর name server-এ DNS zone, সাথে কী এসেছে আর কী আসেনি তার report। Certificate ইমপোর্ট হয় না: domain server-এ
   point করলে নতুন certificate নেওয়া হয়। Test VM-এ চালিয়ে দেখা।
+- <Badge text="পরের release" variant="note" /> একটা website তার file-এর archive (`.zip`, `.tar.gz` বা `.tar`) আর database
+  dump থেকে ইমপোর্ট করা: aaPanel-এর site আর database backup যেমন আছে তেমনই, বা অন্য host থেকে সাধারণ WordPress বা অন্য
+  যেকোনো website। WordPress তার database password রেখে দেয়, আর তার `wp-config.php` নতুন database-এর দিকে বদলে যায়। Test
+  VM-এ চালিয়ে দেখা।
 
 ## API আর command line
 
@@ -298,7 +302,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| Importer | aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
+| Importer | Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |

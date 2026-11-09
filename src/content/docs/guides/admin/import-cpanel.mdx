@@ -14,6 +14,11 @@ DNS zones. You choose what to import, the panel sets it up, and a report tells y
 over and what did not. Nothing changes for visitors until you point the domains at the new
 server.
 
+<Aside type="tip">
+To bring one website from aaPanel or any other host, as an archive of its files with its database
+dump, see [Import a website archive](/guides/admin/import-website/).
+</Aside>
+
 ## Before you start
 
 - You are an **administrator**. Customers do not see this page; you can import an account
@@ -59,8 +64,7 @@ scp cpmove-USER.tar.gz root@203.0.113.20:/srv/ekpanel/imports/
 ```
 
 Replace `203.0.113.20` with the server's address and `cpmove-USER.tar.gz` with the file's
-name. The **Import from cPanel** page shows the `scp` line for the server you choose, with a
-copy button.
+name. The **Import** page shows the `scp` line for the server you choose, with a copy button.
 
 <Aside type="caution">
 The backup holds every file and every message of the account, and the password hashes of its
@@ -75,12 +79,18 @@ databases and mailboxes. Keep it only as long as you need it, and
 1. In the sidebar, under **Administration**, click **Import**. You can also press `Ctrl+K` and
    type "Import".
 
-2. In **Server**, choose the server you copied the backup to.
+2. The page has two tabs. Keep **cPanel backup** ("A whole account: websites, databases, email,
+   cron jobs, DNS"), which is open when the page opens. The other tab, **Website archive**, is
+   for [one website from an archive](/guides/admin/import-website/).
 
-3. In **Backup file name**, enter the file's name only, without a folder:
-   `cpmove-USER.tar.gz`, not `/srv/ekpanel/imports/cpmove-USER.tar.gz`.
+3. In **Server**, choose the server you copied the backup to.
 
-4. Click **Read backup**. "Reading the backup. A large one can take a few minutes."
+4. In **Backup file name**, enter the file's name only, without a folder:
+   `cpmove-USER.tar.gz`, not `/srv/ekpanel/imports/cpmove-USER.tar.gz`. Under the field,
+   "In the folder now: …" names up to five `.tar.gz`, `.tgz` and `.tar` files in the folder,
+   newest first, and the field offers them as you type.
+
+5. Click **Read backup**. "Reading the backup. A large one can take a few minutes."
 
 </Steps>
 
@@ -416,7 +426,9 @@ Also:
   [After the import](#after-the-import)).
 - One backup is imported to one server.
 - Tried in a test VM with small backups built like cPanel's, not yet with backups from many
-  real cPanel servers, and not with real outside mail. Importers for other panels are on the
+  real cPanel servers, and not with real outside mail.
+- Websites from aaPanel and other hosts come over one at a time with
+  [Import a website archive](/guides/admin/import-website/). An importer for Coolify is on the
   [roadmap](/project/roadmap/).
 
 ## Troubleshooting
@@ -464,6 +476,7 @@ need them.
 ## Related
 
 <CardGrid>
+	<LinkCard title="Import a website archive" href="/guides/admin/import-website/" description="One website from aaPanel or any host." />
 	<LinkCard title="Websites" href="/guides/websites/websites/" />
 	<LinkCard title="Databases" href="/guides/data/databases/" description="Passwords, users and connecting." />
 	<LinkCard title="Cron jobs" href="/guides/websites/cron/" />

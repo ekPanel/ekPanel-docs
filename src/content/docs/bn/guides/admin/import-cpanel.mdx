@@ -12,6 +12,11 @@ import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components'
 zone। কী আনবেন তা আপনি বেছে নেন, panel সেটা set up করে, আর শেষে একটা report বলে দেয় কী এসেছে আর কী আসেনি। Domain নতুন
 server-এ point না করা পর্যন্ত visitor-দের জন্য কিছুই বদলায় না।
 
+<Aside type="tip">
+aaPanel বা অন্য যেকোনো host থেকে একটা website তার file-এর archive আর database dump হিসেবে আনতে হলে দেখুন
+[ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)।
+</Aside>
+
 ## শুরু করার আগে
 
 - আপনি **admin**। Customer-রা এই পাতা দেখেন না; তবে আপনি কোনো customer-এর জন্য account ইমপোর্ট করতে পারেন।
@@ -54,7 +59,7 @@ scp cpmove-USER.tar.gz root@203.0.113.20:/srv/ekpanel/imports/
 ```
 
 `203.0.113.20`-এর জায়গায় server-এর address আর `cpmove-USER.tar.gz`-এর জায়গায় file-এর নাম দিন। আপনি যে server বেছে নেন,
-**cPanel থেকে ইমপোর্ট** (Import from cPanel) পাতা তার জন্য `scp` লাইনটা দেখায়, সাথে একটা copy button।
+**ইমপোর্ট** (Import) পাতা তার জন্য `scp` লাইনটা দেখায়, সাথে একটা copy button।
 
 <Aside type="caution">
 Backup-এ account-এর সব file আর সব mail থাকে, সাথে তার database আর mailbox-গুলোর password hash। যতক্ষণ দরকার শুধু
@@ -68,12 +73,17 @@ Backup-এ account-এর সব file আর সব mail থাকে, সাথ
 1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
    যেতে পারেন।
 
-2. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে backup কপি করেছেন।
+2. পাতায় দুটো tab আছে। **cPanel ব্যাকআপ** (cPanel backup) রাখুন ("পুরো অ্যাকাউন্ট: ওয়েবসাইট, ডেটাবেস, ইমেইল, ক্রন জব,
+   DNS"), পাতা খুললে এটাই খোলা থাকে। অন্য tab, **ওয়েবসাইট আর্কাইভ** (Website archive), হলো
+   [একটা archive থেকে একটা website](/guides/admin/import-website/) আনার জন্য।
 
-3. **ব্যাকআপ ফাইলের নাম** (Backup file name)-এ শুধু file-এর নাম লিখুন, folder ছাড়া: `cpmove-USER.tar.gz`,
-   `/srv/ekpanel/imports/cpmove-USER.tar.gz` না।
+3. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে backup কপি করেছেন।
 
-4. **ব্যাকআপ পড়ুন** (Read backup)-এ click করুন। "ব্যাকআপ পড়া হচ্ছে। বড় হলে কয়েক মিনিট লাগতে পারে।"
+4. **ব্যাকআপ ফাইলের নাম** (Backup file name)-এ শুধু file-এর নাম লিখুন, folder ছাড়া: `cpmove-USER.tar.gz`,
+   `/srv/ekpanel/imports/cpmove-USER.tar.gz` না। Field-এর নিচে "ফোল্ডারে এখন আছে: …" folder-এর সর্বোচ্চ পাঁচটা `.tar.gz`,
+   `.tgz` আর `.tar` file-এর নাম দেখায়, নতুনটা আগে, আর লেখার সময় field-টা এগুলো suggest করে।
+
+5. **ব্যাকআপ পড়ুন** (Read backup)-এ click করুন। "ব্যাকআপ পড়া হচ্ছে। বড় হলে কয়েক মিনিট লাগতে পারে।"
 
 </Steps>
 
@@ -368,7 +378,9 @@ cPanel account-এর এই অংশগুলো **ইমপোর্ট হ�
   `.htaccess` file-এ, যা ekPanel পড়ে না (দেখুন [ইমপোর্টের পরে](#after-the-import))।
 - একটা backup একটা server-এ ইমপোর্ট হয়।
 - cPanel-এর মতো করে বানানো ছোট backup দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল cPanel server-এর backup দিয়ে না,
-  আর বাইরের আসল mail দিয়েও না। অন্য panel-এর importer আছে [roadmap](/project/roadmap/)-এ।
+  আর বাইরের আসল mail দিয়েও না।
+- aaPanel আর অন্য host-এর website একটা একটা করে আসে [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/) দিয়ে।
+  Coolify-এর importer আছে [roadmap](/project/roadmap/)-এ।
 
 ## সমস্যা সমাধান
 
@@ -412,6 +424,7 @@ website-এর settings-এ বসান। কোনো database ইমপো�
 ## সম্পর্কিত
 
 <CardGrid>
+	<LinkCard title="ওয়েবসাইট আর্কাইভ ইমপোর্ট" href="/guides/admin/import-website/" description="aaPanel বা যেকোনো host থেকে একটা website।" />
 	<LinkCard title="Website" href="/guides/websites/websites/" />
 	<LinkCard title="Database" href="/guides/data/databases/" description="Password, user আর connect করা।" />
 	<LinkCard title="Cron job" href="/guides/websites/cron/" />

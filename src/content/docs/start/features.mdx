@@ -241,7 +241,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/) · [Import from cPanel](/guides/admin/import-cpanel/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/) · [Import from cPanel](/guides/admin/import-cpanel/) · [Import a website archive](/guides/admin/import-website/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -275,6 +275,10 @@ has not been tried yet.
   passwords, mailboxes with their passwords, forwarders and mail, cron jobs, and DNS zones on
   ekPanel's name servers, with a report of what was and was not imported. Certificates are not
   imported: new ones are issued once the domains point to the server. Tried in a test VM.
+- <Badge text="next release" variant="note" /> Importing one website from an archive of its files
+  (`.zip`, `.tar.gz` or `.tar`) with its database dump: aaPanel's site and database backups as
+  they are, or plain WordPress or any other website from another host. WordPress keeps its
+  database password, and its `wp-config.php` is pointed at the new database. Tried in a test VM.
 
 ## API and command line
 
@@ -306,7 +310,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Importers | aaPanel, plain WordPress from another host, Coolify |
+| Importers | Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |

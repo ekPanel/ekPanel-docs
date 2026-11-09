@@ -432,6 +432,7 @@ certificate বিশ্বাস করে।
 | Database সরানো | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Database সরান](/guides/data/move-database/#with-the-api-or-ekctl)। |
 | Customer সরানো | `POST /customers/{id}/move`। দেখুন [Customer সরান](/guides/admin/move-customer/#with-the-api-or-ekctl)। |
 | cPanel থেকে ইমপোর্ট | `POST /imports/inspect`, `POST /imports` (scope `sites`)। দেখুন [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/#with-the-api)। |
+| ওয়েবসাইট আর্কাইভ ইমপোর্ট | `GET /imports/files?server_id=…` (server-এর import folder-এর file), `POST /imports/site/inspect`, `POST /imports/site` (scope `sites`)। দেখুন [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/#with-the-api)। |
 
 ## Cross-site request থেকে সুরক্ষা
 
