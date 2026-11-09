@@ -15,8 +15,9 @@ outside service, the list says so.
 Everything on this page is in v0.1.0, the first release, except
 [API and command line](#api-and-command-line), moving websites, apps, databases and
 customers to another server, rebuilding a website from a backup, and importing from cPanel,
-website archives and Coolify (under [Many servers](#many-servers)), which come with the next
-release. You can
+website archives and Coolify (under [Many servers](#many-servers)), and recovery codes,
+passkeys and the list of signed-in devices (under [Security](#security)), which come with the
+next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -215,6 +216,13 @@ has not been tried yet.
   list.
 - **Accounts**: two-factor sign-in (TOTP), sign-in rate limiting, "sign out all other
   devices", and an alert on sign-in from a new address.
+- <Badge text="next release" variant="note" /> [Account security](/guides/security/accounts/):
+  ten one-time recovery codes for two-factor sign-in, with an alert when one is used;
+  resetting a customer's two-factor sign-in from the customers list, and an administrator's
+  with `ekpanel reset-2fa` on the panel's server; passkeys (fingerprint, face, PIN or a
+  security key) instead of a password and code; and a list of signed-in devices, each of which
+  can be signed out. Passkeys are tested with a virtual authenticator, not yet with a real
+  device.
 - An append-only audit log of every change.
 
 ## Customers and packages
@@ -316,7 +324,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
+| Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |
 

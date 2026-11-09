@@ -75,7 +75,8 @@ Web UI একটা session cookie দিয়ে sign in করে। Script �
    ```
 
    Account-এ two-factor authentication থাকলে প্রথম উত্তর হবে `401`, code `totp_required`। তখন একই request
-   আবার পাঠান, সাথে `"totp_code":"123456"` যোগ করে।
+   আবার পাঠান, সাথে `"totp_code":"123456"` যোগ করে। পরের release থেকে একই field-এ একটা recovery code-ও দেওয়া
+   যায়; প্রতিটা চলে একবারই।
 
 2. পরের প্রতিটা request-এর সাথে cookie পাঠান:
 
@@ -98,6 +99,9 @@ Session সম্পর্কে:
 - একটা session ৭ দিন থাকে। Panel এর শুধু একটা SHA-256 hash রাখে।
 - আপনার account-এ **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বাকি সব session শেষ করে দেয়
   (`POST /auth/sessions/revoke-others`)। এটা API token revoke করে না।
+- পরের release থেকে `GET /auth/sessions` আপনার sign in থাকা session-গুলোর তালিকা দেয় (যেটা দিয়ে পাঠাচ্ছেন
+  সেটায় `current`), আর `DELETE /auth/sessions/{id}` বাকিগুলোর একটা শেষ করে। এখনকারটার উত্তর আসে
+  `400 session_current`: এর বদলে `POST /auth/logout` দিয়ে sign out করুন।
 - একটা address থেকে, বা একটা email address-এর জন্য ১০ বার sign in ব্যর্থ হলে, ১৫ মিনিট sign in ফিরিয়ে দেওয়া
   হয় (code `too_many_attempts`)।
 
@@ -149,7 +153,10 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 এগুলোর জন্য sign in করা browser session লাগে। Token দিয়ে চেষ্টা করলে উত্তর আসে `403 token_not_allowed`:
 
 - **Account-এর নিরাপত্তা:** `GET /auth/me` ছাড়া `/auth`-এর নিচের সবকিছু: password বদলানো, two-factor
-  sign-in, sign out, অন্য session শেষ করা, password নিশ্চিত করা, আপনার ভাষা বদলানো।
+  sign-in আর recovery code, sign out, session-এর তালিকা দেখা আর শেষ করা, passkey, password নিশ্চিত করা,
+  আপনার ভাষা বদলানো।
+- **Two-factor sign-in reset করা:** যেকোনো path যাতে `2fa` segment আছে, যেমন `POST /customers/{id}/2fa/reset`,
+  token-এর `customers` scope থাকলেও।
 - **Token নিজেই:** `GET /tokens`, `POST /tokens` আর `DELETE /tokens/{id}`। Token দিয়ে কখনো token বানানো, দেখা
   বা revoke করা যায় না।
 - **Terminal:** যেকোনো path যাতে `terminal` segment আছে (server আর app-এর terminal)। Terminal মানে root বা
@@ -385,6 +392,7 @@ certificate বিশ্বাস করে।
 | `GET /openapi.json` | API-এর description। |
 | `GET /setup/status`, `POST /setup` | Setup token দিয়ে প্রথম administrator। |
 | `POST /auth/login` | Sign in। |
+| `POST /auth/passkey/options`, `POST /auth/passkey/login` | <Badge text="পরের release" variant="note" /> Passkey দিয়ে sign in: প্রথমটা browser-কে তার challenge দেয় (`ceremony` আর `options`), দ্বিতীয়টা browser-এর উত্তর নেয়। Browser-এর WebAuthn-এর জন্য, script-এর জন্য নয়। |
 | `POST /hooks/git/{id}` | GitHub, GitLab, Gitea, Forgejo আর Gogs থেকে আসা Git webhook। Session বা token নয়, app-এর webhook secret দিয়ে check করা হয়। |
 
 ### আপনার account (sign in করা যেকোনো user)
@@ -394,6 +402,9 @@ certificate বিশ্বাস করে।
 | `/auth/me`, `/auth/logout` | আপনি কে, আপনার ভাষা, sign out। |
 | `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable` | Two-factor authentication। |
 | `/auth/sessions/revoke-others`, `/auth/confirm`, `/auth/impersonation/end` | Session, password নিশ্চিত করা, **তাঁর হয়ে ঢুকুন** শেষ করা। |
+| `GET /auth/2fa/recovery-codes`, `POST /auth/2fa/recovery-codes` | <Badge text="পরের release" variant="note" /> কয়টা recovery code বাকি (`{"left": 9}`); `{"password": "…"}` দিয়ে দশটা নতুন। |
+| `GET /auth/sessions`, `DELETE /auth/sessions/{id}` | <Badge text="পরের release" variant="note" /> Sign in থাকা device: তালিকা, একটা sign out করা। |
+| `GET /auth/passkeys`, `POST /auth/passkeys/options`, `POST /auth/passkeys`, `DELETE /auth/passkeys/{id}` | <Badge text="পরের release" variant="note" /> Passkey: তালিকা, যোগ করা শুরু (`{"password": "…"}` দিয়ে), browser-এর উত্তর দিয়ে যোগ করা শেষ, সরানো। |
 | `/tokens`, `/tokens/{id}` | আপনার API token: তালিকা, বানানো, revoke (শুধু browser session)। |
 
 ### Administrator আর customer
@@ -417,6 +428,7 @@ certificate বিশ্বাস করে।
 | Group | Endpoint শুরু হয় |
 | --- | --- |
 | Customer আর package | `/customers`, `/packages` |
+| Customer-এর two-factor sign-in reset করা | <Badge text="পরের release" variant="note" /> `POST /customers/{id}/2fa/reset` (শুধু browser session, customer হিসেবে ঢোকা অবস্থায় নয়)। |
 | Server | `/servers` (যোগ করা, মোছা, connection command, address, live statistics, metrics, service, terminal, PHP extension, usage, traffic) |
 | Server security | `/servers/{id}/security/...` (CrowdSec, ban, alert, automatic update, country, malware) |
 | Firewall | `/servers/{id}/firewall` |

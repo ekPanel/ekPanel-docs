@@ -123,6 +123,19 @@ After 10 failed sign-ins from one address, or for one email address, the panel r
 sign-ins for 15 minutes. Wait, then try again. If you use two-factor authentication, check
 that your phone's clock is right: codes change every 30 seconds.
 
+## I lost the phone with my two-factor codes
+
+From the next release, use one of your recovery codes in the code field of the sign-in page, or
+sign in with a passkey if you added one. An administrator can reset a customer's two-factor
+sign-in on the customers list. For an administrator's account, run this on the panel's server:
+
+```bash
+sudo -u ekpanel ekpanel reset-2fa admin@example.com
+```
+
+Then sign in with the password and turn two-factor sign-in on again. See
+[If you lose your phone](/guides/security/accounts/#if-you-lose-your-phone).
+
 ## A server shows as offline
 
 The panel marks a server offline when its agent's connection is gone, and sends a

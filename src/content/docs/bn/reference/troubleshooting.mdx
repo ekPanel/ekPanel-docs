@@ -125,6 +125,19 @@ sudo journalctl -u ekpanel | grep setup_token
 ফিরিয়ে দেয়। অপেক্ষা করুন, তারপর আবার চেষ্টা করুন। Two-factor authentication ব্যবহার করলে দেখে নিন
 আপনার phone-এর ঘড়ি ঠিক আছে কিনা: code প্রতি ৩০ সেকেন্ডে বদলায়।
 
+## Two-factor code-এর phone হারিয়ে ফেলেছি
+
+পরের release থেকে sign-in পাতার code-এর field-এ আপনার একটা recovery code দিন, অথবা passkey যোগ করে থাকলে
+সেটা দিয়ে sign in করুন। Administrator customer তালিকা থেকে কোনো customer-এর two-factor sign-in reset করতে
+পারেন। Administrator-এর account-এর জন্য panel-এর server-এ এটা চালান:
+
+```bash
+sudo -u ekpanel ekpanel reset-2fa admin@example.com
+```
+
+তারপর password দিয়ে sign in করে আবার two-factor sign-in চালু করুন। দেখুন
+[ফোন হারালে](/guides/security/accounts/#if-you-lose-your-phone)।
+
 ## একটা server offline দেখাচ্ছে
 
 কোনো server-এর agent-এর connection চলে গেলে panel সেটাকে offline চিহ্ন দেয়, আর ৩ মিনিট পরে একটা

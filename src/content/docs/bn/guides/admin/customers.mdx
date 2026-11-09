@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 আপনি যদি অন্যদের website host করেন, তাহলে প্রত্যেককে একটা **customer** account দিন। একজন customer
 একই panel-এ sign in করেন আর শুধু নিজের জিনিসগুলোই দেখেন, তাঁর **package**-এর limit-এর মধ্যে।
@@ -77,11 +77,39 @@ Customer-রা কখনো নিজের Compose file চালাতে প
 </Steps>
 
 Customer-এর panel-এর ভাষা শুরুতে হয় আপনার ভাষা, তাঁকে তৈরি করার মুহূর্তে আপনি যেটা ব্যবহার করছিলেন;
-তিনি এটা বদলাতে পারেন। তিনি password হারিয়ে ফেললে customer তালিকায় **নতুন পাসওয়ার্ড** (New
-password)-এ click করে নতুন একটা বানান (একবার দেখানো হয়)। এতে তিনি সব জায়গা থেকে sign out হয়ে যান।
+তিনি এটা বদলাতে পারেন।
 
 Customer তালিকায় প্রত্যেক customer-এর package আর ব্যবহার দেখায়, যেমন website-এর "3-এর মধ্যে 2" আর
 তাঁর disk space।
+
+### Password বা two-factor sign-in reset করুন
+
+কোনো customer password হারিয়ে ফেললে customer তালিকায় **নতুন পাসওয়ার্ড** (New password)-এ click করে নতুন
+একটা বানান (একবার দেখানো হয়)। এতে তিনি সব জায়গা থেকে sign out হয়ে যান। এতে তাঁর two-factor sign-in বদলায় না।
+
+<Badge text="পরের release" variant="note" /> কোনো customer two-factor sign-in চালু করে থাকলে আর তাঁর ফোন আর
+[recovery code](/guides/security/accounts/#recovery-codes) দুটোই হারিয়ে ফেললে, আপনি তাঁর জন্য এটা বন্ধ করে দিতে
+পারেন:
+
+<Steps>
+
+1. Customer তালিকায় customer-এর পাশে **টু-ফ্যাক্টর রিসেট** (Reset two-factor)-এ click করুন। বাটনটা শুধু সেই
+   customer-দের পাশে দেখায়, যাঁদের two-factor sign-in চালু আছে।
+
+2. নিশ্চিত করুন: "…-এর টু-ফ্যাক্টর সাইন-ইন বন্ধ করবেন? তিনি পাসওয়ার্ড দিয়ে সাইন-ইন করে আবার চালু করতে পারবেন।
+   শুধু নিশ্চিত হলে করুন যে সত্যিই তিনিই চাইছেন।"
+
+3. Customer-কে বলুন password দিয়ে sign in করে **নিরাপত্তা** (Security)-তে আবার two-factor sign-in চালু করতে। তখন
+   তিনি দশটা নতুন recovery code পাবেন।
+
+</Steps>
+
+Reset করলে তাঁর recovery code-গুলোও মুছে যায়। এতে তাঁর passkey মোছে না, আর তিনি sign out-ও হন না। Audit log-এ
+এটা আপনার নামে "গ্রাহকের টু-ফ্যাক্টর রিসেট" হিসেবে লেখা হয়। আপনার যদি মনে হয় customer-এর password অন্য কারও হাতে আছে,
+তাহলে তাঁকে একটা **নতুন পাসওয়ার্ড**-ও দিন, এতে সব device থেকে sign out হয়ে যায়।
+
+এই বাটন শুধু customer-দের জন্য। কোনো administrator ফোন হারালে recovery code, passkey, বা panel-এর server-এ
+`ekpanel reset-2fa` ব্যবহার করেন: দেখুন [ফোন হারালে](/guides/security/accounts/#if-you-lose-your-phone)।
 
 ### Customer-এর জন্য কিছু তৈরি করা
 
@@ -97,8 +125,9 @@ Website, database বা app যোগ করার সময় **কার জ
 - **ওয়েবসাইট**, **ডাটাবেস**, **অ্যাপ**, **ইমেইল** আর **DNS**: শুধু যা তাঁর নিজের। Mail domain হতে
   হবে তাঁর নিজের website-এর domain; hosted DNS zone হতে হবে তাঁর নিজের website বা app-এর domain। তিনি
   নিজের Cloudflare account connect করতে পারেন।
-- **নিরাপত্তা** (তাঁর password আর two-factor authentication) আর **নোটিফিকেশন** (তাঁর নিজের alert
-  channel)।
+- **নিরাপত্তা** (তাঁর password আর two-factor authentication; পরের release থেকে recovery code, passkey আর
+  তাঁর sign in থাকা device-ও: দেখুন [Account-এর নিরাপত্তা](/guides/security/accounts/)) আর **নোটিফিকেশন**
+  (তাঁর নিজের alert channel)।
 - **API টোকেন** (API tokens, পরের release থেকে): script আর ekctl-এর জন্য তাঁর নিজের
   [token](/guides/security/api-tokens/), read, website, database, app, DNS আর email-এ সীমিত।
 
@@ -172,14 +201,17 @@ Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আ�
 - এটা সর্বোচ্চ **এক ঘণ্টা** থাকে।
 - Audit log প্রতিটা কাজ **আপনার** নামে record করে, আর এটাও যে আপনি customer হিসেবে কাজ করেছেন।
 - Customer-এর নিজের account security তাঁরই থাকে: তাঁর হয়ে sign in করা অবস্থায় আপনি তাঁর password
-  বদলাতে, two-factor authentication চালু বা বন্ধ করতে, তাঁর অন্য session sign out করাতে, তাঁর
-  notification channel বদলাতে, বা তাঁর API token দেখতে বা বানাতে পারবেন না।
+  বদলাতে, two-factor authentication চালু বা বন্ধ করতে, তাঁর recovery code, passkey বা sign in থাকা device
+  দেখতে, তাঁর অন্য session sign out করাতে, তাঁর notification channel বদলাতে, বা তাঁর API token দেখতে বা
+  বানাতে পারবেন না।
+- পরের release থেকে customer তাঁর **সাইন ইন থাকা ডিভাইস** (Signed-in devices) তালিকায় আপনার এই sign-in
+  **একজন অ্যাডমিন** (An administrator) চিহ্ন-সহ দেখেন, আর সেখান থেকে sign out করাতে পারেন।
 - Customer হিসেবে sign in করা অবস্থায় terminal, app shell-সহ, পাওয়া যায় না।
 
 ## যা শুধু admin-রা পারেন
 
-- Package আর customer তৈরি, বদল আর মুছে ফেলা, customer-দের password reset করা, আর তাঁদের হয়ে sign in
-  করা।
+- Package আর customer তৈরি, বদল আর মুছে ফেলা, customer-দের password (আর পরের release থেকে তাঁদের two-factor
+  sign-in) reset করা, আর তাঁদের হয়ে sign in করা।
 - Server যোগ করা আর সরানো, তাদের metric আর service দেখা, আর একটা root
   [terminal](/guides/apps/terminal/) খোলা।
 - [Backup](/guides/data/backups/), firewall, server security, email server আর built-in name server সেট

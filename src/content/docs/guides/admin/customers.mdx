@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 If you host websites for other people, give each of them a **customer** account. A customer signs
 in to the same panel and sees only what they own, within the limits of their **package**. A
@@ -78,11 +78,40 @@ first".
 </Steps>
 
 The customer's panel language starts as yours at the moment you create them; they can change it.
-If they lose their password, click **New password** on the customers list to make a new one (shown
-once). This signs them out everywhere.
 
 The customers list shows each customer's package and use, such as "2 of 3" websites and their disk
 space.
+
+### Reset a password or two-factor sign-in
+
+If a customer loses their password, click **New password** on the customers list to make a new one
+(shown once). This signs them out everywhere. It does not change their two-factor sign-in.
+
+<Badge text="next release" variant="note" /> If a customer turned on two-factor sign-in and lost
+both their phone and their [recovery codes](/guides/security/accounts/#recovery-codes), you can
+turn it off for them:
+
+<Steps>
+
+1. On the customers list, click **Reset two-factor** next to the customer. The button shows only
+   for customers who have two-factor sign-in on.
+
+2. Confirm: "Turn off two-factor sign-in for …? They sign in with their password and can turn it
+   on again. Do this only when you know it is really them."
+
+3. Tell the customer to sign in with their password and turn two-factor sign-in on again under
+   **Security**. They get ten new recovery codes then.
+
+</Steps>
+
+Resetting also deletes their recovery codes. It does not remove their passkeys and does not sign
+them out. The audit log records it as "Customer's two-factor reset" under your name. If you think someone
+else has the customer's password, give them a **New password** as well, which signs out every
+device.
+
+Only customers have this button. An administrator who lost their phone uses a recovery code, a
+passkey, or `ekpanel reset-2fa` on the panel's server: see
+[If you lose your phone](/guides/security/accounts/#if-you-lose-your-phone).
 
 ### Creating things for a customer
 
@@ -97,8 +126,10 @@ A customer signs in at the same address as you. They see:
 - **Websites**, **Databases**, **Apps**, **Email** and **DNS**: only what they own. Mail domains
   must be domains of their own websites; hosted DNS zones must be domains of their own websites or
   apps. They can connect their own Cloudflare account.
-- **Security** (their password and two-factor authentication) and **Notifications** (their own
-  alert channels).
+- **Security** (their password and two-factor authentication; from the next release also
+  recovery codes, passkeys and their signed-in devices: see
+  [Account security](/guides/security/accounts/)) and **Notifications** (their own alert
+  channels).
 - **API tokens** (from the next release): their own [tokens](/guides/security/api-tokens/) for
   scripts and ekctl, limited to read, websites, databases, apps, DNS and email.
 
@@ -175,14 +206,17 @@ To see exactly what a customer sees, or to fix something for them:
 - This lasts **one hour** at most.
 - The audit log records each action with **your** name and that you acted as the customer.
 - The customer's own account security stays theirs: while signed in as them you cannot change their
-  password, turn two-factor authentication on or off, sign out their other sessions, change
-  their notification channels, or see or make their API tokens.
+  password, turn two-factor authentication on or off, see their recovery codes, passkeys or
+  signed-in devices, sign out their other sessions, change their notification channels, or see
+  or make their API tokens.
+- From the next release, the customer sees your visit in their **Signed-in devices** list,
+  marked **An administrator**, and can sign it out there.
 - Terminals, including app shells, are not available while signed in as a customer.
 
 ## Only administrators can
 
-- Create, change and delete packages and customers, reset customers' passwords, and sign in as
-  them.
+- Create, change and delete packages and customers, reset customers' passwords (and, from the
+  next release, their two-factor sign-in), and sign in as them.
 - Add and remove servers, see their metrics and services, and open a root
   [terminal](/guides/apps/terminal/).
 - Set up [backups](/guides/data/backups/), the firewall, server security, email servers and the

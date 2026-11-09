@@ -63,7 +63,8 @@ of these promises is a vulnerability we want to hear about. Some examples:
 - a website's files, PHP, cron job, FTP or SFTP login reaching outside its own folder or account
 - the agent doing something that is not one of its typed operations, or accepting unchecked
   input from the panel
-- getting into the panel without the password (and two-factor code), or around the setup token
+- getting into the panel without the password (and two-factor code, or one of the account's
+  recovery codes or passkeys), or around the setup token
 - cross-site request forgery or script injection in the web UI
 - secrets showing up where they should not: in logs, API answers, the process list, or files
   other accounts can read

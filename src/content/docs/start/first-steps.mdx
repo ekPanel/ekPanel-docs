@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 This page walks you through your first half hour with a freshly installed panel: from the
 first sign-in to a website that is online and backed up.
@@ -57,11 +57,17 @@ your password. An administrator can do everything on every server, so turn it on
 
 </Steps>
 
+<Badge text="next release" variant="note" /> The panel then shows ten **recovery codes**, once.
+Each one signs you in once if you lose your phone. Copy or download them, keep them somewhere
+safe away from your phone, and click **I have saved them**. See
+[Recovery codes](/guides/security/accounts/#recovery-codes).
+
 On the same page you can change your password and **Sign out all other devices**.
 
 <Aside type="caution">
-Keep your phone, or a backup of your authenticator app, safe. Without the code you cannot
-sign in.
+Keep your phone, or a backup of your authenticator app, safe. Without the code (or, from the
+next release, a recovery code) you cannot sign in. See
+[If you lose your phone](/guides/security/accounts/#if-you-lose-your-phone).
 </Aside>
 
 ## 3. Look around: dashboard and server

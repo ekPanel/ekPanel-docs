@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 ekPanel tells you when something needs attention: a server went offline, a backup failed, a
 website could not be set up, a disk is filling up. Every alert appears under the **bell** at the
@@ -125,6 +125,7 @@ databases, disk space and account.
 | **Disk space used up** | A customer uses all of it | Administrators and that customer |
 | **Task failed** | A task (an image update, a restore, a WordPress install …) failed for good, after its last attempt. Scheduled and manual backups, and setting up websites, apps and databases, send their own alerts instead | Administrators, and the customer who started it |
 | **Sign-in from a new address** | Someone signed in to your account from an address not used in the last 90 days (not on the very first sign-in) | Only you |
+| **Sign-in with a recovery code** | <Badge text="next release" variant="note" /> Someone signed in to your account with a two-factor [recovery code](/guides/security/accounts/#recovery-codes). Says from which address, and how many codes are left | Only you |
 | **New ekPanel version** | The panel found a newer [release](/guides/admin/updates/). Sent once per version | Administrators |
 | **ekPanel updated** | An [update](/start/upgrade/) finished, with how many servers had a problem | Administrators |
 | **ekPanel update failed** | An update could not be installed; the panel keeps its current version | Administrators |

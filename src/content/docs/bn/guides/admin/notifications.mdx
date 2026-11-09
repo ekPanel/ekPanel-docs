@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 কোনো কিছুতে নজর দেওয়া দরকার হলে ekPanel আপনাকে জানায়: একটা server offline হয়ে গেছে, একটা backup fail
 করেছে, একটা website সেট করা যায়নি, একটা disk ভরে আসছে। প্রতিটা alert panel-এর ওপরে **ঘণ্টা**-র (bell)
@@ -128,6 +128,7 @@ Admin-রা প্রতিটা ঘটনা থেকে বেছে নি
 | **ডিস্কের জায়গা শেষ** | একজন customer পুরোটাই ব্যবহার করছেন | Admin আর ওই customer |
 | **কাজ ব্যর্থ** | একটা task (image update, restore, WordPress install …) শেষ চেষ্টার পর পাকাপাকিভাবে fail করেছে। Schedule করা আর হাতে চালানো backup, আর website, app ও database সেট করা, এর বদলে নিজেদের alert পাঠায় | Admin, আর যে customer এটা শুরু করেছেন |
 | **নতুন ঠিকানা থেকে সাইন-ইন** | কেউ আপনার account-এ এমন address থেকে sign in করেছে, যা গত 90 দিনে ব্যবহার হয়নি (একদম প্রথম sign-in-এ নয়) | শুধু আপনি |
+| **রিকভারি কোড দিয়ে সাইন-ইন** | <Badge text="পরের release" variant="note" /> কেউ two-factor-এর একটা [recovery code](/guides/security/accounts/#recovery-codes) দিয়ে আপনার account-এ sign in করেছে। কোন address থেকে, আর কয়টা code বাকি, তা বলে | শুধু আপনি |
 | **ekPanel-এর নতুন ভার্সন** | Panel একটা নতুন [release](/guides/admin/updates/) পেয়েছে। প্রতিটা version-এ একবার পাঠানো হয় | Admin |
 | **ekPanel আপডেট হয়েছে** | একটা [update](/start/upgrade/) শেষ হয়েছে, কয়টা server-এ সমস্যা হয়েছে সহ | Admin |
 | **ekPanel আপডেট ব্যর্থ** | একটা update install করা যায়নি; panel তার বর্তমান version-এই থাকে | Admin |

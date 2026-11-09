@@ -17,7 +17,9 @@ its backup when its server is gone. 4d, importers, is done too: a whole cPanel a
 imported from its full backup, with its websites, files, MySQL databases, email with its mail,
 cron jobs and DNS zones; one website at a time, from aaPanel or any other host, from an
 archive of its files with its database dump; and Coolify's applications and services, through
-its API. Next is 4e, resellers and white-label. The full plan, with every decision and test, is
+its API. 4e has started: its first part, account security (recovery codes for two-factor
+sign-in, resetting someone's two-factor sign-in, a list of signed-in devices, and passkeys), is
+done and comes with the next release. Resellers and white-label come next. The full plan, with every decision and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -178,12 +180,25 @@ with a real Coolify v4). Next is 4e.
 - A report of what was imported and what was not <Badge text="done" variant="success" /> (for
   Coolify, notes on each app)
 
-### 4e. Resellers and white-label
+### 4e. Resellers and white-label <Badge text="partly done" variant="caution" />
+
+Done in the `dev` branch; it comes with the **next release**:
+
+- [Account security](/guides/security/accounts/) <Badge text="done" variant="success" />:
+  - Ten one-time recovery codes when two-factor sign-in is turned on, shown once and kept only
+    as hashes; usable in the sign-in's code field, with an alert and an audit log entry when one
+    is used, and new ones on the Security page
+  - Resetting someone's two-factor sign-in: a customer's from the customers list, anyone's with
+    `ekpanel reset-2fa` on the panel's server. API tokens can never do it
+  - Passkeys, and the active sessions listed and ended one by one on the Security page
+  - Recovery codes and sessions were tried in a browser on a local panel; passkeys so far only
+    in the automated tests, with a virtual authenticator, not yet with a real device
+
+Still to come:
 
 - Resellers with their own packages and customers, within limits an administrator gives them
 - White-label: name, logo, colours and the panel's domain
 - Sub-users with chosen permissions
-- Passkeys, and a list of active sessions
 
 ### 4f. Security center
 

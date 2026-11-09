@@ -13,7 +13,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Aside type="note">
 এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
-server-এ সরানো, backup থেকে website আবার বানানো, আর cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), আর recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -214,6 +214,12 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   list দিয়ে।
 - **Account**: two-factor sign-in (TOTP), sign-in rate limiting, **অন্য সব ডিভাইস থেকে সাইন আউট**
   (Sign out all other devices), আর নতুন address থেকে sign-in হলে একটা alert।
+- <Badge text="পরের release" variant="note" /> [Account-এর নিরাপত্তা](/guides/security/accounts/):
+  two-factor sign-in-এর দশটা এক-বারের recovery code, একটা ব্যবহার হলে alert-সহ; customer তালিকা থেকে
+  customer-এর two-factor sign-in reset, আর panel-এর server-এ `ekpanel reset-2fa` দিয়ে administrator-এর;
+  password আর code-এর বদলে passkey (আঙুলের ছাপ, মুখ, PIN বা security key); আর sign in থাকা device-এর তালিকা,
+  যার প্রতিটা আলাদা করে sign out করা যায়। Passkey একটা virtual authenticator দিয়ে test করা হয়েছে, আসল device
+  দিয়ে এখনো নয়।
 - প্রতিটা পরিবর্তনের একটা append-only audit log (শুধু যোগ করা যায়, মোছা বা বদলানো যায় না)।
 
 ## Customer আর package
@@ -306,7 +312,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
+| Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
 

@@ -77,7 +77,8 @@ the better choice: it has limited scopes, an expiry, and you can revoke it on it
    ```
 
    If the account has two-factor authentication, the first answer is `401` with the code
-   `totp_required`. Send the same request again with `"totp_code":"123456"` added.
+   `totp_required`. Send the same request again with `"totp_code":"123456"` added. From the
+   next release, the same field also takes a recovery code; each one works once.
 
 2. Send the cookie with every later request:
 
@@ -100,6 +101,9 @@ About the session:
 - A session lasts 7 days. The panel stores only a SHA-256 hash of it.
 - **Sign out all other devices** in your account ends every other session
   (`POST /auth/sessions/revoke-others`). It does not revoke API tokens.
+- From the next release, `GET /auth/sessions` lists your signed-in sessions (with `current`
+  for the one you send), and `DELETE /auth/sessions/{id}` ends one of the others. The current
+  one answers `400 session_current`: sign out with `POST /auth/logout` instead.
 - After 10 failed sign-ins from one address or for one email address, sign-ins are refused for
   15 minutes (code `too_many_attempts`).
 
@@ -153,8 +157,10 @@ tools you trust with that.
 These need a signed-in browser session. With a token they answer `403 token_not_allowed`:
 
 - **Account security:** everything under `/auth` except `GET /auth/me`: changing the
-  password, two-factor sign-in, signing out, ending other sessions, confirming the password,
-  changing your language.
+  password, two-factor sign-in and recovery codes, signing out, listing and ending sessions,
+  passkeys, confirming the password, changing your language.
+- **Resetting two-factor sign-in:** any path with a `2fa` segment, such as
+  `POST /customers/{id}/2fa/reset`, even for a token with the `customers` scope.
 - **Tokens themselves:** `GET /tokens`, `POST /tokens` and `DELETE /tokens/{id}`. A token can
   never make, see or revoke tokens.
 - **Terminals:** any path with a `terminal` segment (server and app terminals). A terminal is
@@ -398,6 +404,7 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | `GET /openapi.json` | The API description. |
 | `GET /setup/status`, `POST /setup` | First administrator, with the setup token. |
 | `POST /auth/login` | Sign in. |
+| `POST /auth/passkey/options`, `POST /auth/passkey/login` | <Badge text="next release" variant="note" /> Sign in with a passkey: the first gives the browser its challenge (`ceremony` and `options`), the second takes the browser's answer. Meant for the browser's WebAuthn calls, not for scripts. |
 | `POST /hooks/git/{id}` | Git webhooks from GitHub, GitLab, Gitea, Forgejo and Gogs. Checked by the app's webhook secret, not a session or token. |
 
 ### Your account (any signed-in user)
@@ -407,6 +414,9 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | `/auth/me`, `/auth/logout` | Who you are, your language, signing out. |
 | `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable` | Two-factor authentication. |
 | `/auth/sessions/revoke-others`, `/auth/confirm`, `/auth/impersonation/end` | Sessions, password confirmation, ending **Sign in as**. |
+| `GET /auth/2fa/recovery-codes`, `POST /auth/2fa/recovery-codes` | <Badge text="next release" variant="note" /> How many recovery codes are left (`{"left": 9}`); ten new ones, with `{"password": "…"}`. |
+| `GET /auth/sessions`, `DELETE /auth/sessions/{id}` | <Badge text="next release" variant="note" /> Signed-in devices: list, sign one out. |
+| `GET /auth/passkeys`, `POST /auth/passkeys/options`, `POST /auth/passkeys`, `DELETE /auth/passkeys/{id}` | <Badge text="next release" variant="note" /> Passkeys: list, start adding one (with `{"password": "…"}`), finish adding it with the browser's answer, remove. |
 | `/tokens`, `/tokens/{id}` | Your API tokens: list, create, revoke (browser session only). |
 
 ### Administrators and customers
@@ -430,6 +440,7 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Group | Endpoints start with |
 | --- | --- |
 | Customers and packages | `/customers`, `/packages` |
+| Resetting a customer's two-factor sign-in | <Badge text="next release" variant="note" /> `POST /customers/{id}/2fa/reset` (browser session only, not while signed in as a customer). |
 | Servers | `/servers` (add, delete, connection command, addresses, live statistics, metrics, services, terminal, PHP extensions, usage, traffic) |
 | Server security | `/servers/{id}/security/...` (CrowdSec, bans, alerts, automatic updates, countries, malware) |
 | Firewall | `/servers/{id}/firewall` |

@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 এই page আপনাকে নতুন install করা panel-এর সাথে প্রথম আধা ঘণ্টা ধাপে ধাপে দেখাবে: প্রথম sign-in
 থেকে শুরু করে online থাকা আর backup নেওয়া একটা website পর্যন্ত।
@@ -58,12 +58,18 @@ code-ও লাগবে। একজন administrator সব server-এ সব�
 
 </Steps>
 
+<Badge text="পরের release" variant="note" /> এরপর panel দশটা **recovery code** দেখায়, একবারই। Phone হারালে
+প্রতিটা দিয়ে একবার sign in করা যায়। এগুলো copy বা download করে phone থেকে দূরে নিরাপদ কোথাও রাখুন, তারপর
+**রেখে দিয়েছি** (I have saved them)-এ click করুন। দেখুন
+[Recovery code](/guides/security/accounts/#recovery-codes)।
+
 একই page-এ আপনি password বদলাতে পারেন, আর **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all
 other devices) করতে পারেন।
 
 <Aside type="caution">
-আপনার phone, বা authenticator app-এর একটা backup, নিরাপদে রাখুন। Code ছাড়া আপনি sign in করতে
-পারবেন না।
+আপনার phone, বা authenticator app-এর একটা backup, নিরাপদে রাখুন। Code ছাড়া (বা পরের release থেকে একটা
+recovery code ছাড়া) আপনি sign in করতে পারবেন না। দেখুন
+[ফোন হারালে](/guides/security/accounts/#if-you-lose-your-phone)।
 </Aside>
 
 ## 3. ঘুরে দেখুন: dashboard আর server

@@ -144,7 +144,16 @@ agent-রা বিশ্বাস করে। এর backup কোনো গ�
 - Password argon2id দিয়ে hash করা হয়। ব্যর্থ sign-in-এ rate limit আছে।
 - **Two-factor authentication** (TOTP) প্রত্যেক user-এর জন্য আছে। Server security page-এ সেইসব
   administrator-এর তালিকা থাকে, যাঁরা এটা চালু করেননি।
-- **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বাকি সব session শেষ করে। কেউ নতুন
+- পরের release থেকে two-factor sign-in চালু করলে দশটা এক-বারের **recovery code** পাওয়া যায়। Panel
+  শুধু এগুলোর SHA-256 hash রাখে; একটা ব্যবহার হলে audit log-এ থাকে আর user একটা notification পান।
+  Administrator কোনো customer-এর two-factor sign-in reset করতে পারেন; administrator-এর নিজেরটা reset হয়
+  শুধু panel-এর server থেকে (`ekpanel reset-2fa`), কখনো API token দিয়ে নয়।
+- পরের release থেকে user-রা **passkey** (WebAuthn) দিয়ে sign in করতে পারেন: একটা discoverable
+  credential, যা device আঙুলের ছাপ, মুখ বা PIN দিয়ে খোলে (user verification), তাই এটা দুটো factor
+  হিসেবেই গোনা হয়। এটা panel-এর host name-এর সাথে বাঁধা, তাই দেখতে একই রকম কোনো নকল site এটা ব্যবহার
+  করতে পারে না। যোগ করতে আবার password লাগে।
+- **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বাকি সব session শেষ করে; পরের release
+  থেকে **সাইন ইন থাকা ডিভাইস** (Signed-in devices) তালিকা থেকে একটা একটা করেও শেষ করা যায়। কেউ নতুন
   address থেকে sign in করলে user notification পান।
 - Session cookie `HttpOnly`, `SameSite=Lax`, আর `__Host-` prefix ব্যবহার করে। কিছু বদলায় এমন request
   cross-site request forgery থেকে সুরক্ষিত, আর একটা কড়া Content Security Policy কোনো inline script
@@ -162,8 +171,9 @@ Script আর [ekctl](/reference/cli/) command-line tool password-এর বদ�
   Customer-রা শুধু নিজেদের জিনিসের scope বেছে নিতে পারেন।
 - Token-এর মেয়াদ শেষ হয় 30, 90 বা 365 দিনে (অথবা কখনো না, যদি আপনি তা বেছে নেন), আর একটা একটা করে revoke করা যায়। Panel
   দেখায় প্রতিটা শেষ কখন আর কোথা থেকে ব্যবহার হয়েছে।
-- Scope যা-ই হোক, token **কখনো** password বা two-factor sign-in বদলাতে, session শেষ করতে, token বানাতে, দেখতে বা
-  revoke করতে, বা terminal (root বা container-এর shell) খুলতে পারে না। এগুলোর জন্য browser-এ sign in করা একজন
+- Scope যা-ই হোক, token **কখনো** password বা two-factor sign-in বদলাতে, কারও two-factor sign-in reset করতে,
+  session দেখতে বা শেষ করতে, passkey যোগ করতে বা সরাতে, token বানাতে, দেখতে বা revoke করতে, বা terminal (root
+  বা container-এর shell) খুলতে পারে না। এগুলোর জন্য browser-এ sign in করা একজন
   মানুষ লাগে। Token বানানো যায় শুধু browser session থেকে, আর customer হিসেবে ঢোকা administrator তাঁর জন্য token
   বানাতে পারেন না।
 - Token দিয়ে করা প্রতিটা পরিবর্তন audit log-এ মালিকের নামে থাকে, token-এর নামসহ।
@@ -205,14 +215,13 @@ GitHub environment-এ থাকে। Public key-টা installer আর দু
 ## এখনো নেই
 
 - একটা **web application firewall** আর প্রতিটা site-এর rate limiting (phase 4)।
-- **Passkey** আর active session-এর তালিকা (phase 4)।
 
 বিস্তারিত আছে [roadmap](/project/roadmap/)-এ।
 
 ## আরও দেখুন
 
 - [নিরাপত্তার overview guide](/guides/security/overview/): আপনার server-এ কী কী শক্ত করবেন।
-- [আপনার account](/guides/security/accounts/): two-factor sign-in আর session।
+- [আপনার account](/guides/security/accounts/): two-factor sign-in, recovery code, passkey আর session।
 - [API token](/guides/security/api-tokens/): script আর ekctl-এর key।
 - [Security policy](/project/security-policy/): কীভাবে vulnerability জানাবেন।
 - [Architecture](/concepts/architecture/)

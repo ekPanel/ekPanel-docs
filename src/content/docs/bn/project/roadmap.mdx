@@ -14,7 +14,9 @@ description আর `ekctl` command-line tool) শেষ হয়েছে, আ�
 server-এ সরানো, আর server চলে গেলে একটা website তার backup থেকে অন্য server-এ আবার বানানো। 4d, importer-ও শেষ: একটা পুরো cPanel account তার full backup থেকে
 import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে; aaPanel বা অন্য যেকোনো
 host থেকে একটা একটা করে website, তার file-এর archive আর database dump থেকে; আর Coolify-এর application আর service, তার API
-দিয়ে। এরপর 4e, reseller আর white-label।
+দিয়ে। 4e শুরু হয়েছে: এর প্রথম অংশ, account-এর নিরাপত্তা (two-factor sign-in-এর recovery code, কারও
+two-factor sign-in reset করা, sign in থাকা device-এর তালিকা, আর passkey), শেষ হয়েছে আর আসবে পরের release-এ।
+এরপর reseller আর white-label।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -162,12 +164,25 @@ host-গুলোর মতো করে বানানো backup দিয়�
   data admin নিজে কপি করেন; database ইমপোর্ট হয় না
 - কী import হয়েছে আর কী হয়নি, তার একটা report <Badge text="শেষ" variant="success" /> (Coolify-এর জন্য প্রতিটা app-এর note)
 
-### 4e. Reseller আর white-label
+### 4e. Reseller আর white-label <Badge text="আংশিক শেষ" variant="caution" />
+
+`dev` branch-এ শেষ; আসবে **পরের release-এ**:
+
+- [Account-এর নিরাপত্তা](/guides/security/accounts/) <Badge text="শেষ" variant="success" />:
+  - Two-factor sign-in চালু করলে দশটা এক-বারের recovery code, একবারই দেখানো আর শুধু hash হিসেবে রাখা;
+    sign-in-এর code-এর field-এ ব্যবহার করা যায়, একটা ব্যবহার হলে alert আর audit log-এ লেখা, আর নিরাপত্তা
+    পাতায় নতুন code
+  - কারও two-factor sign-in reset করা: customer-এরটা customer তালিকা থেকে, যে কারও panel-এর server-এ
+    `ekpanel reset-2fa` দিয়ে। API token দিয়ে কখনো করা যায় না
+  - Passkey, আর নিরাপত্তা পাতায় active session-এর তালিকা, যেখান থেকে একটা একটা করে শেষ করা যায়
+  - Recovery code আর session একটা local panel-এ browser দিয়ে চালিয়ে দেখা হয়েছে; passkey এখন পর্যন্ত শুধু
+    automated test-এ, একটা virtual authenticator দিয়ে, আসল device দিয়ে এখনো নয়
+
+বাকি আছে:
 
 - নিজস্ব package আর customer-সহ reseller, administrator-এর দেওয়া সীমার মধ্যে
 - White-label: নাম, logo, রং আর panel-এর domain
 - বাছাই করা permission-সহ sub-user
-- Passkey, আর active session-এর একটা তালিকা
 
 ### 4f. Security center
 

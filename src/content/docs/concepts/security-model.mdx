@@ -145,8 +145,17 @@ agents trust. Back it up somewhere private, and never share it.
 - Passwords are hashed with argon2id. Failed sign-ins are rate limited.
 - **Two-factor authentication** (TOTP) is available to every user. The server security page
   lists administrators who have not turned it on.
-- **Sign out all other devices** ends every other session. Users get a notification when
-  someone signs in from a new address.
+- From the next release, turning on two-factor sign-in gives ten one-time **recovery codes**.
+  The panel keeps only their SHA-256 hashes; using one is in the audit log and sends the user a
+  notification. An administrator can reset a customer's two-factor sign-in; an administrator's
+  own is reset only from the panel's server (`ekpanel reset-2fa`), never with an API token.
+- From the next release, users can sign in with a **passkey** (WebAuthn): a discoverable
+  credential that the device unlocks with a fingerprint, face or PIN (user verification), so
+  it counts as both factors. It is bound to the panel's host name, so a look-alike site cannot
+  use it. Adding one needs the password again.
+- **Sign out all other devices** ends every other session; from the next release, the
+  **Signed-in devices** list also ends them one by one. Users get a notification when someone
+  signs in from a new address.
 - Session cookies are `HttpOnly`, `SameSite=Lax` and use the `__Host-` prefix. Requests that
   change something are protected against cross-site request forgery, and a strict Content
   Security Policy allows no inline scripts.
@@ -164,8 +173,9 @@ leaked token does as little harm as possible:
   for changes. Customers can only choose the scopes of what they own.
 - A token expires after 30, 90 or 365 days (or never, if you choose that), and tokens can be
   revoked one by one. The panel shows when and from where each was last used.
-- Whatever its scopes, a token can **never** change a password or two-factor sign-in, end
-  sessions, make, see or revoke tokens, or open a terminal (a root or container shell). Those
+- Whatever its scopes, a token can **never** change a password or two-factor sign-in, reset
+  someone's two-factor sign-in, see or end sessions, add or remove passkeys, make, see or revoke
+  tokens, or open a terminal (a root or container shell). Those
   need a person signed in in the browser. Tokens are made only in a browser session, and an
   administrator signed in as a customer cannot make tokens for them.
 - Every change made with a token is in the audit log under its owner, with the token's name.
@@ -208,14 +218,14 @@ Updates only go forward, and the previous program is kept to go back to. See
 ## Not there yet
 
 - A **web application firewall** and rate limiting per site (phase 4).
-- **Passkeys** and a list of active sessions (phase 4).
 
 The [roadmap](/project/roadmap/) has the details.
 
 ## Related
 
 - [Security overview guide](/guides/security/overview/): what to tighten on your servers.
-- [Your account](/guides/security/accounts/): two-factor sign-in and sessions.
+- [Your account](/guides/security/accounts/): two-factor sign-in, recovery codes, passkeys and
+  sessions.
 - [API tokens](/guides/security/api-tokens/): keys for scripts and ekctl.
 - [Security policy](/project/security-policy/): how to report a vulnerability.
 - [Architecture](/concepts/architecture/)
