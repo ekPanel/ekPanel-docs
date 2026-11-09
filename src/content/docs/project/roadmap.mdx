@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: What ekPanel can do today, phase by phase, and what comes next - the first release, the API, moving between servers, importers, resellers, a WAF, billing and game servers.
+description: What ekPanel can do today, phase by phase, and what comes next - the API, moving between servers, importers, resellers, a WAF, billing and game servers.
 sidebar:
   order: 1
 ---
@@ -9,14 +9,14 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 ekPanel is built in phases. Each phase ends with something you can install on a real server and
 use. **Phases 0 to 3 are done**, and so is the first part of phase 4: releases and updates (4a).
-The first release comes next. The full plan,
-with every decision and test, is
+The first release, v0.1.0, came out of it on 9 November 2026; next is the API (4b). The full
+plan, with every decision and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
-<Aside type="caution" title="No release yet">
+<Aside type="caution" title="Early software">
 "Done" below means built and tested on a test server (a local VM), not used in production.
-There is no release yet. Everything it needs is ready (4a below); the first one, v0.1.0, comes
-when the project's owner publishes it.
+The first release, v0.1.0, is out: try it and test it, but do not host anything important on
+it yet.
 </Aside>
 
 ## Done
@@ -73,8 +73,9 @@ comes last because it builds on API tokens (4b) and resellers (4e).
 
 ### 4a. Releases and updates <Badge text="done" variant="success" />
 
-Built and tested in the VM with test releases signed by a test key. **The first release comes
-next.**
+Built and tested in the VM with test releases signed by a test key. **The first release,
+[v0.1.0](https://github.com/ekPanel/ekpanel/releases/tag/v0.1.0), was published from it on
+9 November 2026.** Next is 4b.
 
 - Release builds in CI (Linux amd64 and arm64), reproducible from a tag, with a signed
   checksum list and GitHub build attestations
@@ -86,7 +87,7 @@ next.**
   agent, one server at a time
 - Release notes from the changelog, and every server's agent version on the
   [Updates](/guides/admin/updates/) page
-- Still open: a web translation platform (Weblate or similar) before the first public release
+- Still open: a web translation platform (Weblate or similar)
 
 How a release is made: an owner tags `vX.Y.Z` on `pub`. The Release workflow builds
 reproducible archives for amd64 and arm64, signs `SHA256SUMS` with the key kept in the

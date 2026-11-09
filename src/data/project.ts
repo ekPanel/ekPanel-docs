@@ -4,12 +4,14 @@
  */
 export const project = {
 	name: 'ekPanel',
-	/** "early" while there is no release; "release" after the first one. */
+	/** "early" while ekPanel is early software (try it, host nothing important on it); "release"
+	 * once it is ready for real use. Releases exist in both stages: see latestVersion. */
 	stage: 'early' as 'early' | 'release',
 	/** The latest release, such as "0.1.0", or null before the first. */
-	latestVersion: null as string | null,
+	latestVersion: '0.1.0' as string | null,
 	/** The roadmap phase being worked on (see /project/roadmap/). 4a (releases and updates) is
-	 * done; the first release is published from it, then work goes on with 4b. */
+	 * done and the first release, v0.1.0, was published from it on 2026-11-09; work goes on
+	 * with 4b. */
 	currentPhase: '4b',
 	links: {
 		org: 'https://github.com/ekPanel',

@@ -20,7 +20,8 @@ const qs = quickstart[lang];
 			project.stage === 'early' && (
 				<p class="ek-pill">
 					<span class="ek-dot" aria-hidden="true" />
-					{lang === 'bn' ? 'শুরুর পর্যায়ে · এখনো release হয়নি' : 'Early development · no release yet'}
+					{lang === 'bn' ? 'শুরুর পর্যায়ে' : 'Early development'} ·{' '}
+					{project.latestVersion ? `v${project.latestVersion}` : lang === 'bn' ? 'এখনো release হয়নি' : 'no release yet'}
 				</p>
 			)
 		}
