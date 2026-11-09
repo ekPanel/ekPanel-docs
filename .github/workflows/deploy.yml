@@ -1,10 +1,10 @@
-# Builds the site on every push to main and publishes it on GitHub Pages. Pull requests are
-# built too, so a broken page or link is caught before it is merged.
+# Builds the site on every push and pull request, and publishes it on GitHub Pages from pub
+# (which changes only through pull requests from dev), so a broken page is caught first.
 name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [dev, pub]
   pull_request:
   workflow_dispatch:
 
@@ -29,12 +29,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v5
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/pub'
         with:
           path: dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/pub'
     needs: build
     runs-on: ubuntu-latest
     permissions:

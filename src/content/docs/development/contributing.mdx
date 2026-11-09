@@ -55,9 +55,9 @@ are good places to start:
 | Branch | What it holds |
 | --- | --- |
 | `dev` | All work happens here. It is the default branch. **Open pull requests against `dev`.** |
-| `prod` | Production-ready code. It changes only through a pull request from `dev`. |
+| `pub` | Published code. It changes only through a pull request from `dev`. |
 
-Nobody pushes to `prod` directly.
+Nobody pushes to `pub` directly. The documentation repository works the same way.
 
 ## From idea to merged change
 
@@ -99,7 +99,7 @@ Nobody pushes to `prod` directly.
 
 ## Checks that must pass
 
-CI (`.github/workflows/ci.yml`) runs on every push to `dev` and `prod` and on every pull request.
+CI (`.github/workflows/ci.yml`) runs on every push to `dev` and `pub` and on every pull request.
 It has two jobs:
 
 | Job | Steps |

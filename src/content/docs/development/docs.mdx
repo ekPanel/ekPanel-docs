@@ -75,7 +75,7 @@ You need Node.js 22 or newer and Git.
 
 ## Write a page
 
-Read [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/main/WRITING.md) first. The
+Read [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/HEAD/WRITING.md) first. The
 short version:
 
 - **Truth first.** Describe what the code does today. Check the main repository before you
@@ -166,9 +166,11 @@ See [Translating](/development/translating/#translate-these-docs) for the steps 
 
 ## How the site is published
 
-`.github/workflows/deploy.yml` builds the site with Node.js 22 on every push to `main` and
-publishes it on GitHub Pages at https://ekpanel.github.io/ekPanel-docs/. Pull requests are built
-too (but not published), so a broken page is caught before it is merged. The "last updated"
+Like every ekPanel repository, the docs have two branches: `dev`, where all changes go, and
+`pub`, which changes only through a pull request from `dev`. `.github/workflows/deploy.yml`
+builds the site with Node.js 26 on every push to `pub` and publishes it on GitHub Pages at
+https://ekpanel.github.io/ekPanel-docs/. Pushes to `dev` and pull requests are built too (but
+not published), so a broken page is caught before it is published. The "last updated"
 date of each page comes from the Git history.
 
 The site is served under `/ekPanel-docs` until the project has a domain of its own; that is why

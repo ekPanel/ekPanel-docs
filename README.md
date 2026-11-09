@@ -30,9 +30,10 @@ npm run build      # the site in dist/, as it will be published
   follows (describe what the code does today, write for beginners, Bangla style).
 - Every page has an "Edit page" link that opens it here on GitHub.
 
-The site is built with [Starlight](https://starlight.astro.build/). Every push to `main` is
-published by the workflow in `.github/workflows/deploy.yml`; pull requests are built to catch
-broken pages.
+The site is built with [Starlight](https://starlight.astro.build/). Like every ekPanel
+repository it has two branches: all work goes to `dev`, and `pub` changes only through pull
+requests from `dev`. Every push to `pub` is published by `.github/workflows/deploy.yml`; pushes
+to `dev` and pull requests are built too, to catch broken pages first.
 
 ## Contributing
 

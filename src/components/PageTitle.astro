@@ -1,0 +1,28 @@
+---
+/**
+ * The page's title with its description underneath as a short lead, the way the best
+ * documentation sites open a page. The description is the one in each page's frontmatter.
+ */
+const { title, description } = Astro.locals.starlightRoute.entry.data;
+---
+
+<h1 id="_top">{title}</h1>
+{description && <p class="ek-lead">{description}</p>}
+
+<style>
+	h1 {
+		margin-top: 0.75rem;
+		font-size: var(--sl-text-h1);
+		line-height: 1.15;
+		font-weight: 650;
+		letter-spacing: -0.025em;
+		color: var(--sl-color-white);
+	}
+	.ek-lead {
+		margin-top: 0.75rem;
+		max-width: 42rem;
+		font-size: 1.15rem;
+		line-height: 1.6;
+		color: var(--sl-color-gray-2);
+	}
+</style>

@@ -55,9 +55,9 @@ Label দেওয়া starter issue-এর কোনো list এখনো ন
 | Branch | এতে কী থাকে |
 | --- | --- |
 | `dev` | সব কাজ এখানেই হয়। এটাই default branch। **Pull request `dev`-এর বিপরীতে খুলুন।** |
-| `prod` | Production-এর জন্য তৈরি code। এটা শুধু `dev` থেকে একটা pull request দিয়েই বদলায়। |
+| `pub` | Publish হওয়া code। এটা শুধু `dev` থেকে একটা pull request দিয়েই বদলায়। |
 
-কেউ সরাসরি `prod`-এ push করে না।
+কেউ সরাসরি `pub`-এ push করে না। Documentation-এর repository-ও একইভাবে চলে।
 
 ## Idea থেকে merge হওয়া change পর্যন্ত
 
@@ -98,7 +98,7 @@ Label দেওয়া starter issue-এর কোনো list এখনো ন
 
 ## যে check-গুলো pass করতে হবে
 
-CI (`.github/workflows/ci.yml`) `dev` আর `prod`-এ প্রতিটা push-এ আর প্রতিটা pull request-এ চলে। এর দুটো
+CI (`.github/workflows/ci.yml`) `dev` আর `pub`-এ প্রতিটা push-এ আর প্রতিটা pull request-এ চলে। এর দুটো
 job আছে:
 
 | Job | Step |

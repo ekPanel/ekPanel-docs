@@ -79,3 +79,32 @@ export const paths: { link: string; en: Text; bn: Text }[] = [
 		bn: { title: 'আমি এটা বানাতে সাহায্য করতে চাই', text: 'Development environment সাজান আর প্রথম পরিবর্তনটা করুন।' },
 	},
 ];
+
+/**
+ * The commands shown next to the headline. They follow the install page (/start/install/);
+ * when releases arrive, this becomes the one-line installer.
+ */
+export const quickstart: Record<'en' | 'bn', { label: string; lines: string[] }> = {
+	en: {
+		label: 'Install from source',
+		lines: [
+			'# On your computer: build ekPanel',
+			'git clone https://github.com/ekPanel/ekpanel.git',
+			'cd ekpanel && make release',
+			'# On a fresh Ubuntu 24.04 server',
+			'tar -xzf ekpanel-*-amd64.tar.gz && cd ekpanel-*-amd64',
+			'sudo ./install.sh --local-dir . --domain panel.example.com',
+		],
+	},
+	bn: {
+		label: 'Source থেকে install',
+		lines: [
+			'# আপনার computer-এ: ekPanel build করুন',
+			'git clone https://github.com/ekPanel/ekpanel.git',
+			'cd ekpanel && make release',
+			'# নতুন একটা Ubuntu 24.04 server-এ',
+			'tar -xzf ekpanel-*-amd64.tar.gz && cd ekpanel-*-amd64',
+			'sudo ./install.sh --local-dir . --domain panel.example.com',
+		],
+	},
+};

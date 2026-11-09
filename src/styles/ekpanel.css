@@ -1,74 +1,268 @@
 /*
- * ekPanel's look for the docs: the panel's colours and fonts (assets/brand in the main repo).
- * Colours are set once as tokens below; everything else uses Starlight's variables, so a
- * Starlight update keeps working and a colour changes in one place.
+ * ekPanel's look for the docs, in the spirit of the best documentation sites: calm white (or
+ * near-black) pages, crisp type, one accent colour used sparingly, quiet navigation.
+ *
+ * Everything is set as tokens in the first two blocks; the rest only uses tokens and
+ * Starlight's own variables. To change a colour or a font, change it here, once.
  */
 
-/* ---- Tokens ---------------------------------------------------------------------------- */
+/* ---- Tokens: shared ---------------------------------------------------------------------- */
 
 :root {
-	--ek-black: #0f1513; /* terminal black */
+	/* Brand (assets/brand in the main repository). */
 	--ek-green: #36d27e; /* cursor green */
-	--ek-green-deep: #13804a; /* the panel's accent on light themes */
-	--ek-white: #eaf2ee; /* screen white */
-	--ek-border: #28332f;
+	--ek-green-deep: #13804a; /* the panel's accent on light backgrounds */
+	--ek-amber: #f2b13c;
+
+	/* Type. Geist for Latin, Hind Siliguri for Bangla, Geist Mono for code. */
+	--sl-font: 'Geist Variable', 'Hind Siliguri', ui-sans-serif, system-ui, sans-serif;
+	--sl-font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, monospace;
+	--sl-text-h1: 2.4rem;
+	--sl-text-h2: 1.6rem;
+	--sl-text-h3: 1.25rem;
+	--sl-line-height: 1.7;
+	--sl-line-height-headings: 1.25;
+
+	/* Layout: a comfortable reading width, a slimmer sidebar. */
+	--sl-content-width: 46rem;
+	--sl-sidebar-width: 17rem;
 	--ek-radius: 0.75rem;
-
-	--sl-font: 'Noto Sans Variable', 'Noto Sans Bengali Variable', system-ui, sans-serif;
-	--sl-font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
 }
 
-/* Dark (the default): cursor green on terminal black. */
+/* ---- Tokens: dark (the default when the system is dark) --------------------------------- */
+
 :root {
-	--sl-color-accent-low: #0f2e1f;
+	--sl-color-accent-low: #0e2a1c;
 	--sl-color-accent: var(--ek-green);
-	--sl-color-accent-high: #c9f5dc;
-	--sl-color-black: var(--ek-black);
-	--sl-color-gray-6: #18201d;
-	--sl-color-gray-5: var(--ek-border);
-	--ek-card-glow: rgba(54, 210, 126, 0.16);
+	--sl-color-accent-high: #c6f6da;
+
+	--sl-color-white: #f2f5f4; /* strongest text */
+	--sl-color-gray-1: #dde3e1;
+	--sl-color-gray-2: #b3bcb8; /* body text */
+	--sl-color-gray-3: #87918d; /* muted */
+	--sl-color-gray-4: #5a6360;
+	--sl-color-gray-5: #262d2b; /* borders */
+	--sl-color-gray-6: #151a19; /* raised surfaces */
+	--sl-color-gray-7: #101413;
+	--sl-color-black: #0b0e0d; /* page */
+
+	--sl-color-bg-nav: rgb(11 14 13 / 0.82);
+	--sl-color-bg-sidebar: #0b0e0d;
+	--sl-color-hairline: #1d2321;
+	--sl-color-hairline-light: #262d2b;
+
+	--ek-code-bg: #0f1312;
+	--ek-code-fg: #dde3e1;
+	--ek-shadow-lg: 0 1.5rem 3rem -1.5rem rgb(0 0 0 / 0.8);
+	--ek-glow: rgb(54 210 126 / 0.12);
 }
 
-/* Light: the panel's deeper green, readable on white. */
+/* ---- Tokens: light ---------------------------------------------------------------------- */
+
 :root[data-theme='light'] {
-	--sl-color-accent-low: #ddf3e6;
+	--sl-color-accent-low: #e3f5ea;
 	--sl-color-accent: var(--ek-green-deep);
 	--sl-color-accent-high: #0b4a2b;
-	--ek-card-glow: rgba(19, 128, 74, 0.14);
+
+	--sl-color-white: #0c1412; /* strongest text */
+	--sl-color-gray-1: #1e2826;
+	--sl-color-gray-2: #3f4a47; /* body text */
+	--sl-color-gray-3: #66716e; /* muted */
+	--sl-color-gray-4: #95a09c;
+	--sl-color-gray-5: #e2e7e5; /* borders */
+	--sl-color-gray-6: #f4f6f5; /* raised surfaces */
+	--sl-color-gray-7: #f9faf9;
+	--sl-color-black: #ffffff; /* page */
+
+	--sl-color-bg-nav: rgb(255 255 255 / 0.85);
+	--sl-color-bg-sidebar: #fbfcfb;
+	--sl-color-hairline: #e8ecea;
+	--sl-color-hairline-light: #eef1f0;
+
+	--ek-code-bg: #0f1312; /* the home page terminal stays dark in both themes */
+	--ek-code-fg: #dde3e1;
+	--ek-shadow-lg: 0 1.5rem 3rem -1.5rem rgb(12 20 18 / 0.35);
+	--ek-glow: rgb(19 128 74 / 0.08);
 }
 
-/* ---- Bangla ---------------------------------------------------------------------------- */
+/* ---- Bangla ----------------------------------------------------------------------------- */
 
-/* Bangla script reads better a little larger, with more space between lines. */
+/* Bangla script needs a little more size and room between lines than Latin. */
 :root:lang(bn) {
 	--sl-line-height: 1.85;
+	--sl-font: 'Hind Siliguri', 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
 }
 :lang(bn) .sl-markdown-content {
-	font-size: 1.04em;
+	font-size: 1.06em;
+}
+:lang(bn) h1,
+:lang(bn) h2,
+:lang(bn) h3 {
+	letter-spacing: 0 !important;
 }
 
-/* ---- Home page ------------------------------------------------------------------------- */
+/* ---- Header ----------------------------------------------------------------------------- */
 
-.hero {
-	position: relative;
-	isolation: isolate;
+.header {
+	backdrop-filter: saturate(1.6) blur(12px);
+	-webkit-backdrop-filter: saturate(1.6) blur(12px);
+	border-bottom: 1px solid var(--sl-color-hairline);
 }
-/* A soft green glow behind the logo, like a lit screen. */
-.hero::before {
-	content: '';
-	position: absolute;
-	inset: -2rem 0 auto auto;
-	width: min(32rem, 70vw);
-	aspect-ratio: 1;
-	background: radial-gradient(circle, var(--ek-card-glow), transparent 65%);
-	pointer-events: none;
-	z-index: -1;
+site-search button[data-open-modal] {
+	border-radius: 0.6rem;
+	background: var(--sl-color-gray-6);
+	border-color: var(--sl-color-gray-5);
 }
-.hero h1 {
+
+/* ---- Sidebar (quiet, like Stripe's) ----------------------------------------------------- */
+
+.sidebar-pane {
+	border-inline-end: 1px solid var(--sl-color-hairline);
+}
+/* Group names: small capitals, muted. */
+.sidebar-content summary .large {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--sl-color-gray-3);
+}
+:lang(bn) .sidebar-content summary .large {
+	font-size: 0.85rem;
+	letter-spacing: 0;
+}
+.sidebar-content .top-level > li + li {
+	margin-top: 0.9rem;
+}
+/* Pages: no rail, muted until hovered, the current one marked softly. */
+.sidebar-content ul ul li {
+	border-inline-start: 0;
+	margin-inline-start: 0;
+	padding-inline-start: 0;
+}
+.sidebar-content a {
+	font-size: 0.9rem;
+	color: var(--sl-color-gray-2);
+	border-radius: 0.45rem;
+	padding: 0.32em 0.6rem;
+}
+.sidebar-content a:hover {
+	color: var(--sl-color-white);
+	background: var(--sl-color-gray-6);
+}
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+	font-weight: 600;
+	color: var(--sl-color-accent);
+	background: var(--sl-color-accent-low);
+}
+
+/* ---- Table of contents ------------------------------------------------------------------ */
+
+starlight-toc nav h2 {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--sl-color-gray-3);
+}
+starlight-toc nav a {
+	font-size: 0.85rem;
+	color: var(--sl-color-gray-3);
+}
+starlight-toc nav a[aria-current='true'] {
+	color: var(--sl-color-accent);
+}
+
+/* ---- Content ---------------------------------------------------------------------------- */
+
+.sl-markdown-content {
+	color: var(--sl-color-gray-2);
+}
+.sl-markdown-content :is(h2, h3, h4) {
+	color: var(--sl-color-white);
+	font-weight: 650;
 	letter-spacing: -0.02em;
 }
+.sl-markdown-content h2 {
+	margin-top: 2.75rem;
+	padding-top: 1.75rem;
+	border-top: 1px solid var(--sl-color-hairline);
+}
+.sl-markdown-content a:not(:where(.card, .sl-link-card, .sl-link-button, .ek-card-link)) {
+	color: var(--sl-color-accent);
+	text-decoration-color: color-mix(in srgb, var(--sl-color-accent) 35%, transparent);
+	text-underline-offset: 0.2em;
+}
+.sl-markdown-content a:not(:where(.card, .sl-link-card, .sl-link-button, .ek-card-link)):hover {
+	text-decoration-color: currentColor;
+}
+.sl-markdown-content strong {
+	color: var(--sl-color-white);
+	font-weight: 600;
+}
 
-/* Feature cards are links to their guides. */
+/* Inline code: a light chip. */
+.sl-markdown-content :not(pre) > code {
+	padding: 0.12em 0.4em;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.35rem;
+	background: var(--sl-color-gray-6);
+	font-size: 0.86em;
+	color: var(--sl-color-gray-1);
+}
+
+/* Tables: hairlines only, a quiet header; wide tables scroll. */
+.sl-markdown-content table {
+	display: block;
+	overflow-x: auto;
+	border-collapse: collapse;
+	font-size: 0.92em;
+}
+.sl-markdown-content :is(th, td) {
+	border: 0;
+	border-bottom: 1px solid var(--sl-color-hairline);
+	padding: 0.6rem 0.9rem;
+}
+.sl-markdown-content th {
+	background: transparent;
+	color: var(--sl-color-white);
+	font-weight: 600;
+	border-bottom-color: var(--sl-color-gray-5);
+}
+
+/* Callouts: soft background, a coloured edge, like Stripe's notes. */
+.starlight-aside {
+	border: 0;
+	border-inline-start: 3px solid var(--sl-color-asides-border);
+	border-radius: 0 var(--ek-radius) var(--ek-radius) 0;
+	padding: 1rem 1.25rem;
+}
+.starlight-aside__title {
+	font-size: 0.95rem;
+}
+
+/* Steps: numbers in calm circles. */
+.sl-steps > li::before {
+	font-weight: 600;
+}
+
+/* Cards and link cards: hairline boxes that lift a little on hover. */
+.sl-markdown-content :is(.card, .sl-link-card) {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: var(--ek-radius);
+	background: var(--sl-color-black);
+	box-shadow: none;
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+.sl-markdown-content .sl-link-card:hover,
+.ek-card-link:hover .card {
+	border-color: color-mix(in srgb, var(--sl-color-accent) 55%, var(--sl-color-gray-5));
+	box-shadow: 0 0.75rem 1.75rem -1rem var(--ek-glow), 0 0 0 4px var(--ek-glow);
+}
 .ek-card-link {
 	display: block;
 	color: inherit;
@@ -77,44 +271,55 @@
 }
 .ek-card-link .card {
 	height: 100%;
-	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease,
-		transform 0.15s ease;
 }
-.ek-card-link:hover .card,
-.ek-card-link:focus-visible .card {
-	border-color: var(--sl-color-accent);
-	box-shadow: 0 0.5rem 1.5rem var(--ek-card-glow);
-	transform: translateY(-2px);
+.sl-markdown-content .card .title {
+	font-weight: 600;
+	color: var(--sl-color-white);
 }
-@media (prefers-reduced-motion: reduce) {
-	.ek-card-link .card {
-		transition: none;
-	}
-	.ek-card-link:hover .card {
-		transform: none;
-	}
-}
-
-/* ---- Content --------------------------------------------------------------------------- */
-
-.sl-markdown-content .card,
-.sl-markdown-content .sl-link-card,
-.sl-markdown-content .starlight-aside {
-	border-radius: var(--ek-radius);
-}
-
-/* Commands stand out as the thing to copy. */
-.sl-markdown-content pre {
+.sl-markdown-content .card .icon {
+	color: var(--sl-color-accent);
+	background: var(--sl-color-accent-low);
+	border: 0;
 	border-radius: 0.6rem;
 }
 
-/* Tables: a light header row, and wide tables scroll instead of squeezing. */
-.sl-markdown-content table {
-	display: block;
-	overflow-x: auto;
+/* Buttons. */
+.sl-link-button {
+	border-radius: 0.6rem;
+	font-weight: 600;
 }
-.sl-markdown-content th {
-	background: var(--sl-color-gray-6);
+.sl-link-button.primary {
+	background: var(--sl-color-white);
+	border-color: var(--sl-color-white);
+	color: var(--sl-color-black);
+}
+
+/* Footer of each page: quieter. */
+.sl-markdown-content + footer,
+footer .meta {
+	color: var(--sl-color-gray-3);
+}
+.pagination-links a {
+	border-radius: var(--ek-radius);
+	border-color: var(--sl-color-gray-5);
+	box-shadow: none;
+}
+
+/* ---- Home page -------------------------------------------------------------------------- */
+
+/* A faint green light at the top of the home page, like a screen just switched on. */
+[data-has-hero] .main-frame {
+	background: radial-gradient(60rem 28rem at 70% -6rem, var(--ek-glow), transparent 70%);
+}
+[data-has-hero] .sl-markdown-content h2 {
+	border-top: 0;
+	padding-top: 0;
+	margin-top: 3.5rem;
+	font-size: 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		transition: none !important;
+	}
 }

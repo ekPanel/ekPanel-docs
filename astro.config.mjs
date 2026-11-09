@@ -40,14 +40,28 @@ export default defineConfig({
 			defaultLocale: 'root',
 			locales,
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/ekPanel' }],
-			editLink: { baseUrl: 'https://github.com/ekPanel/ekPanel-docs/edit/main/' },
+			editLink: { baseUrl: 'https://github.com/ekPanel/ekPanel-docs/edit/dev/' },
 			lastUpdated: true,
 			customCss: [
-				'@fontsource-variable/noto-sans',
-				'@fontsource-variable/noto-sans-bengali',
-				'@fontsource-variable/jetbrains-mono',
+				'@fontsource-variable/geist',
+				'@fontsource-variable/geist-mono',
+				'@fontsource/hind-siliguri/400.css',
+				'@fontsource/hind-siliguri/500.css',
+				'@fontsource/hind-siliguri/600.css',
+				'@fontsource/hind-siliguri/700.css',
 				'./src/styles/ekpanel.css',
 			],
+			// Our versions of two pieces of Starlight: the home page's opening, and page titles
+			// with the page's description as a lead.
+			components: {
+				Hero: './src/components/Hero.astro',
+				PageTitle: './src/components/PageTitle.astro',
+			},
+			// Code blocks: GitHub's themes, with rounded frames.
+			expressiveCode: {
+				themes: ['github-dark-default', 'github-light'],
+				styleOverrides: { borderRadius: '0.75rem', codeFontSize: '0.86rem', frames: { shadowColor: 'transparent' } },
+			},
 			sidebar,
 		}),
 	],
