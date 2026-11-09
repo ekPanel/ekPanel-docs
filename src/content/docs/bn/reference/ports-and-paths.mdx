@@ -127,6 +127,7 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | `/etc/ekpanel/cron/` | Cron job-এর script। |
 | `/etc/ekpanel/ssh/` | SFTP key, root-এর মালিকানার file-এ, যা site account-রা বদলাতে পারে না। |
 | `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH setting, যা SFTP-কে প্রতিটা site-এর folder-এ আটকে রাখে। |
+| `/srv/ekpanel/incoming/<move id>/` | [Website সরানোর](/guides/websites/move/) সময় নতুন server-এ: কপি হওয়া home folder (`home.tar`) আর database dump, জায়গামতো বসানো পর্যন্ত। তারপর, বা সরানো ব্যর্থ হলে, মুছে ফেলা হয়। শুধু root। |
 
 `<account>` হলো website-এর Linux account, website-এর page-এ **লিনাক্স অ্যাকাউন্ট** হিসেবে দেখানো।
 একটা website বা app-এর ID হলো panel-এ এর address-এ থাকা লম্বা ID।

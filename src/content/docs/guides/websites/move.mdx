@@ -1,0 +1,278 @@
+---
+title: Move to another server
+description: Move a website and its databases to another of your servers, point its domain there, and remove the old copy when visitors have followed.
+sidebar:
+  order: 9
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+You can move a website, with the databases it uses, from one of your servers to another: to
+free up a full server, to retire an old one, or to give a busy site a server of its own. The
+copy goes straight from server to server, the new server is checked before anything switches,
+and the old copy keeps serving until you remove it.
+
+## Before you start
+
+- You are an **administrator**. Customers do not see this; they can ask you to move a site.
+- For a customer's website, the new server is one their package allows (otherwise: "The customer's
+  package does not include this server. Add it to the package first.").
+- **Both servers are connected.** The new server is [added to the panel](/start/add-server/)
+  and shows **Online** on the **Servers** page, and so does the website's current server.
+- **The website is working**: its page shows no error and it is not being set up. The same
+  goes for every database you take along.
+- **The database names are free on the new server.** A database keeps its name and its user
+  on the new server, so the new server must not have a database or a user of the same name
+  (for the same engine) yet.
+- **The new server has enough free disk space**: about twice the size of the website's home
+  folder, plus the size of its databases. The copy is kept in one piece on the new server
+  before it is unpacked. Check **Disk** on the server's page.
+- **Pick a quiet time.** Changes made on the old copy after the copy starts (new orders,
+  comments, uploads) are not carried over.
+
+<Aside type="tip">
+If you do not manage the domain's DNS in the panel, lower the TTL of its `A` and `AAAA` records
+to 300 seconds at your DNS provider a day before. Visitors then follow the new address within
+minutes instead of hours.
+</Aside>
+
+## Move a website
+
+<Steps>
+
+1. Open the website. Find the **Move to another server** card and click **Move…**.
+
+2. In **Move to**, choose the server. Only servers other than the current one are listed;
+   servers that are not connected show **(Offline)** and cannot be chosen.
+
+3. Under **Databases to move with it**, tick every database the website uses. The list shows
+   all databases of the website's owner on its current server, not only this website's.
+   "They keep their names, users and passwords, so the website's settings stay right."
+
+4. Read the steps and the warning, then click **Start the move**.
+
+</Steps>
+
+The card now shows the move: its phase, the two servers (**old → new**), when it started, and
+how much was copied. It updates by itself.
+
+<Aside type="caution">
+Tick only databases this website uses. A database that another website also uses would leave
+that website's server too: the other website keeps working until you remove the old copy, then
+it loses its database.
+</Aside>
+
+## What happens during a move
+
+| Phase | What happens |
+| --- | --- |
+| **Copying** | The old server packs the website and sends it, through the panel, to the new server, which keeps it in `/srv/ekpanel/incoming/<move>/`. The website's certificates go straight into the new server's web server. Visitors notice nothing. |
+| **Switching over** | In the panel, the website and its databases now belong to the new server. The new server sets them up as for a new website (the same Linux account name, the PHP version, the database server if it is missing, the databases with the same users and passwords), puts the copied files and databases in place, and asks its own web server for the home page. The old server keeps serving its copy. |
+| **Moved** | The website runs on the new server. DNS records the panel manages now point there. The old copy still answers visitors whose DNS has not changed yet. |
+| **Removing the old copy** | After you choose to remove it: the old server deletes its copy. |
+| **Done** | Only the new server has the website. |
+| **Failed** | The error is shown on the card. See [When a move fails](#when-a-move-fails). |
+
+Most of the time goes into setting up the new server. In a test with two VMs, a PHP website
+with a MariaDB database and a 20 MB file moved in about 90 seconds, most of it installing PHP
+and MariaDB on the new server; the copy itself took a few seconds.
+
+### What is copied
+
+- **Files**: the website's whole home folder (`/home/<account>`: `public_html`, its logs, other
+  files), with owners, permissions and ACLs. The Linux account has the same name on the new
+  server.
+- **Databases**: a dump of each database you ticked (MariaDB with `--single-transaction`, so
+  the website keeps working while it is taken), loaded into the new server's database of the
+  same name.
+- **Certificates**: the website's certificates, and those of its extra domains, from the
+  web server's storage. HTTPS works on the new server at once, before DNS changes.
+- **Settings and cron jobs**: everything the panel stores about the website (PHP version and
+  settings, extra domains, redirects, SFTP access) is applied on the new server. Its
+  [cron jobs](/guides/websites/cron/) move too: they stop on the old server at the switch and
+  run only on the new one.
+
+The web server's request log (`/var/log/caddy/site-<id>.log`) is not copied; the new server
+starts a new one.
+
+## Point the domain to the new server
+
+### When the panel manages the DNS
+
+If the domain is on the panel's own [name servers](/guides/dns/name-servers/) or connected
+through [Cloudflare](/guides/dns/cloudflare/), its `A` and `AAAA` records follow the website by
+themselves: the panel updates them right after the switch. The built-in name servers give these
+records a TTL of 300 seconds. With Cloudflare's proxy on, visitors follow as soon as the record
+changes.
+
+Two exceptions keep a record on the old address:
+
+- on the built-in name servers, a record of your own with the same name and type is used
+  instead of ekPanel's (it is listed under **Records ekPanel could not add**);
+- in Cloudflare, a record ekPanel made but someone changed afterwards is not overwritten.
+
+### When it does not
+
+The card says: "If the panel does not manage this domain's DNS, point its records to …", with
+the new server's address. At your DNS provider, change the `A` record (and `AAAA`, if you have
+one) of the domain and of each extra domain, such as `www`, to the new server's address.
+
+The address is the one under **Public addresses for DNS** on the new server's page, or else
+the first address the server reports. If the server is behind NAT, set its public address
+there first. See [Servers](/guides/admin/servers/#public-addresses-for-dns).
+
+### Check the new server first
+
+You can try the website on the new server before DNS changes. Tell `curl` to use the new
+server's address for the domain:
+
+```bash
+curl -I --resolve example.com:443:203.0.113.20 https://example.com/
+```
+
+Replace `example.com` with the domain and `203.0.113.20` with the new server's address. An
+answer such as `HTTP/2 200` (or a redirect your website makes) means it works.
+
+### How long to wait
+
+Remove the old copy only when visitors no longer reach it:
+
+1. The domain points to the new server. Check from your computer and from a public resolver:
+
+   ```bash
+   dig +short example.com
+   dig +short example.com @1.1.1.1
+   ```
+
+2. After the change, the old record's **TTL** has passed. Resolvers may keep the old address for
+   that long. The TTL is the value the record had **before** you changed it: if it was one day
+   (86400 seconds), wait a day.
+
+Until then, both copies answer. Anything visitors change on the old copy in that time
+(orders, comments, uploads) stays there.
+
+<Aside type="caution">
+Do not leave the domain on the old server for long. The new server can renew the website's
+Let's Encrypt certificate only once the domain points to it. The copied certificate stays valid
+until its own expiry date (at most 90 days).
+</Aside>
+
+## Remove the old copy
+
+<Steps>
+
+1. On the website's page, in the **Move to another server** card, click
+   **Remove the old copy on _server_**.
+
+2. Confirm: "Remove the old copy on _server_? Its files and databases there are deleted. Only do
+   this once the domain points to the new server."
+
+</Steps>
+
+The phase changes to **Removing the old copy**, then **Done**. The old server deletes the
+website's Linux account, its home folder, its web server and PHP settings, and the databases
+that moved with it. Databases you did not tick stay where they were. This cannot be undone.
+
+Until the old copy is removed, nobody (not even the website's owner) can delete the website:
+the panel answers "This website is being moved, or its old copy is still on the other server.
+Finish the move first." Once the move is **Done**, the website can be moved again, back to
+its first server too.
+
+<Aside type="note">
+[Backup locations](/guides/data/backups/) belong to a server. After the move, the website is
+backed up only if the new server has a backup location. Its older backups stay in the old
+server's location.
+</Aside>
+
+## When a move fails
+
+A failed move leaves the website where it was.
+
+- **During Copying** (for example, a server lost its connection): the new server deletes what
+  it received. Nothing else changed.
+- **During Switching over** (for example, the new server could not install something, a
+  database dump did not load, or the home page answered with an error `500` or higher): the
+  website and its databases go back to the old server in the panel, and the new server deletes
+  its half-made copy. The old copy served visitors all along.
+
+The card shows **Failed** and the reason. Fix the cause, then click **Move…** again.
+
+<Aside type="caution">
+Avoid updating or restarting the panel while a move runs. A move is not continued after the
+panel restarts: it is marked **Failed** ("the panel restarted during the move"), a website
+that was already switching goes back to the old server, and you can start the move again.
+</Aside>
+
+## With the API or ekctl
+
+An administrator's [API token](/guides/security/api-tokens/) with the `sites` scope can move
+websites. Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/sites/{id}/move` | Start a move. Body: `{"server_id": "…", "database_ids": ["…"]}`. Answers `202` with the move. |
+| `GET /api/v1/sites/{id}/moves` | The website's moves, newest first (up to 20), with `phase`, `error` and `bytes`. |
+| `POST /api/v1/moves/{id}/cleanup` | Remove the old copy. Answers `202` with a [task](/reference/api/#tasks-following-slow-work). |
+
+With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api POST sites/<site id>/move --data '{"server_id":"<server id>","database_ids":["<database id>"]}'
+ekctl api GET sites/<site id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## Limits and what is not there yet
+
+- Only websites move. Moving an [app](/guides/apps/docker-apps/), a database on its own,
+  restoring a backup onto another server and moving a whole customer are not there yet (see
+  the [roadmap](/project/roadmap/)).
+- Changes made on the old copy after the copy starts are not carried over.
+- Email for the domain is not part of the move; it stays on its email server.
+- A WordPress staging copy is a website of its own and stays where it is.
+- The panel does not check free disk space on the new server before it starts.
+- A move that takes longer than 11 hours in all is stopped and fails.
+- Tested with two VMs (a PHP website with a MariaDB database), not yet on real servers or with
+  PostgreSQL databases.
+
+## Troubleshooting
+
+The panel refuses to start a move with one of these messages:
+
+| Message (error code) | What to do |
+| --- | --- |
+| "The website must be working before it can move." (`site_not_active`) | Open the website and fix what its status shows, or wait until it is set up. |
+| "The website is already on this server." (`same_server`) | Choose another server. |
+| "Choose a server to move the website to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
+| "The server's agent is not connected." (`agent_offline`) | One of the two servers is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+| "A chosen database is not on the website's server or belongs to someone else." (`invalid_database`) | Choose only databases of the website's owner on its current server. |
+| "A chosen database must be working before it can move." (`database_not_active`) | Open **Databases** and fix the database first. |
+| "The target server already has a database or user with the same name." (`database_name_taken`) | Delete or rename that database or user on the new server, or move to another server. |
+| "This website is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | Wait for the move to finish, or remove the old copy. |
+| "You do not have permission to do that." (`forbidden`) | Only administrators can move websites. |
+
+Removing the old copy can answer "There is no old copy to remove." (`move_not_moved`): the move
+failed, or the old copy is already gone.
+
+**The move failed with "on the new server the site answered 500" (or another number of 500 or
+more).** The website gave an error on the new server, often because it uses a database you did
+not tick. The website is still on the old server; move it again with every database it needs.
+
+**The move is Moved, but the website shows a database error on the new server.** A database it
+needs stayed on the old server. A new move can start only once the old copy is removed, and
+removing it does not delete databases you did not tick. So either remove the old copy and move
+the website back to the old server (ticking the databases that went along), or copy the
+missing database to the new server by hand.
+
+**Removing the old copy shows an error.** The card keeps the reason. The old server tries
+again each time the panel applies its state; to try at once, click the remove button on the
+card again (it stays there while the error is shown).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="Servers" href="/guides/admin/servers/" description="Add, watch and remove servers." />
+	<LinkCard title="Built-in name servers" href="/guides/dns/name-servers/" />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />
+</CardGrid>

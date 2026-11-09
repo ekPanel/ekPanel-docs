@@ -1,0 +1,255 @@
+---
+title: অন্য server-এ সরান
+description: একটা website আর তার database অন্য server-এ সরান, domain সেখানে দিন, আর visitor-রা চলে এলে পুরোনো কপি মুছে ফেলুন।
+sidebar:
+  order: 9
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা website, তার ব্যবহার করা database সহ, আপনার এক server থেকে আরেক server-এ সরাতে পারেন: ভরে যাওয়া server খালি
+করতে, পুরোনো server বাদ দিতে, বা ব্যস্ত কোনো site-কে আলাদা server দিতে। কপি সরাসরি এক server থেকে আরেক server-এ যায়,
+কিছু বদলানোর আগে নতুন server যাচাই করা হয়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি চলতে থাকে।
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এটা দেখেন না; site সরাতে হলে তাঁরা আপনাকে বলতে পারেন।
+- কোনো customer-এর website হলে, নতুন server তাঁর package-এ থাকতে হবে (না থাকলে: "গ্রাহকের প্যাকেজে এই সার্ভার নেই।
+  আগে প্যাকেজে যোগ করুন।")।
+- **দুটো server-ই connected।** নতুন server [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায়
+  **অনলাইন** (Online) দেখায়, website-এর বর্তমান server-ও তাই।
+- **Website ঠিকমতো চলছে**: তার পাতায় কোনো error নেই, আর সেটা set up হওয়ার মাঝখানে নেই। সাথে নেওয়া প্রতিটা database-এর
+  ক্ষেত্রেও একই কথা।
+- **নতুন server-এ database-এর নামগুলো খালি।** নতুন server-এ database তার নাম আর user একই রাখে, তাই নতুন server-এ (একই
+  engine-এর) ওই নামে কোনো database বা user আগে থেকে থাকা চলবে না।
+- **নতুন server-এ যথেষ্ট disk জায়গা আছে**: website-এর home folder-এর প্রায় দ্বিগুণ, সাথে তার database-গুলোর size। Unpack
+  করার আগে কপিটা নতুন server-এ পুরোটা একসাথে রাখা হয়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন।
+- **শান্ত সময় বেছে নিন।** কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায় (নতুন order, comment, upload), তা নতুনটায় যায় না।
+
+<Aside type="tip">
+Domain-এর DNS panel-এ না চালালে, এক দিন আগে আপনার DNS provider-এ তার `A` আর `AAAA` record-এর TTL কমিয়ে 300 second করুন।
+তাহলে visitor-রা কয়েক ঘণ্টার বদলে কয়েক মিনিটের মধ্যে নতুন address-এ চলে আসেন।
+</Aside>
+
+## Website সরান
+
+<Steps>
+
+1. Website খুলুন। **অন্য সার্ভারে সরান** (Move to another server) card খুঁজে **সরান…** (Move…)-এ click করুন।
+
+2. **যেখানে সরাবেন** (Move to)-এ server বেছে নিন। শুধু বর্তমান server ছাড়া অন্যগুলো তালিকায় থাকে; connected নয় এমন
+   server **(অফলাইন)** ((Offline)) দেখায়, সেগুলো বেছে নেওয়া যায় না।
+
+3. **সাথে যে ডেটাবেসগুলো যাবে** (Databases to move with it)-এর নিচে website যে database-গুলো ব্যবহার করে, সবগুলোতে tick দিন।
+   তালিকায় website-এর মালিকের বর্তমান server-এর সব database থাকে, শুধু এই website-এর না। "এগুলোর নাম, ইউজার আর পাসওয়ার্ড
+   একই থাকে, তাই ওয়েবসাইটের সেটিংস ঠিক থাকে।"
+
+4. ধাপগুলো আর সতর্কবার্তা পড়ে **সরানো শুরু করুন** (Start the move)-এ click করুন।
+
+</Steps>
+
+এবার card-এ সরানোর কাজটা দেখায়: তার phase, দুটো server (**পুরোনো → নতুন**), কখন শুরু হয়েছে, আর কতটা কপি হয়েছে। এটা
+নিজে থেকেই update হয়।
+
+<Aside type="caution">
+শুধু এই website যে database ব্যবহার করে, সেগুলোতেই tick দিন। অন্য কোনো website-ও যে database ব্যবহার করে, সেটাও server
+ছেড়ে চলে যাবে: পুরোনো কপি মোছা পর্যন্ত অন্য website-টা চলবে, তারপর তার database আর থাকবে না।
+</Aside>
+
+## সরানোর সময় কী হয়
+
+| Phase | যা হয় |
+| --- | --- |
+| **কপি হচ্ছে** (Copying) | পুরোনো server website-টা pack করে panel-এর মাধ্যমে নতুন server-এ পাঠায়, যা সেটা `/srv/ekpanel/incoming/<move>/`-এ রাখে। Website-এর certificate সরাসরি নতুন server-এর web server-এ যায়। Visitor-রা কিছু টের পান না। |
+| **বদলানো হচ্ছে** (Switching over) | Panel-এ website আর তার database এখন নতুন server-এর। নতুন server এগুলো নতুন website-এর মতো set up করে (একই নামের Linux account, PHP version, database server না থাকলে সেটা, একই user আর password-এর database), কপি হওয়া file আর database জায়গামতো বসায়, আর নিজের web server-এর কাছে home page চায়। পুরোনো server তার কপি চালিয়ে যায়। |
+| **সরানো হয়েছে** (Moved) | Website নতুন server-এ চলছে। Panel যে DNS record চালায়, সেগুলো এখন সেখানে point করে। যাদের DNS এখনো বদলায়নি, পুরোনো কপি তাদের এখনো উত্তর দেয়। |
+| **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy) | আপনি মুছতে বলার পরে: পুরোনো server তার কপি মুছে ফেলে। |
+| **শেষ** (Done) | Website শুধু নতুন server-এ আছে। |
+| **ব্যর্থ** (Failed) | Card-এ error দেখায়। দেখুন [সরানো ব্যর্থ হলে](#when-a-move-fails)। |
+
+বেশিরভাগ সময় যায় নতুন server set up করতে। দুটো VM দিয়ে একটা test-এ, MariaDB database আর একটা 20 MB file-সহ একটা PHP
+website প্রায় ৯০ second-এ সরেছে, যার বেশিরভাগটা গেছে নতুন server-এ PHP আর MariaDB install করতে; কপিতে লেগেছে কয়েক second।
+
+### কী কপি হয়
+
+- **File**: website-এর পুরো home folder (`/home/<account>`: `public_html`, তার log, অন্য file), owner, permission আর ACL
+  সহ। নতুন server-এ Linux account-এর নাম একই থাকে।
+- **Database**: আপনার tick দেওয়া প্রতিটা database-এর একটা dump (MariaDB-তে `--single-transaction` দিয়ে, তাই dump নেওয়ার
+  সময়ও website চলতে থাকে), নতুন server-এ একই নামের database-এ load করা হয়।
+- **Certificate**: web server-এর storage থেকে website-এর আর তার extra domain-গুলোর certificate। DNS বদলানোর আগেই নতুন
+  server-এ HTTPS সাথে সাথে কাজ করে।
+- **Settings আর cron job**: Panel website-এর যা কিছু রাখে (PHP version আর settings, extra domain, redirect, SFTP access)
+  সব নতুন server-এ apply হয়। এর [cron job](/guides/websites/cron/)-ও সাথে যায়: switch-এর সময় পুরোনো server-এ বন্ধ হয়, আর
+  শুধু নতুনটায় চলে।
+
+Web server-এর request log (`/var/log/caddy/site-<id>.log`) কপি হয় না; নতুন server নতুন করে শুরু করে।
+
+## Domain নতুন server-এ দিন
+
+### DNS যখন panel চালায়
+
+Domain panel-এর নিজের [name server](/guides/dns/name-servers/)-এ থাকলে বা [Cloudflare](/guides/dns/cloudflare/) দিয়ে
+connected থাকলে, এর `A` আর `AAAA` record নিজে থেকেই website-এর পেছনে যায়: switch-এর ঠিক পরেই panel সেগুলো update করে।
+Built-in name server এই record-গুলোকে 300 second TTL দেয়। Cloudflare-এর proxy চালু থাকলে record বদলানোর সাথে সাথেই
+visitor-রা চলে আসেন।
+
+দুটো ক্ষেত্রে record পুরোনো address-এই থেকে যায়:
+
+- Built-in name server-এ, একই নাম আর type-এর আপনার নিজের record থাকলে ekPanel-এরটার বদলে সেটাই ব্যবহার হয় (সেটা
+  **যেসব record ekPanel যোগ করতে পারেনি** (Records ekPanel could not add)-এর নিচে দেখায়);
+- Cloudflare-এ, ekPanel-এর বানানো কোনো record পরে কেউ বদলে থাকলে সেটা overwrite হয় না।
+
+### যখন চালায় না
+
+Card-এ লেখা থাকে: "এই ডোমেইনের DNS প্যানেল না চালালে, এখনই এর রেকর্ড …-এ দিন" (If the panel does not manage this domain's
+DNS, point its records to …), সাথে নতুন server-এর address। আপনার DNS provider-এ domain-এর আর প্রতিটা extra domain-এর (যেমন
+`www`) `A` record (আর থাকলে `AAAA`) বদলে নতুন server-এর address দিন।
+
+Address টা হলো নতুন server-এর পাতায় **DNS-এর জন্য পাবলিক ঠিকানা** (Public addresses for DNS)-এ দেওয়া address, নইলে server
+যে প্রথম address জানায় সেটা। Server NAT-এর পেছনে থাকলে আগে সেখানে তার public address দিন। দেখুন
+[Server](/guides/admin/servers/#public-addresses-for-dns)।
+
+### আগে নতুন server যাচাই করুন
+
+DNS বদলানোর আগেই নতুন server-এ website চালিয়ে দেখতে পারেন। `curl`-কে বলুন domain-এর জন্য নতুন server-এর address ব্যবহার
+করতে:
+
+```bash
+curl -I --resolve example.com:443:203.0.113.20 https://example.com/
+```
+
+`example.com`-এর জায়গায় domain আর `203.0.113.20`-এর জায়গায় নতুন server-এর address দিন। `HTTP/2 200`-এর মতো উত্তর (বা
+আপনার website-এর নিজের কোনো redirect) মানে এটা কাজ করছে।
+
+### কতক্ষণ অপেক্ষা করবেন
+
+পুরোনো কপি তখনই মুছুন, যখন visitor-রা আর সেখানে পৌঁছান না:
+
+1. Domain নতুন server-এ point করছে। আপনার computer থেকে আর একটা public resolver থেকে check করুন:
+
+   ```bash
+   dig +short example.com
+   dig +short example.com @1.1.1.1
+   ```
+
+2. বদলানোর পরে পুরোনো record-এর **TTL** পার হয়েছে। Resolver-গুলো ততক্ষণ পুরোনো address মনে রাখতে পারে। TTL হলো আপনি
+   বদলানোর **আগে** record-এর যে মান ছিল: সেটা এক দিন (86400 second) হলে এক দিন অপেক্ষা করুন।
+
+ততক্ষণ দুটো কপিই উত্তর দেয়। ওই সময়ে visitor-রা পুরোনো কপিতে যা বদলান (order, comment, upload), তা সেখানেই থেকে যায়।
+
+<Aside type="caution">
+Domain বেশিদিন পুরোনো server-এ রাখবেন না। Domain নতুন server-এ point করলে তবেই সেটা website-এর Let's Encrypt certificate
+renew করতে পারে। কপি হওয়া certificate তার নিজের মেয়াদ (সর্বোচ্চ ৯০ দিন) পর্যন্ত valid থাকে।
+</Aside>
+
+## পুরোনো কপি মুছুন
+
+<Steps>
+
+1. Website-এর পাতায়, **অন্য সার্ভারে সরান** (Move to another server) card-এ **_server_-এর পুরোনো কপি মুছে ফেলুন** (Remove the
+   old copy on _server_)-এ click করুন।
+
+2. নিশ্চিত করুন: "_server_-এর পুরোনো কপি মুছে ফেলবেন? সেখানকার ফাইল আর ডেটাবেস মুছে যাবে। ডোমেইন নতুন সার্ভারে যাওয়ার পরেই
+   এটা করুন।"
+
+</Steps>
+
+Phase বদলে হয় **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy), তারপর **শেষ** (Done)। পুরোনো server website-এর Linux
+account, তার home folder, তার web server আর PHP settings, আর তার সাথে যাওয়া database-গুলো মুছে ফেলে। যে database-এ tick
+দেননি, সেগুলো যেখানে ছিল সেখানেই থাকে। এটা আর ফেরানো যায় না।
+
+পুরোনো কপি মোছা না হওয়া পর্যন্ত কেউই (website-এর মালিকও না) website টা delete করতে পারেন না: panel উত্তর দেয় "এই ওয়েবসাইট
+সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" সরানো **শেষ** (Done) হলে website আবার সরানো যায়,
+প্রথম server-এ ফেরতও।
+
+<Aside type="note">
+[Backup location](/guides/data/backups/) একটা server-এর হয়। সরানোর পরে website-এর backup হয় শুধু তখনই, যদি নতুন server-এ
+কোনো backup location থাকে। পুরোনো backup-গুলো পুরোনো server-এর location-এই থাকে।
+</Aside>
+
+## সরানো ব্যর্থ হলে
+
+সরানো ব্যর্থ হলে website যেখানে ছিল সেখানেই থাকে।
+
+- **কপি হওয়ার সময়** (যেমন কোনো server-এর connection চলে গেলে): নতুন server যা পেয়েছিল তা মুছে ফেলে। আর কিছু বদলায় না।
+- **বদলানোর সময়** (যেমন নতুন server কিছু install করতে পারেনি, কোনো database dump load হয়নি, বা home page `500` বা তার
+  বেশি error দিয়েছে): panel-এ website আর তার database পুরোনো server-এ ফিরে যায়, আর নতুন server তার আধা-বানানো কপি মুছে ফেলে।
+  পুরোটা সময় পুরোনো কপিই visitor-দের সামলেছে।
+
+Card-এ **ব্যর্থ** (Failed) আর কারণ দেখায়। কারণটা ঠিক করে আবার **সরান…** (Move…)-এ click করুন।
+
+<Aside type="caution">
+সরানো চলার সময় panel update বা restart এড়িয়ে চলুন। Panel restart হলে সরানোর কাজ আর এগোয় না: সেটা **ব্যর্থ** (Failed)
+হিসেবে চিহ্নিত হয় ("the panel restarted during the move"), বদলানো শুরু হয়ে থাকলে website পুরোনো server-এ ফিরে যায়, আর আপনি
+আবার সরানো শুরু করতে পারেন।
+</Aside>
+
+## API বা ekctl দিয়ে
+
+`sites` scope-এর একটা admin-এর [API token](/guides/security/api-tokens/) দিয়ে website সরানো যায়। Customer-দের token দিয়ে
+যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/sites/{id}/move` | সরানো শুরু করে। Body: `{"server_id": "…", "database_ids": ["…"]}`। সরানোর কাজটা সহ `202` উত্তর দেয়। |
+| `GET /api/v1/sites/{id}/moves` | Website-এর সরানোর কাজগুলো, নতুনটা আগে (২০টা পর্যন্ত), `phase`, `error` আর `bytes` সহ। |
+| `POST /api/v1/moves/{id}/cleanup` | পুরোনো কপি মোছে। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+
+[ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api POST sites/<site id>/move --data '{"server_id":"<server id>","database_ids":["<database id>"]}'
+ekctl api GET sites/<site id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## সীমা আর যা এখনো নেই
+
+- শুধু website সরানো যায়। [App](/guides/apps/docker-apps/) সরানো, শুধু একটা database সরানো, অন্য server-এ backup restore করা
+  আর পুরো একজন customer সরানো এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+- কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
+- Domain-এর email সরানোর অংশ না; সেটা তার email server-এই থাকে।
+- WordPress-এর staging copy আলাদা একটা website, সেটা যেখানে আছে সেখানেই থাকে।
+- শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
+- মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
+- দুটো VM দিয়ে test করা হয়েছে (MariaDB database-সহ একটা PHP website), এখনো আসল server-এ বা PostgreSQL database দিয়ে না।
+
+## সমস্যা সমাধান
+
+এই message-গুলোর কোনো একটা দিয়ে panel সরানো শুরু করতে রাজি হয় না:
+
+| Message (error code) | যা করবেন |
+| --- | --- |
+| "সরানোর আগে ওয়েবসাইটটা ঠিকমতো চলতে হবে।" (`site_not_active`) | Website খুলে তার status যা দেখায় তা ঠিক করুন, বা set up শেষ হওয়া পর্যন্ত অপেক্ষা করুন। |
+| "ওয়েবসাইটটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
+| "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | **যেখানে সরাবেন** (Move to)-এ একটা server বেছে নিন। API দিয়ে করলে server ID check করুন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | দুটো server-এর একটা offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "বেছে নেওয়া একটা ডেটাবেস ওয়েবসাইটের সার্ভারে নেই, বা অন্য কারো।" (`invalid_database`) | শুধু website-এর মালিকের, তার বর্তমান server-এর database বেছে নিন। |
+| "সরানোর আগে বেছে নেওয়া ডেটাবেস ঠিকমতো চলতে হবে।" (`database_not_active`) | **ডেটাবেস** (Databases) খুলে আগে database টা ঠিক করুন। |
+| "নতুন সার্ভারে আগে থেকেই একই নামের ডেটাবেস বা ইউজার আছে।" (`database_name_taken`) | নতুন server-এ ওই database বা user মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
+| "এই ওয়েবসাইট সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | সরানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা পুরোনো কপি মুছে ফেলুন। |
+| "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা website সরাতে পারেন। |
+
+পুরোনো কপি মোছার সময় উত্তর আসতে পারে "মুছে ফেলার মতো কোনো পুরোনো কপি নেই।" (`move_not_moved`): সরানো ব্যর্থ হয়েছিল, বা
+পুরোনো কপি আগেই মোছা হয়ে গেছে।
+
+**"on the new server the site answered 500" (বা 500 বা তার বেশি অন্য কোনো সংখ্যা) দিয়ে সরানো ব্যর্থ হয়েছে।** নতুন server-এ
+website error দিয়েছে, প্রায়ই এমন কোনো database ব্যবহার করে বলে যেটায় আপনি tick দেননি। Website এখনো পুরোনো server-এই আছে;
+যত database লাগে সবগুলো সহ আবার সরান।
+
+**সরানো Moved, কিন্তু নতুন server-এ website database error দেখায়।** দরকারি কোনো database পুরোনো server-এ রয়ে গেছে। পুরোনো
+কপি মোছার পরেই কেবল নতুন করে সরানো শুরু করা যায়, আর মোছার সময় tick না দেওয়া database মোছে না। তাই হয় পুরোনো কপি মুছে
+website-টা পুরোনো server-এ ফেরত সরান (সাথে যাওয়া database-গুলোতে tick দিয়ে), নয়তো হারানো database টা হাতে করে নতুন
+server-এ কপি করুন।
+
+**পুরোনো কপি মোছার সময় error দেখায়।** Card-এ কারণটা থেকে যায়। Panel যতবার পুরোনো server-এর state apply করে, ততবার server
+আবার চেষ্টা করে; এখনই চেষ্টা করাতে card-এর মোছার button-এ আবার click করুন (error দেখানোর সময় button-টা থাকে)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />
+	<LinkCard title="Built-in name server" href="/guides/dns/name-servers/" />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />
+</CardGrid>

@@ -10,7 +10,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
-description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ; এরপর আসছে server-এর মধ্যে সরানো (4c)।
+description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর প্রথম অংশও তাই: একটা website অন্য server-এ সরানো। এরপর আসছে 4c-এর
+বাকিটা (app, শুধু database, backup, পুরো customer)।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -114,11 +115,19 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 - ধীর কাজের খোঁজ রাখার একটাই উপায়: কাজ শুরু করে এমন প্রতিটা উত্তরে একটা `task_id` (আজ কোনো উত্তর task, কোনোটা
   state-সহ জিনিস, কোনোটা deployment)
 
-### 4c. Server-এর মধ্যে সরানো
+### 4c. Server-এর মধ্যে সরানো <Badge text="আংশিক শেষ" variant="caution" />
 
-- একটা website, app বা database অন্য ekPanel server-এ সরানো, DNS আর certificate-সহ বদলে দিয়ে
+`dev` branch-এ শেষ আর দুটো VM দিয়ে test করা হয়েছে; আসবে **পরের release-এ**:
+
+- আপনার বেছে নেওয়া database সহ একটা [website অন্য ekPanel server-এ সরানো](/guides/websites/move/): owner আর ACL-সহ
+  file, database, certificate, settings আর cron job। কিছু বদলানোর আগে নতুন server যাচাই করা হয়, panel যে DNS চালায় তা
+  পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি চলতে থাকে। সরানো ব্যর্থ হলে website যেখানে ছিল সেখানেই থাকে
+- Copy যায় panel-এর সাথে agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
+
+এখনো বাকি:
+
+- একটা app, বা শুধু একটা database সরানো
 - অন্য server-এ backup restore করা; পুরো একজন customer সরানো
-- Copy যায় agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
 
 ### 4d. Importer
 

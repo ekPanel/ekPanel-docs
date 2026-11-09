@@ -13,7 +13,8 @@ outside service, the list says so.
 
 <Aside type="note">
 Everything on this page is in v0.1.0, the first release, except
-[API and command line](#api-and-command-line), which comes with the next release. You can
+[API and command line](#api-and-command-line) and moving a website to another server
+(under [Many servers](#many-servers)), which come with the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -231,7 +232,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move to another server](/guides/websites/move/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -242,6 +243,11 @@ has not been tried yet.
 - Live CPU, memory, disk, network, load and uptime, with 30 days of history.
 - Services on each server (Caddy, PostgreSQL, cron and others) with restart.
 - Background tasks with their progress shown in the panel.
+- <Badge text="next release" variant="note" /> Moving a website, with the databases you choose,
+  to another server: files (with owners and ACLs), databases and certificate are copied
+  between the servers' agents, the new server is checked before anything switches, DNS the
+  panel manages follows, and the old copy keeps serving until you remove it. Tested with two
+  VMs.
 
 ## API and command line
 
@@ -273,7 +279,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Moving | Move a website, app or database to another server; restore a backup onto another server; move a whole customer |
+| Moving | Move an app, or a database on its own, to another server; restore a backup onto another server; move a whole customer. (Websites can be moved already.) |
 | Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
