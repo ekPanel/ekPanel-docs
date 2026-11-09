@@ -1,0 +1,174 @@
+---
+title: App catalogue
+description: Uptime Kuma, n8n, Nextcloud বা Vaultwarden-এর মতো তৈরি service এক click-এ install করুন, password আপনার জন্য তৈরি করে দেওয়া হয়।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+**App catalogue** হলো তৈরি service-এর একটা তালিকা, যেগুলো এক click-এ install করা যায়: monitoring,
+automation, password manager, blog, নিজের cloud। প্রতিটা হলো একটা Compose file, যা ekPanel project
+লিখেছে আর যাচাই করেছে। আপনি শুধু একটা নাম, একটা server আর একটা domain বেছে নেন; password আর key
+ekPanel বানায়।
+
+## শুরু করার আগে
+
+- যথেষ্ট খালি memory-সহ একটা connected server। প্রতিটা service দেখায় তার কতটা লাগে।
+- Service-এর জন্য একটা domain বা subdomain, যেমন `status.example.com`, যার DNS server-এর দিকে দেওয়া
+  (অথবা ekPanel [Cloudflare](/guides/dns/cloudflare/) বা
+  [built-in name server](/guides/dns/name-servers/)-এর মাধ্যমে সামলায়)। Redis ছাড়া প্রতিটা service
+  তার domain দিয়ে ব্যবহার হয়, তাই domain দিতেই হবে।
+- প্রথম ব্যবহারে Docker নিজে থেকেই install হয়, যেকোনো [Docker app](/guides/apps/docker-apps/)-এর
+  মতো।
+
+## একটা service install করুন
+
+<Steps>
+
+1. **অ্যাপ** (Apps) খুলে **ক্যাটালগ** (Catalogue)-এ click করুন (অথবা, খালি Apps পাতায়, "ক্যাটালগ
+   থেকে তৈরি সার্ভিস ইনস্টল করুন")।
+
+2. Service-টা খুঁজে নিন: **ক্যাটালগে খুঁজুন** (Search the catalogue)-এ লিখুন, বা একটা **বিভাগ**
+   (Category) বাছুন। প্রতিটা card-এ একটা ছোট বর্ণনা আর "প্রায় … মেমরি লাগে" দেখায়।
+
+3. **ইনস্টল করুন** (Install)-এ click করুন।
+
+4. **ইনস্টল** dialog পূরণ করুন:
+   - **নাম** (Name): server-এ app-এর নাম (ছোট হাতের অক্ষর, সংখ্যা আর ড্যাশ)।
+   - **সার্ভার** (Server) (আপনার একাধিক server থাকলে দেখায়)।
+   - **কার জন্য** (For) (শুধু admin): নিজের জন্য ("অ্যাডমিনদের (কোনো প্যাকেজ নয়)"), অথবা এমন একজন
+     customer, যিনি app-টার মালিক হবেন।
+   - **ডোমেইন** (Domain): "সার্ভিসটি এই ডোমেইন দিয়ে ব্যবহার হয়। আগে এর DNS সার্ভারের দিকে দিন;
+     HTTPS নিজে থেকে সেট হবে।" এর পাশে **SSL সার্টিফিকেট (HTTPS)**: **স্বয়ংক্রিয়, ফ্রি** অথবা
+     **সেলফ-সাইনড**।
+   - **কী চলবে, আর মেমরির সীমা** (What will run, and a memory limit)-এর নিচে: যেসব image download
+     হবে, আর main service-এর জন্য একটা ঐচ্ছিক memory limit।
+
+5. **ইনস্টল করুন**-এ click করুন। ekPanel app তৈরি করে, তার secret বানায় আর চালু করে। বড় service
+   (Nextcloud, Ghost) প্রথমবার চালু হতে কয়েক মিনিট লাগতে পারে।
+
+6. App-এর পাতা খুলুন। সেখানে service-এর note ("এরপর কী করবেন") দেখায়, আর **সাইন ইনের তথ্য**
+   (Sign-in details)-এর নিচে আপনার দরকারি user name, password আর token। কোনো value দেখতে **দেখান**
+   (Show)-এ click করুন।
+
+</Steps>
+
+<Aside type="caution">
+কয়েকটা service-এ **প্রথম visitor** administrator account তৈরি করেন: Uptime Kuma, n8n, Gitea, Memos,
+Ghost আর Vaultwarden। Install করার পরপরই app-টা খুলুন আর অন্য কেউ address খুঁজে পাওয়ার আগেই নিজের
+account তৈরি করে ফেলুন।
+</Aside>
+
+## Service-গুলো
+
+আজ 14টা service আছে।
+
+| Service | বিভাগ | যতটা memory লাগে | Image | আপনার জন্য যা তৈরি হয় |
+| --- | --- | --- | --- | --- |
+| Uptime Kuma | মনিটরিং | 256 MB | `louislam/uptime-kuma:2` | কিছু না; প্রথম visitor admin তৈরি করেন |
+| Grafana | মনিটরিং | 256 MB | `grafana/grafana:latest` | admin password (user `admin`) |
+| n8n | অটোমেশন | 512 MB | `docker.n8n.io/n8nio/n8n:latest` | `N8N_ENCRYPTION_KEY` |
+| Gitea | ডেভেলপমেন্ট | 256 MB | `gitea/gitea:1` | কিছু না; setup পাতা শেষ করুন |
+| IT Tools | ডেভেলপমেন্ট | 64 MB | `corentinth/it-tools:latest` | কিছু না |
+| Vaultwarden | নিরাপত্তা | 128 MB | `vaultwarden/server:latest` | admin পাতার token (`ADMIN_TOKEN`) |
+| Umami | অ্যানালিটিক্স | 512 MB | `ghcr.io/umami-software/umami:postgresql-latest`, `postgres:17-alpine` | database password, app secret |
+| Ghost | প্রকাশনা | 768 MB | `ghost:6-alpine`, `mysql:8.4` | database password |
+| listmonk | প্রকাশনা | 256 MB | `listmonk/listmonk:latest`, `postgres:17-alpine` | admin password (user `admin`), database password |
+| Nextcloud | কাজের টুল | 1 GB | `nextcloud:32-apache`, `postgres:17-alpine` | admin password (user `admin`), database password |
+| Memos | কাজের টুল | 128 MB | `neosmemo/memos:stable` | কিছু না; প্রথম account admin হয় |
+| Excalidraw | কাজের টুল | 64 MB | `excalidraw/excalidraw:latest` | কিছু না; আঁকাগুলো browser-এই থাকে |
+| ntfy | নোটিফিকেশন | 64 MB | `binwiederhier/ntfy:latest` | কিছু না; আগে এর shell-এ একটা user যোগ করুন |
+| Redis | ডেটাবেস | 128 MB | `redis:8-alpine` | `REDIS_PASSWORD` |
+
+কয়েকটার জন্য panel যে note দেখায়:
+
+- **n8n**: `N8N_ENCRYPTION_KEY` রেখে দিন। এটা ছাড়া n8n-এ রাখা credential পড়া যায় না।
+- **Vaultwarden**: নিজের account তৈরি করুন, তারপর app-এর variable-এ `SIGNUPS_ALLOWED` `false` করে
+  দিন, যাতে আর কেউ sign up করতে না পারে। `/admin`-এর admin পাতা token চায়।
+- **Umami**: `admin` হিসেবে `umami` password দিয়ে sign in করুন, আর সঙ্গে সঙ্গে সেটা বদলান। (এটা
+  Umami-র নিজের default, তৈরি করা password নয়।)
+- **Ghost**: database তৈরি হওয়ার সময় প্রথমবার চালু হতে এক-দুই মিনিট লাগে। তারপর domain-এ `/ghost`
+  খুলে owner account তৈরি করুন। Newsletter-এর জন্য একটা mail service লাগে, যা Ghost-এ সেট করতে হয়।
+- **listmonk**: mail পাঠাতে listmonk-এর **Settings → SMTP**-তে আপনার SMTP server যোগ করুন।
+- **ntfy**: একটা user যোগ না করা পর্যন্ত কেউ এটা ব্যবহার করতে পারে না। App-এর
+  [shell](/guides/apps/terminal/) খুলে চালান `ntfy user add --role=admin yourname`।
+- **Redis**: এর কোনো domain নেই। একই server-এর website আর app **সাইন ইনের তথ্য** থেকে password
+  নিয়ে `127.0.0.1:<port>`-এ connect করে (app-এর পাতায় port দেখায়)। অন্য server থেকে এতে পৌঁছানো
+  যায় না।
+
+## তৈরি করা password আর key
+
+প্রতিটা install নতুন secret পায়, যা panel-এ ঠিক **ইনস্টল করুন**-এ click করার মুহূর্তে বানানো হয়:
+
+- **Password** হলো 24টা অক্ষর আর সংখ্যা, দেখতে একই রকম character ছাড়া (`0`/`O`, `1`/`l` নেই) আর
+  symbol ছাড়া, তাই URL, shell command আর config file-এ নিশ্চিন্তে paste করা যায়।
+- **Key** হলো 64টা hexadecimal digit (256 bit), encryption key আর app secret-এর জন্য।
+
+এগুলো app-এর **environment variable** হিসেবে রাখা হয়, তাই app-এর **সেটিং** (Settings)-এ দেখতে আর
+বদলাতে পারেন। Domain থেকে বানানো value (যেমন `ROOT_URL=https://status.example.com/`) app-এর domain
+বদলালে সাথে সাথে বদলে যায়।
+
+<Aside type="note">
+**সাইন ইনের তথ্য** app-এর variable দেখায়, service নিজে যা রেখেছে তা নয়। Grafana বা Nextcloud-এর
+ভেতরে admin password বদলালে panel-এ পুরোনো value-ই থেকে যায়।
+</Aside>
+
+## Template কীভাবে যাচাই করা হয়
+
+প্রতিটা service ekPanel source-এ একটা Compose file (`internal/catalog/templates/`), আর
+`internal/catalog/catalog.go`-তে তার variable-গুলোর একটা ছোট বর্ণনা। Automated test প্রতিটা template এই
+নিয়মগুলোর জন্য check করে:
+
+- কোনো `ports:` বা `expose:` নেই: ekPanel নিজেই web port `127.0.0.1`-এ publish করে আর সামনে HTTPS-সহ
+  domain বসায়।
+- কোনো `privileged`, `cap_add`, `devices:`, `security_opt`, `network_mode`, `pid:`, `ipc:`,
+  `userns_mode`, `cgroup_parent`, `sysctls` বা `volumes_from` নেই, আর Docker socket নেই।
+- শুধু named volume, host-এর folder কখনো নয়।
+- কোনো `build:`, `env_file`, `extends:` বা `include:` নেই: যা চলে সবকিছু ওই একটা file-এ।
+- File-এর প্রতিটা image ঘোষণা করা থাকে, যাতে একটা [package](/guides/admin/customers/) image দেখে
+  service-টা allow বা refuse করতে পারে।
+- File-এর প্রতিটা `${VARIABLE}` ঘোষণা করা থাকে, আর ঘোষণা করা প্রতিটা variable ব্যবহার হয়।
+- বর্ণনা আর বিভাগ panel-এ অনুবাদ করা থাকে।
+
+কোনো **customer** একটা service install করলে, server-এর agent কিছু চালু করার আগে একই ধরনের নিয়ম
+আবার check করে (দেখুন
+[ekPanel একটা Compose file-এ কী check করে](/guides/apps/docker-apps/#what-ekpanel-checks-in-a-compose-file)),
+আর app-এর প্রতিটা container customer-এর memory আর CPU limit-এর ভেতরে চালায়।
+
+Project 14টা service-ই একটা test VM-এ পরীক্ষা করেছে: প্রতিটা install করা হয়েছে, HTTPS-এ সাড়া
+দিয়েছে, আর কোনো volume পেছনে না রেখে সরানো হয়েছে।
+
+## কে কী install করতে পারেন
+
+- **Admin**-রা প্রতিটা service install করতে পারেন, নিজের জন্য বা কোনো customer-এর জন্য।
+- **Customer**-রা একটা service install করতে পারেন, যখন তাঁদের package ওই service-এর **সব** image
+  allow করে (দেখুন [package](/guides/admin/customers/#package-limits)-এর **অনুমোদিত Docker ইমেজ**)।
+  যে service তাঁদের package allow করে না, সেটায় **আপনার প্যাকেজে নেই** (Not in your package) লেখা
+  থাকে। Customer-রা নিজের Compose file paste করতে পারেন না; catalogue service ব্যতিক্রম, কারণ সেগুলো
+  যাচাই করা।
+- Install করা একটা service customer-এর package-এ একটা app হিসেবে গোনা হয়।
+
+## Install করার পর
+
+Install করা service একটা সাধারণ Compose app, যা তার template আর version মনে রাখে (তার পাতায় "ক্যাটালগ
+থেকে, টেমপ্লেট সংস্করণ 1")। একে যেকোনো [Docker app](/guides/apps/docker-apps/)-এর মতোই সামলান: log,
+restart, stop, **ইমেজ আপডেট** (Update image), shell, delete।
+
+Domain, variable আর limit বদলাতে পারেন। Compose file আর port template-এরটাই থাকে: "Compose ফাইল আর
+পোর্ট ক্যাটালগ থেকে আসে।"
+
+## Limit আর যা এখনো নেই
+
+- **Install করা service-কে নতুন template version-এ update করা** এখনো নেই। **ইমেজ আপডেট** একই tag-এর
+  নতুন image pull করে, কিন্তু Compose file install করার সময় যেমন ছিল তেমনই থাকে।
+- **যেসব service-এর একাধিক domain বা port লাগে**, সেগুলো এখনো catalogue-এ নেই।
+- আরও service আসবে। কোনোটা প্রস্তাব করতে [main repository](https://github.com/ekPanel)-তে একটা issue
+  খুলুন। নিজে যোগ করতে দেখুন [Feature যোগ করা](/development/adding-a-feature/)।
+- [Backup](/guides/data/backups/)-এ এখনো app volume থাকে না। Nextcloud-এর file, Vaultwarden-এর vault
+  আর Gitea-র repository ekPanel backup করে না।
+
+## সম্পর্কিত
+
+- [Docker app](/guides/apps/docker-apps/): যেকোনো image বা Compose file চালান।
+- [Customer আর package](/guides/admin/customers/): Customer-রা কোন কোন image চালাতে পারেন।

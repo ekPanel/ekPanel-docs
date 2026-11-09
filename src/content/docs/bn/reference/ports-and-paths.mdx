@@ -1,0 +1,161 @@
+---
+title: Port আর path
+description: ekPanel আর এর set up করা service-গুলো যে যে network port ব্যবহার করে, আর server-এ গুরুত্বপূর্ণ file ও folder কোথায় থাকে।
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel কোন কোন port-এ listen করে বা খোলে, আর server-এ কোথায় file রাখে, এই page-এ তার তালিকা।
+Cloud firewall set up করার সময়, কোনো log খুঁজতে, বা কোনো folder কীসের জন্য তা জানতে এটা দেখুন।
+
+## Port
+
+### সবসময়
+
+| Port | Protocol | কে listen করে | কোথা থেকে পৌঁছানো যায় | কীসের জন্য |
+| --- | --- | --- | --- | --- |
+| 8080 | TCP | panel (`ekpanel`) | শুধু এই server থেকে (`127.0.0.1`) | Web UI আর API। Caddy HTTPS traffic এখানে পাঠায়। |
+| 7443 | TCP | panel | সব জায়গা থেকে | Agent-রা এখানে mutual TLS দিয়ে connect করে। শুধু panel-এর server এতে listen করে। |
+| 80 | TCP | Caddy | সব জায়গা থেকে | HTTP, HTTPS-এ redirect, আর Let's Encrypt-এর certificate check। |
+| 443 | TCP আর UDP | Caddy | সব জায়গা থেকে | Panel, প্রতিটা website আর app, আর webmail-এর HTTPS। UDP হলো HTTP/3। |
+| 22 | TCP | OpenSSH | সব জায়গা থেকে | SSH আর SFTP। `sshd` আসলে যে port-গুলো ব্যবহার করে, ekPanel সেগুলো খোলা রাখে। |
+| 5432 | TCP | PostgreSQL | শুধু এই server থেকে | Panel-এর database, আর এই server-এ customer-দের PostgreSQL database। |
+
+Agent-রা শুধু panel-এর দিকে **বাইরে** connect করে। Panel-কে কোনো managed server-এ পৌঁছাতে ওই server-এ
+কোনো port খোলা রাখতে হয় না, তাই NAT-এর পেছনেও এটা কাজ করে। শুধু panel-এর server-কে আপনার অন্য
+server-গুলো থেকে TCP 7443 গ্রহণ করতে হয়।
+
+<Aside type="tip" title="Cloud firewall">
+অনেক provider-এর web console-এ server-এর বাইরে একটা firewall থাকে। সেখানে প্রতিটা server-এর জন্য
+TCP 80, 443 আর 22 খুলুন, আর panel-এর server-এ TCP 7443। নিচের বাকি port-গুলো খুলুন শুধু তখনই, যখন
+ওই feature ব্যবহার করবেন।
+</Aside>
+
+### কোনো feature ব্যবহার করলে
+
+| Port | Protocol | Service | কখন | নোট |
+| --- | --- | --- | --- | --- |
+| 3306 | TCP | MariaDB | Server-এ MariaDB database থাকলে | শুধু local connection। |
+| 20000–29999 | TCP | Docker app | Docker আর Git app | শুধু `127.0.0.1`-এ publish করা হয়; Caddy app-এর domain-কে এখানে পাঠায়। Zero-downtime release-এর জন্য Git app পরপর দুটো port নেয়। |
+| 25 | TCP | Stalwart (mail) | Email চালু থাকলে | আসা mail (SMTP)। |
+| 465 | TCP | Stalwart | Email চালু থাকলে | Mail app থেকে mail পাঠানো, শুরু থেকেই TLS। |
+| 587 | TCP | Stalwart | Email চালু থাকলে | Mail app থেকে mail পাঠানো, STARTTLS। |
+| 993 | TCP | Stalwart | Email চালু থাকলে | TLS-এর ওপর IMAP। |
+| 995 | TCP | Stalwart | Email চালু থাকলে | TLS-এর ওপর POP3। |
+| 21 | TCP | Pure-FTPd | কোনো website-এ FTP চালু থাকলে | শুধু TLS-এর ওপর FTP। |
+| 30000–30100 | TCP | Pure-FTPd | কোনো website-এ FTP চালু থাকলে | FTP passive data port। |
+| 53 | TCP আর UDP | PowerDNS | Server-টা name server হলে | Server-এর নিজের address-গুলোতে listen করে। |
+
+### ভেতরের port (শুধু loopback)
+
+এগুলো `127.0.0.1`-এ listen করে আর firewall-এ কখনো খোলা হয় না। এগুলোর তালিকা দেওয়া হলো যাতে আপনি
+জানেন এগুলো কী, আর এগুলোতে অন্য কিছু না বসান।
+
+| Port | Service | নোট |
+| --- | --- | --- |
+| 18900 | Stalwart management API | Agent একটা random password দিয়ে sign in করে, যা রাখা থাকে `/etc/ekpanel/mail/admin.env`-এ। |
+| 18910 | CrowdSec local API | CrowdSec-এর default 8080 থেকে সরানো, কারণ সেটা panel-এর। |
+| 18920 | PowerDNS API | এর key আছে `/etc/powerdns/ekpanel-api.key`-এ। |
+| `127.0.0.53`-এ 53 | systemd-resolved | System-এর নিজের resolver। PowerDNS এই address-এ হাত দেয় না। |
+
+### ekPanel যে firewall rule-গুলো manage করে
+
+Server-এর page-এ firewall চালু করলে ekPanel `ufw` manage করে আর এগুলো সবসময় খোলা রাখে, যাতে
+ভুল করে আপনি নিজেকে বাইরে আটকে না ফেলেন:
+
+- SSH, `sshd` আসলে যে port-গুলোতে listen করে সেগুলোতে (পড়া না গেলে 22)
+- 80/tcp, 443/tcp, 443/udp
+- 7443/tcp
+
+এছাড়া email চালু থাকলে mail port-গুলো, কোনো website FTP ব্যবহার করলে 21 আর 30000–30100, আর
+server-টা name server হলে 53 (TCP আর UDP) খোলে। Firewall "not managed" (panel-এ "পরিচালনা নয়")
+থাকলে ekPanel আগে থেকে থাকা firewall যেমন আছে তেমন রাখে, আর এই port-গুলো আপনাকে নিজেই খুলতে হবে।
+
+Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শুধু তখনই, যখন `ufw` আগে থেকেই active।
+
+## Server-এ path
+
+### ekPanel-এর নিজের file
+
+| Path | এটা কী |
+| --- | --- |
+| `/usr/local/bin/ekpanel` | Panel program (শুধু panel-এর server-এ)। |
+| `/usr/local/bin/ekpanel-agent` | Agent program (প্রতিটা server-এ)। |
+| `/etc/ekpanel/panel.env` | Panel-এর setting। দেখুন [Configuration](/reference/configuration/)। |
+| `/etc/ekpanel/agent.json` | Agent-এর credential: certificate আর key। শুধু root। |
+| `/var/lib/ekpanel/` | Panel-এর data folder: setup token, agent CA, `secret.key`। মালিক `ekpanel` user। |
+| `/var/lib/ekpanel-agent/` | Agent-এর নিজের state (কী কী বানিয়েছে, firewall আর traffic state)। |
+| `/etc/ekpanel/tls/` | `--domain` ছাড়া install করলে panel-এর self-signed certificate। |
+| `/usr/local/lib/ekpanel/` | Agent যেসব tool download করে আর check করে: WP-CLI, Railpack, Stalwart। |
+
+### Website
+
+প্রতিটা website-এর নিজস্ব Linux account আছে, আর এর file থাকে ওই account-এর home folder-এ।
+
+| Path | এটা কী |
+| --- | --- |
+| `/home/<account>/public_html` | Website-এর file। |
+| `/home/<account>/logs/php-error.log` | Website-এর PHP error log। |
+| `/home/<account>/tmp` | সাময়িক file। Backup-এ থাকে না। |
+| `/home/<account>/.trash` | File manager-এর trash। Backup-এ থাকে না। |
+| `/etc/ekpanel/caddy/sites/<site id>.caddy` | Website-এর Caddy configuration। Agent লেখে; edit করবেন না। |
+| `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | Domain-সহ app-এর জন্য একই জিনিস। |
+| `/etc/ekpanel/caddy/sites/webmail.caddy` | Email চালু থাকলে webmail। |
+| `/var/log/caddy/site-<site id>.log` | Website-এর request log (JSON)। |
+| `/var/log/caddy/app-<app id>.log` | একটা app-এর request log। |
+| `/etc/php/<version>/fpm/pool.d/` | Administrator-দের website-এর PHP-FPM pool। |
+| `/etc/ekpanel/php/` | Customer-দের website-এর PHP-FPM, প্রতি customer আর version-এ একটা PHP master। |
+| `/etc/ekpanel/certs/` | Website-এর জন্য upload করা certificate। |
+| `/etc/ekpanel/cron/` | Cron job-এর script। |
+| `/etc/ekpanel/ssh/` | SFTP key, root-এর মালিকানার file-এ, যা site account-রা বদলাতে পারে না। |
+| `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH setting, যা SFTP-কে প্রতিটা site-এর folder-এ আটকে রাখে। |
+
+`<account>` হলো website-এর Linux account, website-এর page-এ **লিনাক্স অ্যাকাউন্ট** হিসেবে দেখানো।
+একটা website বা app-এর ID হলো panel-এ এর address-এ থাকা লম্বা ID।
+
+### App, backup আর security
+
+| Path | এটা কী |
+| --- | --- |
+| `/srv/ekpanel/apps/<name>` | একটা Docker app-এর Compose project। শুধু root। |
+| `/srv/ekpanel/builds` | Git deploy-এর build। |
+| `/var/backups/ekpanel` | Server-এর নিজের disk-এ রাখা backup। |
+| `/etc/ekpanel/backup/` | Backup setting, encryption key আর S3 key। শুধু root। |
+| `/var/lib/ekpanel/quarantine` | Malware scan যেসব file সরিয়ে রেখেছে। শুধু root পড়তে পারে। |
+| `/var/lib/ekpanel/geo/` | Country blocking-এর জন্য DB-IP-এর country list, প্রতি মাসে refresh হয়। |
+| `/etc/ekpanel/countries.nft` | Country blocking-এর rule, boot-এর সময় `ekpanel-countries.service` load করে। |
+
+### Email, DNS আর FTP
+
+| Path | এটা কী |
+| --- | --- |
+| `/etc/ekpanel/mail/` | Mail server-এর setting, API password-সহ `admin.env`। |
+| `/var/lib/ekpanel-mail` | Stalwart-এর data: mailbox আর তাদের mail। |
+| `/var/lib/ekpanel-webmail` | Roundcube-এর data। |
+| `/etc/powerdns/pdns.conf` | PowerDNS-এর setting, agent লেখে। |
+| `/var/lib/powerdns/pdns.sqlite3` | PowerDNS-এর zone। |
+| `/etc/pure-ftpd/` | Pure-FTPd-এর setting আর এর নিজস্ব user list। |
+
+<Aside type="caution">
+এগুলোর বেশিরভাগ file agent লেখে, আর panel যা চায় তার থেকে আলাদা হলে আবার লেখে। নিজে হাতে করা
+পরিবর্তন সাধারণত পরের apply-এ মুছে যায় (সর্বোচ্চ ১০ মিনিটের মধ্যে)। তার বদলে panel-এ পরিবর্তন
+করুন।
+</Aside>
+
+## আপনার computer-এ (development)
+
+| Port বা path | এটা কী |
+| --- | --- |
+| `127.0.0.1:8080` | `make dev` থেকে চালু হওয়া panel। |
+| `127.0.0.1:7443` | এর agent listener। |
+| `localhost:5173` | `make dev-ui` থেকে চালু হওয়া Vite dev server। |
+| `.data/` | Development data folder: embedded database, setup token, `agent.json`। নতুন করে শুরু করতে এটা মুছে ফেলুন। |
+| `127.0.0.1:2222`, `8443`, `17443` | [Test VM](/development/test-vm/)-এর SSH, HTTPS আর agent port। |
+
+## সম্পর্কিত
+
+- [Configuration](/reference/configuration/)
+- [Firewall](/guides/security/firewall/)
+- [সমস্যা সমাধান](/reference/troubleshooting/)

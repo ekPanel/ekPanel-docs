@@ -1,0 +1,160 @@
+---
+title: PHP app
+description: এক click-এ খালি PHP website-এ Joomla, Drupal (Drush সহ), Moodle বা Laravel install করুন, নিজস্ব database আর check করা download সহ।
+sidebar:
+  order: 6
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+[WordPress](/guides/websites/wordpress/) ছাড়াও ekPanel খালি website-এ চারটা PHP application install করে: একটা content
+system, একটা structured-content system, একটা learning platform আর একটা framework। প্রতিটা নিজের একটা MariaDB database পায়।
+
+## কী কী install করতে পারবেন
+
+| Application | যে version install হয় | যে PHP লাগে | Admin sign-in | Website যে folder দেখায় |
+| --- | --- | --- | --- | --- |
+| **Joomla**: অনেক extension সহ website আর portal | 6.2.0 | 8.3 বা নতুন | `/administrator/` | `public_html` |
+| **Drupal**: বড় site-এর জন্য গোছানো content | 11 (সবচেয়ে নতুন 11.x), Drush 13 সহ | 8.3 বা নতুন | `/user/login` | `public_html/web` |
+| **Moodle**: course, quiz আর class | 5.2.4 | 8.3 বা নতুন | `/login/index.php` | `public_html/public` |
+| **Laravel**: কাজ শুরু করার জন্য একটা নতুন app | 13 (সবচেয়ে নতুন 13.x) | 8.3 বা নতুন | নেই | `public_html/public` |
+
+Site যে application-এর PHP চাহিদা পূরণ করে না, panel সেটাকে ধূসর করে রাখে: "PHP 8.3 বা নতুন লাগবে; আগে সাইটের PHP ভার্সন
+বদলান" (Needs PHP 8.3 or newer; change the site's PHP version first)। দেখুন
+[Site-এর PHP version বদলান](/guides/websites/php/#switch-a-sites-php-version)।
+
+## Application install করুন
+
+<Steps>
+
+1. PHP 8.3 বা নতুন দিয়ে [একটা PHP website যোগ করুন](/guides/websites/websites/#add-a-website), বা আগে থেকে থাকা এমন একটা
+   ব্যবহার করুন যার `public_html` খালি (ekPanel-এর স্বাগত page থাকলে সমস্যা নেই)।
+
+2. Site-এর page-এ **অন্যান্য অ্যাপ্লিকেশন** (Other applications) খুঁজে একটা বেছে নিন।
+
+3. **সাইটের শিরোনাম** (Site title) পূরণ করুন (সর্বোচ্চ ১০০ character)। Joomla, Drupal আর Moodle-এর জন্য
+   **অ্যাডমিন ইউজার নাম** (Admin user name) (৩ থেকে ৬০টা অক্ষর, সংখ্যা আর `. _ @ -`; Moodle এটাকে ছোট হাতের অক্ষরে
+   বদলে নেয়) আর **অ্যাডমিন ইমেইল** (Admin email)-ও পূরণ করুন।
+
+4. **… বসান** (Install …)-এ click করুন।
+
+5. **Admin password এখনই copy করুন।** এটা শুধু একবার দেখানো হয়; ekPanel এটা রাখে না। Laravel-এর কোনো admin account
+   নেই, তাই এর কোনো password-ও নেই।
+
+6. কয়েক মিনিট অপেক্ষা করুন। চাইলে page থেকে চলে যেতে পারেন। শেষ হলে card-এ **… অ্যাডমিন খুলুন** (Open … admin) দেখায়
+   (Laravel-এর জন্য **সাইট দেখুন** (Visit site))।
+
+</Steps>
+
+একটা site-এ একটাই application থাকতে পারে। একটা application বা WordPress-এর ওপরে আরেকটা যোগ করা যায় না।
+
+## Download কীভাবে check করা হয়
+
+Check না করা কোনো download থেকে কিছুই install করা হয় না।
+
+- **Joomla** আর **Moodle** আসে তাদের official release archive হিসেবে (Joomla তার GitHub release থেকে, Moodle
+  `packaging.moodle.org` থেকে)। Publisher যে SHA-256 checksum দেয়, যেটা ekPanel-এর ভেতরে লেখা আছে, agent প্রতিটা archive
+  সেটা দিয়ে check করে। না মিললে download ফিরিয়ে দেওয়া হয়: "the download does not match its published checksum"।
+- **Drupal** আর **Laravel** বানানো হয় Composer দিয়ে, যেটা তাদের package নেয় Packagist থেকে। ekPanel Composer-এর একটা
+  নির্দিষ্ট version (2.11.1) ব্যবহার করে, যেটা প্রতিটা server-এ একবার Composer-এর GitHub release থেকে download করে এর
+  SHA-256 দিয়ে check করা হয়।
+
+Installer-গুলো চলে site-এর নিজের Linux account হিসেবে। Password তাদের কাছে পৌঁছায় environment দিয়ে, যেটা শুধু ওই account
+পড়তে পারে, কখনো command-line argument হিসেবে না যেটা অন্য account দেখতে পারে।
+
+## Database
+
+প্রতিটা installation একটা নতুন MariaDB database আর user পায়, application আর site-এর account-এর নাম অনুযায়ী:
+
+| Application | Database |
+| --- | --- |
+| Joomla | `jo_<site account>` |
+| Drupal | `dr_<site account>` |
+| Moodle | `mo_<site account>` |
+| Laravel | `la_<site account>` |
+
+Database password random, আর শুধু application-এর configuration file-এ লেখা হয়। মালিকের
+[package](/guides/admin/customers/)-এ database টা একটা database হিসেবে গোনা হয়। অন্য যেকোনো database-এর মতোই এটা
+[ডাটাবেস](/guides/data/databases/) page-এ পাবেন।
+
+## প্রতিটা application নিয়ে কিছু কথা
+
+### Joomla
+
+- Joomla-র command-line installer দিয়ে install হয়, random table prefix সহ (যেমন `j3f9a_`)।
+- পরে `installation` folder সরিয়ে ফেলা হয়, আর `configuration.php` শুধু site-এর account পড়তে পারে।
+
+### Drupal
+
+- `drupal/recommended-project` (version 11) থেকে বানানো, **Drush** 13 যোগ করা, আর standard profile দিয়ে install করা।
+- Website দেখায় `public_html/web`; Composer-এর file আর `vendor` এর বাইরে থাকে।
+- Drush চালাতে `public_html` থেকে Drush-এর PHP file সহ পুরো PHP path ব্যবহার করুন। যেমন, PHP 8.4 site-এ একটা
+  [cron job](/guides/websites/cron/)-এ:
+
+  ```bash
+  /usr/bin/php8.4 vendor/drush/drush/drush.php cron
+  ```
+
+### Moodle
+
+- Version 5.2.4। Moodle 5.3-এর MariaDB 11.4 লাগে, আর Ubuntu 24.04 ও Debian 12-এ আসে 10.11, তাই ekPanel 5.2 branch install
+  করে।
+- Website দেখায় `public_html/public`।
+- Moodle-এর চাহিদা অনুযায়ী site-এর জন্য `max_input_vars` `5000` করা হয়।
+- Upload করা file থাকে `/home/<account>/moodledata`-এ, website-এর বাইরে।
+- Moodle-এর background task-এর জন্য প্রতি মিনিটে এর cron script চালাতে হয়। ekPanel আপনার জন্য **Moodle** নামে একটা
+  [cron job](/guides/websites/cron/) যোগ করে: site-এর PHP version দিয়ে `admin/cli/cron.php`, প্রতি মিনিটে, time zone UTC,
+  সময়সীমা ৬০ মিনিট। এটা চালু রাখুন।
+- Moodle English-এ install হয়।
+
+### Laravel
+
+- `laravel/laravel` (version 13) থেকে বানানো। কোনো admin account নেই।
+- Website দেখায় `public_html/public`।
+- ekPanel Laravel-এর example থেকে `public_html/.env` লেখে, `APP_URL` আর MariaDB database-এর তথ্য দিয়ে, তারপর
+  `key:generate`, `migrate` আর `storage:link` চালায়।
+- অন্য সব লুকানো file-এর মতোই `.env` file কখনো দেখানো হয় না।
+- নিজের code [SFTP](/guides/websites/files/#sftp) (বা file manager) দিয়ে upload করুন, তারপর এর migration চালান। Laravel-এর
+  scheduler-এর জন্য প্রতি মিনিটের একটা [cron job](/guides/websites/cron/) যোগ করুন:
+
+  ```bash
+  /usr/bin/php8.4 artisan schedule:run
+  ```
+
+## Install fail করলে
+
+Card-এ কারণ সহ "বসানো যায়নি: …" (The install failed: …) দেখায়। ekPanel তখন সবকিছু আগের মতো করে দেয়:
+
+- `public_html` আবার খালি করা হয় (আর Moodle-এর ক্ষেত্রে `moodledata` সরানো হয়);
+- application-এর database খালি করা হয়।
+
+তাই কারণটা ঠিক করে আবার install-এ click করতে পারবেন। দ্বিতীয় চেষ্টায় একই database নতুন password দিয়ে ব্যবহার হয়।
+
+সাধারণ কারণগুলো হলো server download site বা Packagist-এ পৌঁছাতে না পারা, বা site এখনো তৈরি না হওয়া। Install শুরু হওয়ার
+আগে panel restart হলে এটা fail করে, সাথে আবার শুরু করার বার্তা দেয়, কারণ একবারের password-গুলো শুধু memory-তে ছিল।
+
+<Aside type="note">
+Drupal, Moodle আর Laravel-এর ক্ষেত্রে install শুরু হওয়ার সময়ই website application-এর folder (`web` বা `public`) দেখাতে
+শুরু করে। Install fail করার পর ওই folder আর থাকে না, তাই কোনো install সফল না হওয়া পর্যন্ত site কোনো page দেখায় না।
+</Aside>
+
+## PrestaShop পাওয়া যায় না
+
+PrestaShop 9 এখনো checksum সহ কোনো download প্রকাশ করে না। ekPanel শুধু সেই software install করে যা check করা যায়, তাই
+PrestaShop দেওয়া হয় না। তবে আপনি নিজে এটা একটা খালি PHP website-এ upload করতে পারেন।
+
+## সীমা আর যা এখনো নেই
+
+- ekPanel application install করে কিন্তু update করে না। প্রতিটা application-এর নিজের updater ব্যবহার করুন।
+- প্রতিটা application ekPanel-এর সাথে আসা নির্দিষ্ট version দিয়ে install হয়।
+- Test server-এ (VM) পরীক্ষা করা হয়েছে: চারটাই install হয়েছে আর উত্তর দিয়েছে, প্রতিটার admin password কাজ করেছে, আর
+  Moodle-এর cron চলেছে।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="WordPress" href="/guides/websites/wordpress/" />
+	<LinkCard title="Cron job" href="/guides/websites/cron/" />
+	<LinkCard title="PHP" href="/guides/websites/php/" />
+	<LinkCard title="Database" href="/guides/data/databases/" />
+</CardGrid>

@@ -1,0 +1,205 @@
+---
+title: Feature যোগ করা
+description: ekPanel-এ একটা feature কীভাবে agent থেকে UI পর্যন্ত যায়, আসল FTP feature-টা file ধরে ধরে অনুসরণ করে।
+sidebar:
+  order: 5
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel-এ একটা feature সাধারণত প্রতিটা layer-এ হাত দেয়: agent একটা server-এ কী করে, panel কী store করে,
+API, UI আর তার অনুবাদ, test, আর docs। এই page একটা আসল, ছোট feature, **website-প্রতি FTP over TLS**
+(commit `e0e4d19`, roadmap-এর part 3f), file ধরে ধরে দেখায়, যাতে আপনি নিজের feature-এর জন্য একই পথ ধরতে
+পারেন।
+
+## Feature-টা
+
+প্রতিটা website নিজের একটা FTP login চালু করতে পারে। FTP শুধু encrypted (FTPS), website-এর home folder-এ
+আটকানো, আর এর port firewall-এ শুধু তখনই খোলা থাকে যখন কোনো website এটা ব্যবহার করে। Password একবারই
+দেখানো হয়, আর শুধু এর hash store করা হয়। Customer-রা FTP ব্যবহার করতে পারেন শুধু যদি তাঁদের package-এ
+এটা থাকে।
+
+Commit-টা 21টা file বদলেছিল। নিচে সেগুলো আছে সেই ক্রমে, যে ক্রমে আপনি লিখতেন।
+
+## একটা server বদলানোর দুটো উপায়
+
+শুরু করার আগে ঠিক করুন আপনার feature কীভাবে server-এ পৌঁছাবে:
+
+| ধরন | কখন | কীভাবে | উদাহরণ |
+| --- | --- | --- | --- |
+| **Desired state** | এমন কিছু যা *থাকা* উচিত আর সেভাবেই থাকা উচিত | একটা spec-এ field যোগ করুন, যা panel `state.apply`-এ পাঠায়। প্রতিটা apply-এ agent সেই অবস্থায় পৌঁছায়। | Website, app, firewall, FTP, email |
+| **One-off operation** | একবার ঘটে এমন একটা কাজ, বা একটা প্রশ্ন | একটা operation name (`internal/agentproto`-এ `Op…`) আর agent-এর `Dispatch`-এ (`internal/agent/ops.go`) একটা `case` যোগ করুন। Panel এটা hub দিয়ে call করে, সাধারণত একটা task থেকে। | একটা service restart, malware scan চালানো, ban-এর list |
+
+FTP হলো desired state: "এই website-এ এই password hash দিয়ে FTP আছে"। Agent restart হলে, server আবার
+install হলে, বা কেউ একটা file মুছে দিলে, পরের apply সেটা আবার ফিরিয়ে আনে।
+
+<Aside type="caution" title="শুধু typed operation">
+Agent-এ একটা shell command, browser থেকে আসা একটা file path, বা configuration-এর একটা টুকরো পাঠানোর কোনো
+উপায় কখনো যোগ করবেন না। Typed field পাঠান, আর প্রতিটা value নিজে check করার পর agent-কে সেগুলো থেকে
+command আর file বানাতে দিন।
+</Aside>
+
+## ধাপে ধাপে
+
+<Steps>
+
+1. **Protocol: `internal/agentproto/proto.go`**
+
+   Agent-এর যে field লাগবে সেগুলো spec-এ যোগ করুন, JSON name আর একটা comment-সহ:
+
+   ```go
+   // FTP (over TLS only) with a login of its own, locked into the site's home folder.
+   FTPEnabled      bool   `json:"ftp_enabled,omitempty"`
+   FTPPasswordHash string `json:"ftp_password_hash,omitempty"` // SHA-512 crypt
+   ```
+
+   FTP `StateApplyParams`-এ `FTPPassiveIP`-ও যোগ করেছিল (NAT-এর পেছনের server-এর জন্য), `FirewallSpec`-এ
+   একটা `FTP` flag, আর port-এর list:
+
+   ```go
+   var FTPPorts = []string{"21/tcp", "30000:30100/tcp"}
+   ```
+
+   নতুন field-এর জন্য `omitempty` ব্যবহার করুন, যাতে একটা পুরনো agent আর একটা নতুন panel (বা উল্টোটা)
+   তখনো একে অপরকে বুঝতে পারে।
+
+2. **Agent: `internal/agent/ftp.go`, `sites.go`, `firewall.go`**
+
+   `ftp.go`-তে server-এর দিকের পুরো feature-টা আছে: প্রথম website-এর যখন দরকার হয় তখন `applyFTP`
+   Pure-FTPd install করে, এর settings লেখে (TLS বাধ্যতামূলক, কোনো anonymous বা system login নয়, passive port
+   30000-30100), এর user list FTP-ওয়ালা website-গুলোতেই সীমিত রাখে, আর কোনোটা না থাকলে এটা বন্ধ করে।
+   কোনো failure পুরো server-এ নয়, সংশ্লিষ্ট website-গুলোতে report করা হয়।
+
+   Panel আগেই check করলেও agent input আবার check করে। `validateSite`-এ (`sites.go`):
+
+   ```go
+   if sp.FTPPasswordHash != "" && !cryptHashRE.MatchString(sp.FTPPasswordHash) {
+       return errors.New("invalid FTP password hash")
+   }
+   ```
+
+   Website apply হওয়ার পর `stateApply` `a.applyFTP(...)` call করে, আর spec যতক্ষণ বলে ততক্ষণ `firewall.go`
+   `FTPPorts` খোলা রাখে।
+
+   Agent-এর অভ্যাসগুলো মেনে চলুন: file শুধু তখনই লিখুন যখন তার content বদলেছে, agent যে account বা data
+   বানায়নি তাতে কখনো হাত দেবেন না, আর স্পষ্ট delete ছাড়া কখনো data মুছবেন না।
+
+3. **Agent-এর test: `internal/agent/ftp_test.go`**
+
+   Agent test একটা fake system-এর বিপরীতে চলে: root file system হিসেবে একটা temporary folder, আর agent যে
+   command চালাত সেগুলোর একটা recorder। `TestApplyFTP` check করে user list, settings file (TLS বাধ্যতামূলক,
+   কোনো system login নয়, passive address), certificate, Pure-FTPd restart হয়েছে কি না, আর শেষ website FTP
+   বন্ধ করলে খালি user list-সহ এটা বন্ধ হয় কি না। আপনার computer-এ কিছুই হাত দেওয়া হয় না।
+
+4. **Database: `internal/db/migrations/0025_ftp.sql`**
+
+   ```sql
+   ALTER TABLE sites ADD COLUMN ftp_enabled boolean NOT NULL DEFAULT false;
+   ALTER TABLE sites ADD COLUMN ftp_password_hash text;
+   ALTER TABLE packages ADD COLUMN ftp boolean NOT NULL DEFAULT false;
+   ```
+
+   Panel চালু হওয়ার সময় migration নামের ক্রমে apply হয়। পরের number দিয়ে একটা নতুন file যোগ করুন; যেটা
+   আগেই merge হয়ে গেছে সেটা কখনো edit করবেন না। শুধু hash store হয়, password কখনো নয়।
+
+5. **Store: `internal/store/sites.go`, `customers.go`**
+
+   Column-গুলো `Site` struct-এ যোগ করুন (hash-টা `json:"-"` দিয়ে, যাতে এটা কখনো browser-এ না পৌঁছায়),
+   `siteColumns` আর `scanSite`-এ যোগ করুন, আর change-টার জন্য একটা method লিখুন:
+
+   ```go
+   // SetSiteFTP turns FTP on (with a new password hash) or off (forgetting the password).
+   func (s *Store) SetSiteFTP(ctx context.Context, id string, enabled bool, passwordHash *string) (Site, error)
+   ```
+
+   এটা site-এর `generation`-ও বাড়ায় আর এর state `pending` করে: এভাবেই panel জানে যে server এখনো change-টা
+   apply করেনি। `customers.go` package-এর `FTP` flag পেয়েছে।
+
+6. **Reconcile: `internal/tasks/tasks.go`**
+
+   `Runner.Reconcile` একটা server-এর পুরো desired state বানায়। FTP এখানে কয়েকটা লাইন যোগ করেছে: একটা site
+   তার spec-এ FTP পায় শুধু যদি এর একটা password hash থাকে **আর** এর মালিকের package FTP-র অনুমতি দেয়, কোনো
+   site এটা ব্যবহার করলে firewall FTP port খোলে, আর NAT-এর পেছনের server-গুলো তাদের public address
+   `FTPPassiveIP` হিসেবে পায়। এখানেই package-এর limit বাস্তব হয়: কোনো package FTP হারালে পরের reconcile
+   server-এ এটা বন্ধ করে দেয়।
+
+7. **API: `internal/api/ftp.go`, `server.go`**
+
+   `server.go`-তে দুটো route, administrator আর customer-দের group-এ:
+
+   ```go
+   r.Post("/sites/{id}/ftp", s.handleSetFTP)
+   r.Post("/sites/{id}/ftp/password", s.handleResetFTPPassword)
+   ```
+
+   Handler চেনা pattern মেনে চলে:
+
+   - `readJSON` দিয়ে JSON body পড়ে (অজানা field প্রত্যাখ্যান করা হয়);
+   - `loadSite` দিয়ে site load করে, যা ownership-ও check করে (অন্য কারো site-এর জন্য customer `404` পান);
+   - package check করে (FTP না থাকলে `ftp_not_allowed`);
+   - একটা password বানায়, শুধু এর hash store করে, password-টা একবার ফেরত দেয়;
+   - **audit log** লেখে: `s.audit(r, "site.ftp_enabled", site.Domain, …)`;
+   - server-এর একটা reconcile queue করে: `s.queueReconcile(r, site.ServerID)`।
+
+   Error-গুলো একটা stable code-সহ `writeError` ব্যবহার করে, যেমন `ftp_disabled` ("turn on FTP first")।
+
+8. **API-এর test: `internal/api/ftp_test.go`**
+
+   API test একটা আসল (embedded) PostgreSQL-এর বিপরীতে আসল panel চালায়, mutual TLS-এর ওপর একটা fake agent
+   enrol করে, আর agent যে `state.apply` পায় সেটা দেখে। `TestFTP` FTP চালু করে, check করে যে spec আর firewall
+   এটা বহন করছে আর একটা password একবার ফেরত এসেছে, সেটা reset করে, FTP বন্ধ করে, আর check করে যে package-এ
+   FTP নেই এমন customer-কে প্রত্যাখ্যান করা হয়।
+
+9. **UI: `web/src/components/SiteSFTP.tsx`, `SiteDetailPage.tsx`, `lib/api.ts`**
+
+   নতুন field-গুলো `web/src/lib/api.ts`-এর TypeScript type-এ যোগ করুন (`Site`-এ `ftp_enabled`, `Package`-এ
+   `ftp`)। `SiteFTP` card দেখায় host, port 21, encryption, user name, copy button-সহ একবারের password, আর FTP
+   চালু বা বন্ধ করার button। Website page এটা `<SiteFTP site={s} server={server.data} />` দিয়ে দেখায়;
+   customers page package-এর জন্য একটা checkbox পেয়েছে।
+
+   এর প্রতিটা text `t("ftp.…")`, number আর date `web/src/lib/format.ts` দিয়ে যায়, আর layout logical class
+   (`ms-`, `pe-`…) ব্যবহার করে, যাতে right-to-left ভাষা কাজ করে।
+
+10. **অনুবাদ: `web/src/i18n/locales/en.json` আর `bn.json`**
+
+    FTP একটা নতুন `ftp` section যোগ করেছে (title, intro, button, note), error text
+    (`errors.ftp_not_allowed`, `errors.ftp_disabled`), audit log text
+    (`audit.actions.site.ftp_enabled`, `ftp_disabled`, `ftp_password_reset`) আর package option
+    (`packages.ftp`)। পারলে বাংলা যোগ করুন; যেকোনো অবস্থায় `npm run i18n:check` দেখায় কী বাকি আছে।
+
+11. **একটা আসল server-এ test করুন**
+
+    [Test VM](/development/test-vm/)-এ build, copy আর install করুন, তারপর প্রতিটা পথ চেষ্টা করুন। FTP-র জন্য
+    সেটা ছিল: plain FTP প্রত্যাখ্যাত, FTPS sign-in আর website-এর serve করা একটা upload, home folder থেকে বের
+    হওয়ার কোনো উপায় নেই, root আর অন্য account প্রত্যাখ্যাত, password reset, firewall port খোলা আর বন্ধ, আর
+    কোনো website আর FTP ব্যবহার না করলে Pure-FTPd বন্ধ।
+
+12. **Document করুন**
+
+    `README.md` (কী কাজ করে), `PLAN.md` (part-এর checklist), `SECURITY.md` (feature-টা যে প্রতিশ্রুতি দেয়),
+    আর এই docs update করুন: একটা guide page, আর [reference](/reference/ports-and-paths/)-এ যা কিছু বদলেছে
+    (FTP port 21 আর 30000-30100 যোগ করেছে)।
+
+</Steps>
+
+## Checklist
+
+Pull request খোলার আগে:
+
+- [ ] শুধু typed field; browser থেকে কোনো command বা path agent-এ পৌঁছায় না
+- [ ] প্রতিটা value panel-এ **আর** আবার agent-এ check করা হয়
+- [ ] Secret শুধু hash হিসেবে store করা (বা `secretbox` দিয়ে sealed), কখনো log করা হয় না, একবার দেখানো হয়
+- [ ] Customer-দের জন্য ownership check করা; reconcile-এ package-এর limit কার্যকর করা
+- [ ] প্রতিটা change-এর জন্য একটা audit log entry, `audit.actions`-এ তার text-সহ
+- [ ] Stable `code`-সহ error, `errors`-এ অনুবাদ করা
+- [ ] UI text `en.json`-এ (আর পারলে `bn.json`-এ); `npm run i18n:check` pass করে
+- [ ] Agent আর API-এর জন্য test; `make test` আর `gofmt -l .` পরিষ্কার
+- [ ] Test VM-এ চেষ্টা করা, failure আর আবার বন্ধ করাসহ
+- [ ] Docs update করা, অথবা docs repository-তে একটা issue বলছে কী যোগ করতে হবে
+
+## সম্পর্কিত
+
+- [Repository-র গঠন](/development/repository/)
+- [Desired state](/concepts/desired-state/)
+- [Security model](/concepts/security-model/)
+- [অবদান রাখুন](/development/contributing/)

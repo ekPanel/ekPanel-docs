@@ -1,0 +1,184 @@
+---
+title: Docs-এ কাজ করা
+description: এই docs কীভাবে বদলাবেন - site local-এ চালানো, Starlight component দিয়ে page লেখা, sidebar-এ যোগ করা, অনুবাদ করা, আর এটা কীভাবে publish হয়।
+sidebar:
+  order: 7
+---
+
+import { Aside, Steps, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+এই docs-এর নিজস্ব repository আছে,
+[ekPanel/ekPanel-docs](https://github.com/ekPanel/ekPanel-docs), যা [Starlight](https://starlight.astro.build/)
+(Astro-র ওপর) দিয়ে বানানো। যে কেউ একটা page ঠিক করতে বা নতুন page লিখতে পারেন। এই page দেখায় কীভাবে।
+
+<Aside type="tip" title="ছোট একটা fix?">
+প্রতিটা page-এর নিচে একটা **Edit page** link আছে। এটা GitHub-এ page-এর file খোলে, যেখানে কিছু install না
+করেই আপনি সেটা বদলে একটা pull request খুলতে পারেন।
+</Aside>
+
+## শুরু করার আগে
+
+আপনার লাগবে Node.js 22 বা নতুন, আর Git।
+
+## Site local-এ চালান
+
+<Steps>
+
+1. Repository clone করুন আর এর dependency install করুন:
+
+   ```bash
+   git clone https://github.com/ekPanel/ekPanel-docs.git
+   cd ekPanel-docs
+   npm ci
+   ```
+
+2. Development server চালু করুন:
+
+   ```bash
+   npm run dev
+   ```
+
+   http://localhost:4321/ekPanel-docs/ খুলুন। Save করলেই page reload হয়।
+
+3. Pull request খোলার আগে পুরো site একবার build করুন। ভাঙা page থাকলে build fail করে:
+
+   ```bash
+   npm run build
+   ```
+
+   তৈরি site থাকে `dist/`-এ। `npm run preview` এটা serve করে।
+
+</Steps>
+
+## কোথায় কী আছে
+
+<FileTree>
+
+- astro.config.mjs site-এর settings, ভাষা আর sidebar
+- WRITING.md যে নিয়ম প্রতিটা page মেনে চলে
+- src/
+  - assets/ logo
+  - content/docs/
+    - index.mdx home page
+    - start/ install আর প্রথম ধাপ
+    - guides/ প্রতিটা area-র জন্য একটা folder: websites, apps, data, dns, security, admin
+    - concepts/ ekPanel কীভাবে কাজ করে
+    - reference/ configuration, port, API, troubleshooting, FAQ, glossary
+    - development/ contributing (এই page এখানে)
+    - project/ roadmap, policy, licence
+    - bn/ বাংলা page, একই path-এ
+  - styles/ekpanel.css রং আর font
+- .github/workflows/deploy.yml build আর publish
+
+</FileTree>
+
+## একটা page লিখুন
+
+আগে [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/main/WRITING.md) পড়ুন। সংক্ষেপে:
+
+- **সত্য সবার আগে।** Code আজ যা করে সেটাই বর্ণনা করুন। কোনো feature নিয়ে লেখার আগে main repository check
+  করুন। Plan করা কোনো feature-কে কখনো এমনভাবে বর্ণনা করবেন না যেন সেটা আছে: "not yet" বলুন আর
+  [roadmap](/project/roadmap/)-এ link দিন।
+- **Panel-এর আসল label ব্যবহার করুন** (`web/src/i18n/locales/en.json` থেকে), আর আসল path, port, command
+  আর limit।
+- **কিছু শুধু VM-এ test করা হলে বলুন**, অথবা আসল service-এর বিপরীতে test না হলে।
+- **সহজ English**, ছোট বাক্য, "you", active voice। কোনো marketing শব্দ নয়।
+- **Page কীসের জন্য সেটা দিয়ে শুরু করুন**, কাজটা আগে বলুন, আর step-গুলোতে number দিন।
+- **Term-এর ব্যাখ্যা দিন** প্রথমবার আসার সময়, অথবা [glossary](/reference/glossary/)-তে link দিন।
+- **কী ভুল হতে পারে বলুন**, আর তখন কী করতে হবে।
+
+### Page-এর গঠন
+
+যে page component ব্যবহার করে সেগুলো `.mdx`; সাধারণ page `.md` হতে পারে। প্রতিটা page একটা title আর এক
+বাক্যের description দিয়ে শুরু হয়:
+
+```mdx
+---
+title: Short title, as in the sidebar
+description: One sentence, shown in search results and link previews.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+One or two sentences on what this is.
+
+## Before you start
+## Step-by-step task sections
+## How it works (optional, short)
+## Limits and what is not there yet
+## Troubleshooting (optional)
+## Related
+```
+
+### Component
+
+যা ব্যবহার করবেন তা `@astrojs/starlight/components` থেকে import করুন:
+
+| Component | কীসের জন্য ব্যবহার করবেন |
+| --- | --- |
+| `<Steps>` | ক্রমিক একটা procedure। ভেতরে একটা ordered list (`1.`, `2.`…) রাখুন। |
+| `<Aside type="tip">` | এমন কিছু যা মানুষের চোখ এড়ানো চলবে না। Type: `note`, `tip`, `caution`, `danger`। |
+| `<Tabs>`, `<TabItem>` | একই কাজ ভিন্ন ভিন্ন উপায়ে, যেমন দুটো operating system-এ। |
+| `<Card>`, `<CardGrid>`, `<LinkCard>` | Overview আর অন্য page-এর link। |
+| `<Badge>` | "not yet"-এর মতো একটা ছোট label। |
+| `<FileTree>` | একটা folder-এর গঠন, ওপরেরটার মতো। |
+
+### Link আর code
+
+- অন্য page-এ link দিন site root থেকে path দিয়ে, base ছাড়া:
+  `[Firewall](/guides/security/firewall/)`।
+- Main repository-তে link দিন পুরো GitHub URL দিয়ে।
+- Code block-এ তার ভাষার নাম থাকে (`bash`, `json`, `yaml`)। Reader যে command server-এ চালান, দরকার হলে
+  সেগুলো `sudo` দিয়ে শুরু হয়।
+
+<Aside type="caution" title="MDX কড়া">
+`.mdx` file-এ সাধারণ text-এর মধ্যে `<` আর `{` একটা component বা expression শুরু করে। `<site id>` বা
+`{{name}}`-এর মতো জিনিস backtick-এর ভেতরে রাখুন।
+</Aside>
+
+## Sidebar-এ একটা page যোগ করুন
+
+Sidebar `astro.config.mjs`-এ হাতে লেখা list, তাই নতুন page শুধু তখনই দেখা যায় যখন আপনি এটা যোগ করেন। প্রতিটা
+entry হলো `src/content/docs/`-এর নিচে page-এর path, extension ছাড়া:
+
+```js
+{
+	label: 'Security',
+	translations: { bn: 'নিরাপত্তা' },
+	items: [
+		'guides/security/overview',
+		'guides/security/firewall',
+		'guides/security/my-new-page', // add your page where it belongs
+	],
+},
+```
+
+Sidebar প্রতিটা page-এর `title` দেখায়। নতুন group-এর একটা `label` আর `translations`-এ তার বাংলা নাম
+লাগে।
+
+## বাংলা page
+
+বাংলা page থাকে `src/content/docs/bn/`-এ, English page-গুলোর মতো একই file name আর folder-এ। একটা page
+অনুবাদ না হওয়া পর্যন্ত বাংলা site একটা notice-সহ English page দেখায়। Step আর style-এর জন্য দেখুন
+[অনুবাদ](/development/translating/#translate-these-docs)।
+
+## Site কীভাবে publish হয়
+
+`.github/workflows/deploy.yml` `main`-এ প্রতিটা push-এ Node.js 22 দিয়ে site build করে আর GitHub Pages-এ
+publish করে, এই address-এ: https://ekpanel.github.io/ekPanel-docs/ । Pull request-ও build হয় (কিন্তু publish হয় না), তাই
+merge হওয়ার আগেই ভাঙা page ধরা পড়ে। প্রতিটা page-এর "last updated" date আসে Git history থেকে।
+
+Project-এর নিজস্ব domain না হওয়া পর্যন্ত site `/ekPanel-docs`-এর নিচে serve হয়; এজন্যই `astro.config.mjs`
+`base` set করে।
+
+## Licence
+
+Documentation (`src/content/`-এর file-গুলো)
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)-এর অধীনে; site-এর code (configuration আর style)
+MIT licence-এর অধীনে।
+
+## সম্পর্কিত
+
+- [অনুবাদ](/development/translating/)
+- [অবদান রাখুন](/development/contributing/)
+- [Code of conduct](/project/code-of-conduct/)

@@ -1,0 +1,142 @@
+---
+title: Roadmap
+description: What ekPanel can do today, phase by phase, and what comes next - releases, the API, moving between servers, importers, resellers, a WAF, billing and game servers.
+sidebar:
+  order: 1
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+ekPanel is built in phases. Each phase ends with something you can install on a real server and
+use. **Phases 0 to 3 are done**; phase 4 is next, and it starts with releases. The full plan,
+with every decision and test, is
+[`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/dev/PLAN.md) in the main repository.
+
+<Aside type="caution" title="No release yet">
+"Done" below means built and tested on a test server (a local VM), not used in production.
+There is no release yet; it is the first thing phase 4 delivers.
+</Aside>
+
+## Done
+
+### Phase 0: Foundations <Badge text="done" variant="success" />
+
+The base everything else plugs into: the panel and agent, connected by mutual TLS (the agent
+connects out, so servers behind NAT work); sign-in with a setup token, argon2id passwords,
+two-factor authentication and rate limits; roles; an append-only audit log; a task queue in
+PostgreSQL; live server statistics with 30 days of history; the web UI in English and Bangla,
+ready for right-to-left languages; and `install.sh` with the test VM script.
+
+### Phase 1: "I can host real sites" <Badge text="done" variant="success" />
+
+| Part | What it added |
+| --- | --- |
+| 1a | Websites (static and PHP 7.4 to 8.5 side by side) with the desired-state engine, one Linux account and PHP pool per site, free HTTPS |
+| 1b | MariaDB and PostgreSQL databases; passwords shown once and never stored |
+| 1c | File manager and SFTP, locked into each site's folder |
+| 1d | One-click WordPress in 14 languages |
+| 1e | Encrypted, deduplicated backups (restic) to the server or S3, with restores; a basic firewall (ufw) |
+| 1f | Docker apps from an image or a Compose file |
+
+### Phase 2: "Coolify level" <Badge text="done" variant="success" />
+
+| Part | What it added |
+| --- | --- |
+| 2a | Customers and packages, with memory and CPU limits enforced by the kernel (cgroups) |
+| 2b | Cron jobs for websites and apps |
+| 2c | Request logs, traffic charts and notifications (email, Telegram, Discord, Slack, webhooks) |
+| 2d | A web terminal for servers and app containers |
+| 2e | The app catalogue (14 one-click services) |
+| 2f | Git deploys with zero-downtime releases and rollbacks |
+| 2g | Builds without a Dockerfile (Railpack), pull request previews, Git apps for customers |
+
+### Phase 3: "cPanel level" <Badge text="done" variant="success" />
+
+| Part | What it added |
+| --- | --- |
+| 3a | Redirects, hotlink protection, PHP settings and extensions, your own certificates |
+| 3b | Cloudflare DNS, kept in sync with websites and apps |
+| 3c | Email: Stalwart mail server, mailboxes, forwarders, auto-replies and Roundcube webmail |
+| 3d | WordPress toolkit: safe updates, update rules, hardening, staging |
+| 3d-2 | PHP app installer: Joomla, Drupal, Moodle and Laravel |
+| 3e | Server security: CrowdSec bans, allowlists and a checklist |
+| 3e-2 | Malware scans with ClamAV and country blocking |
+| 3f | FTP over TLS with a login per website |
+| 3g | Your own name servers: PowerDNS with DNSSEC |
+
+## Next: phase 4, "Beyond"
+
+Agreed on 2026-11-09. The parts come in this order, each tested in the VM like phase 3. Billing
+comes last because it builds on API tokens (4b) and resellers (4e).
+
+### 4a. Releases and updates <Badge text="next" variant="note" />
+
+- Release builds in CI (Linux amd64 and arm64) with checksums and signatures, reproducible from
+  a tag
+- A one-line installer that downloads a release and checks its signature; it can also install
+  an agent alone for a second server
+- Self-update: the panel shows a newer release, updates itself (keeping the old binary to go
+  back to), then updates every agent, one server at a time
+- Release notes, a changelog, and versions shown per server
+- A web translation platform (Weblate or similar) before the first public release
+
+### 4b. API, CLI, Terraform
+
+- API tokens per user, with scopes and expiry, shown once, revocable, in the audit log
+- An OpenAPI description of the API, checked in CI, and a docs site
+- The `ekpanel` command line tool for the same API
+- A Terraform provider, later in phase 4, once the API is stable
+
+### 4c. Moving between servers
+
+- Move a website, an app or a database to another ekPanel server, with DNS and certificate
+  switched over
+- Restore a backup onto another server; move a whole customer
+- Copies over the agents' own connection, not public SSH
+
+### 4d. Importers
+
+- cPanel backups (accounts, files, databases, mail, DNS, cron jobs, certificates)
+- aaPanel sites and databases; plain WordPress from another host
+- Coolify applications and services
+- A report of what was imported and what was not
+
+### 4e. Resellers and white-label
+
+- Resellers with their own packages and customers, within limits an administrator gives them
+- White-label: name, logo, colours and the panel's domain
+- Sub-users with chosen permissions
+- Passkeys, and a list of active sessions
+
+### 4f. Security center
+
+- A WAF (Coraza with the OWASP Core Rule Set) per site, detect-only first
+- Rate limiting per site and for the panel's sign-in; blocking for services CrowdSec does not
+  read
+
+### 4g. Billing integrations
+
+- Provisioning modules for WHMCS, Blesta and Paymenter, with single sign-on into the panel
+- Built-in billing (Stripe, bKash, SSLCommerz) afterwards, if still wanted
+
+### Smaller things left from earlier phases
+
+These are taken along where they fit:
+
+- A database browser, and database import and export
+- Restoring single files, and downloading a backup
+- Suspending a customer, bandwidth limits in packages, alerts for failed cron jobs
+- Wildcard certificates (DNS-01) through Cloudflare or the built-in DNS
+- Moving a website, database or app to another owner
+- Trying the Cloudflare API and outside mail delivery for real
+
+## Later: phase 5, game servers
+
+Minecraft and other game servers in containers, with a console, files and startup variables,
+like Pterodactyl. They are a module of their own and wait until the hosting side is released and
+in use.
+
+## Want something else?
+
+Open a feature request once the repository is public, or write to ekpanelbd@gmail.com. Say what
+you want to do and why it is hard today. See [Contributing](/development/contributing/).

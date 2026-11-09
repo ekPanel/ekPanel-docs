@@ -1,0 +1,235 @@
+---
+title: Backups
+description: Encrypted, deduplicated backups of every website and database on a server, to the server's own disk or S3-compatible storage, with schedules, retention and restores.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel backs up every website and every database on a server with
+[restic](https://restic.net), a well-known backup program. Backups are **encrypted** (nobody can
+read them without your recovery key) and **deduplicated** (a file that did not change is stored
+only once, so keeping many backups costs little extra space).
+
+Backups are for administrators: customers do not see the **Backups** page.
+
+## What is backed up
+
+A **backup location** belongs to one server and backs up everything of these kinds on it:
+
+| Item | What goes in the backup | One snapshot per |
+| --- | --- | --- |
+| **Websites** | The site's whole home folder (`/home/<account>`: `public_html`, logs, other files), without its `tmp` folder and trash | website, each run |
+| **MariaDB databases** | A dump made with `mariadb-dump --single-transaction` (with routines, triggers and events), saved as `<name>.sql` | database, each run |
+| **PostgreSQL databases** | A dump made with `pg_dump -Fc`, saved as `<name>.pgdump` | database, each run |
+
+Database dumps stream straight into restic; nothing is written to the server's disk first. The
+`--single-transaction` and `pg_dump` dumps are consistent copies taken while the database keeps
+working.
+
+<Aside type="caution">
+**Not backed up yet:** Docker apps (their volumes and folders, including catalogue services such
+as Nextcloud or Vaultwarden), mailboxes, and the panel's own settings database. Back those up
+another way for now.
+</Aside>
+
+## Where to keep backups
+
+| Kind (in the panel) | Where | Good for |
+| --- | --- | --- |
+| **This server** | `/var/backups/ekpanel/<location id>` on the same server | "Fast to set up, but lost if the server's disk is lost." Undoing mistakes. |
+| **S3-compatible storage** | A bucket at a storage provider | "Safer: kept off the server." Recovering from a lost server. |
+
+Use S3-compatible storage for anything you cannot afford to lose. You can add both kinds to the
+same server.
+
+### S3-compatible providers
+
+Any storage that speaks the S3 API should work, for example Amazon S3, Backblaze B2, Cloudflare
+R2, Wasabi or MinIO. You need:
+
+| Field | Example | Notes |
+| --- | --- | --- |
+| **Endpoint** | `s3.us-west-002.backblazeb2.com` | "The host name only". `https://` is added for you; write `http://…` only for a local test server |
+| **Bucket** | `my-backups` | Create it at the provider first |
+| **Folder in the bucket (optional)** | `server1` | Lets several servers share one bucket |
+| **Region (optional)** | `us-west-002` | Some providers need it |
+| **Access key ID** and **Secret access key** | | Create a key at the provider that can read and write this bucket |
+
+"The keys are stored only on the server, readable by root. The panel does not keep them." They
+live in `/etc/ekpanel/backup/<location id>.json` (mode 600).
+
+<Aside type="note">
+The project tested S3 backups against a local S3 test server, not yet against each of the
+providers above. If one does not work for you, please tell us on
+[GitHub](https://github.com/ekPanel).
+</Aside>
+
+## Add a backup location
+
+<Steps>
+
+1. Open **Backups** and click **Add backup location**.
+
+2. Choose the server, and under **Where to keep the backups** choose **This server** or
+   **S3-compatible storage**. For S3, fill in the fields above.
+
+3. Give it a **Name**, for example "Offsite (S3)".
+
+4. Choose **How often** and **At** (see [Schedules](#schedules-and-retention)), and
+   **How many to keep**.
+
+5. Click **Create**. The server installs restic (from the distribution's packages) if needed and
+   creates the encrypted repository.
+
+6. **Save the recovery key** that appears. Then click **I have saved the recovery key**.
+
+</Steps>
+
+## The recovery key
+
+<Aside type="danger" title="Save the recovery key, or your backups are useless">
+The recovery key is the password that encrypts the backups. "It is shown only this once. Without
+it, nobody (including you) can read these backups."
+
+Keep it somewhere safe **away from this server**, such as a password manager. If the server is
+lost, the key on it is lost too, and the backups in S3 cannot be opened without the copy you
+saved.
+</Aside>
+
+- The key is 30 letters and digits (about 175 bits), without look-alike characters.
+- It is stored only on the server, in `/etc/ekpanel/backup/<location id>.pass`, readable by root.
+  The panel never stores it.
+- There is no way to show it again or to recover it. If you lost it but the server still runs,
+  the backups still work, because the server has its copy. Add a new location to get a new key you
+  can save, and remove the old one later.
+
+### Connect backups made earlier
+
+After rebuilding a server (or moving to a new one), you can connect an existing S3 backup
+location again:
+
+<Steps>
+
+1. Click **Add backup location** and choose **S3-compatible storage** with the same endpoint,
+   bucket and folder.
+
+2. Tick **Connect backups made earlier, using their recovery key** and enter the
+   **Recovery key**.
+
+3. Click **Connect**. The server checks that the key opens the repository. A wrong key is refused:
+   "the recovery key does not open these backups".
+
+</Steps>
+
+Backups kept on **This server** cannot be connected again from the panel.
+
+## Schedules and retention
+
+**How often**:
+
+| Choice | When it runs |
+| --- | --- |
+| **Every hour** | On the hour |
+| **Every day** | Daily at the hour you choose |
+| **Every week (Sunday)** | Sundays at the hour you choose |
+| **Only when I start it** | Never by itself; use **Back up now** |
+
+You choose the hour in your own time zone; the panel shows the next run ("Next backup: …").
+
+**How many to keep**: a number of **Daily**, **Weekly** and **Monthly** backups (at least one in
+total; up to 365 daily, 520 weekly and 240 monthly). After each run, older backups are removed
+(`restic forget --prune`), counted separately for each website and database. For example, 7 daily,
+4 weekly and 6 monthly keeps a week of daily backups, a month of weekly ones and half a year of
+monthly ones.
+
+Click **Schedule and retention** on the location's page to change these later.
+
+## Back up now
+
+Click **Back up now** on the location's page. The button shows "Backing up…" until it is done. A
+backup that runs on schedule and one you start cannot run twice at the same time for the same
+location. A backup may run for up to 11 hours.
+
+The page then shows the last result:
+
+| Result | Meaning |
+| --- | --- |
+| **Succeeded** | Every website and database was backed up |
+| **Partly failed** | Some items failed (or removing old backups failed); each failure is named, for example `shop: database dump failed: …`. The other items were backed up |
+| **Failed** | Nothing was backed up, or the server could not be reached |
+
+A database dump that stops half way is never kept as a backup.
+
+## Alerts
+
+When a backup fails or partly fails, administrators get a
+[notification](/guides/admin/notifications/): **Backup failed** or **Backup partly failed**, with
+the reasons. Set up an email, Telegram or other channel so you hear about it.
+
+## Restore
+
+Under **Backups** on the location's page, every website and database is listed with its backups
+(newest first). Click **Restore** next to the one you want.
+
+<Tabs>
+  <TabItem label="A website">
+    Choose how:
+
+    - **Into a new folder**: "Puts the files in a 'restored-…' folder in the site's home, next to
+      public_html. Nothing current changes." Use it to pick out a few files with the
+      [file manager](/guides/websites/files/).
+    - **Replace the current files**: "Swaps public_html for the backup. The current files move to
+      the site's trash, so you can still get them back."
+
+    Only `public_html` is restored. The restored files get the site's account as owner.
+  </TabItem>
+  <TabItem label="A database">
+    "This replaces everything in the database with the backup. Changes made since then are lost."
+    Type the database's name to confirm.
+
+    The database is restored in place, under the same name and user, so the website or app keeps
+    working with its current password.
+  </TabItem>
+</Tabs>
+
+You can restore only items that still exist in the panel. Backups of a deleted website or database
+are marked **Deleted from the panel**; restore them by hand (below).
+
+### Restoring by hand
+
+The backups are ordinary restic repositories. On the server, as root, for a location on the server
+itself:
+
+```bash
+sudo restic -r /var/backups/ekpanel/<location id> \
+  --password-file /etc/ekpanel/backup/<location id>.pass snapshots
+```
+
+For S3, the repository address and keys are in `/etc/ekpanel/backup/<location id>.json`. On any
+other machine, you need restic, the S3 keys and your recovery key. See
+[restic's documentation](https://restic.readthedocs.io) for `restore` and `dump`.
+
+## Remove a backup location
+
+Click **Remove location**. ekPanel stops backing up there and forgets the location, but **the
+backups are not deleted**:
+
+- In S3, they stay in the bucket and can be connected again with the recovery key.
+- On **This server**, they stay in `/var/backups/ekpanel/<location id>`. Delete that folder
+  yourself if you no longer need them.
+
+## Limits and what is not there yet
+
+- Docker apps, mailboxes and the panel's own database are not backed up.
+- Restoring a single file, or downloading a backup from the panel: not yet.
+- Restoring onto another server: not yet.
+- A location belongs to one server; add one per server.
+
+See the [roadmap](/project/roadmap/).
+
+## Related
+
+- [Databases](/guides/data/databases/): Create databases and reset passwords.
+- [Notifications](/guides/admin/notifications/): Hear about failed backups.

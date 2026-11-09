@@ -1,0 +1,183 @@
+---
+title: Redirect আর hotlink protection
+description: 301, 302, 307 বা 308 redirect দিয়ে ভিজিটরদের এক address থেকে আরেক address-এ পাঠান, extra domain-গুলোকে main domain-এ পাঠান, আর অন্য site-কে আপনার file embed করা থেকে আটকান।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Redirect browser-কে বলে "এই page এখন অন্য কোথাও আছে"। Page সরালে, site-এর গঠন বদলালে বা নতুন domain-এ গেলে
+redirect ব্যবহার করুন, যাতে পুরনো link আর search result কাজ করতে থাকে। Hotlink protection অন্য website-কে
+আপনার bandwidth খরচ করে তাদের page-এ আপনার ছবি আর media দেখানো থেকে আটকায়।
+
+দুটোই static আর PHP website-এ কাজ করে, আর আপনার application request দেখার আগেই web server (Caddy) এগুলো
+সামলায়।
+
+## Redirect যোগ করুন
+
+<Steps>
+
+1. Website খুলে **রিডাইরেক্ট** (Redirects) card খুঁজুন।
+
+2. **রিডাইরেক্ট যোগ করুন** (Add redirect)-এ click করুন।
+
+3. **থেকে** (From) পূরণ করুন: এই site-এর path, যেমন `/old-page`, বা এর নিচের সবকিছুর জন্য একটা prefix, যেমন
+   `/blog/*`।
+
+4. **যেখানে** (To) পূরণ করুন: এই site-এর একটা path, যেমন `/new-page`, বা পুরো address, যেমন
+   `https://example.com/new-page`।
+
+5. **ধরন** (Type) বেছে নিন (নিচের table দেখুন)।
+
+6. Prefix হলে, `/blog/post` যদি `…/post`-এ যাওয়ার কথা থাকে তাহলে **পাথের বাকি অংশ রাখুন** (Keep the rest of
+   the path)-এ টিক দিন।
+
+7. **পরিবর্তন সেভ করুন** (Save changes)-এ click করুন। Site-এ কিছুক্ষণের জন্য **চালু হচ্ছে…** (Applying…)
+   দেখায়।
+
+</Steps>
+
+কোনো redirect সরাতে এর পাশের bin-এ click করে save করুন।
+
+### কোন ধরন বেছে নেবেন
+
+| ধরন | মানে | কখন ব্যবহার করবেন |
+| --- | --- | --- |
+| **301 স্থায়ী** (301 permanent) | Page টা চিরতরে সরে গেছে। Browser আর search engine এটা মনে রাখে। | বেশিরভাগ সরানোর ক্ষেত্রে। সাধারণত এটাই বেছে নেওয়া হয়। |
+| **302 অস্থায়ী** (302 temporary) | Page টা আপাতত অন্য জায়গায় আছে। | অল্প দিনের campaign বা maintenance page। |
+| **307 অস্থায়ী, একই মেথড** (307 temporary, same method) | 302-এর মতো, কিন্তু browser-কে একই request আবার করতে হয় (form-এর `POST` `POST`-ই থাকে)। | Form বা API সাময়িকভাবে সরানো। |
+| **308 স্থায়ী, একই মেথড** (308 permanent, same method) | 301-এর মতো, কিন্তু method একই থাকে। | Form বা API স্থায়ীভাবে সরানো। |
+
+<Aside type="tip">
+Browser স্থায়ী (301 আর 308) redirect তাদের cache-এ রেখে দেয়। Test করার সময় অস্থায়ী ধরন ব্যবহার করুন, আর
+কাজ করলে স্থায়ী ধরনে বদলে দিন।
+</Aside>
+
+## Redirect কীভাবে মেলে
+
+**থেকে** দুই রকম হতে পারে:
+
+- **একটা নির্দিষ্ট path**, যেমন `/old-page`। শুধু ওই path টাই মেলে।
+- **`/*` দিয়ে শেষ হওয়া একটা prefix**, যেমন `/blog/*`। `/blog/`-এর নিচের প্রতিটা path মেলে। শুধু `/*` দিলে
+  site-এর সবকিছু মেলে।
+
+Prefix হলে, ভিজিটর কোথায় পৌঁছাবেন সেটা ঠিক করে **পাথের বাকি অংশ রাখুন**:
+
+| থেকে | যেখানে | পাথের বাকি অংশ রাখুন | `/blog/2024/hello` যায় |
+| --- | --- | --- | --- |
+| `/blog/*` | `https://news.example.com` | টিক দেওয়া | `https://news.example.com/2024/hello` |
+| `/blog/*` | `https://news.example.com` | টিক দেওয়া নেই | `https://news.example.com` |
+| `/blog/*` | `/articles` | টিক দেওয়া | `/articles/2024/hello` |
+
+Path-এর বাকি অংশ রাখা হলে query string (`?page=2`)-ও সাথে যায়।
+
+<Aside type="caution">
+`/blog/*` মেলে `/blog/` আর এর নিচের সবকিছুর সাথে, কিন্তু slash ছাড়া `/blog`-এর সাথে না। ওই address টাও ধরতে
+`/blog` থেকে দ্বিতীয় একটা নির্দিষ্ট redirect যোগ করুন।
+</Aside>
+
+### ক্রম
+
+Redirect check করা হয় **list-এ যে ক্রমে আছে সেই ক্রমে**, আর যেটা প্রথমে মেলে সেটাই খাটে। নতুন redirect
+নিচে যোগ হয়। নির্দিষ্ট path-গুলো সেইসব prefix-এর ওপরে রাখুন যেগুলোও তাদের সাথে মিলবে। ক্রম বদলাতে একটা
+redirect সরিয়ে আবার যোগ করুন।
+
+Redirect আপনার file আর PHP-র আগেই check করা হয়, তাই ওই path-এ কোনো file থাকলেও redirect-ই খাটে।
+
+### কী লিখতে পারবেন
+
+- **থেকে** অবশ্যই `/` দিয়ে শুরু হতে হবে, আর এতে অক্ষর, সংখ্যা আর `. _ ~ - % +`-এর মতো URL character থাকতে
+  পারে। Space বা quote চলবে না।
+- **যেখানে** হলো `/` দিয়ে শুরু হওয়া একটা path, বা `http://` বা `https://` দিয়ে শুরু হওয়া একটা address।
+- প্রতিটা **থেকে** একবারই থাকতে পারে। একটা site-এ সর্বোচ্চ ১০০টা redirect থাকতে পারে।
+
+## উদাহরণ
+
+**একটা page-এর নাম বদলানো হয়েছে।** `/about-us.html` থেকে `/about/`-এ, **301 স্থায়ী**।
+
+**পুরো একটা অংশ subdomain-এ সরে গেছে।** `/shop/*` থেকে `https://shop.example.com`-এ, **301 স্থায়ী**,
+**পাথের বাকি অংশ রাখুন**-এ টিক দিয়ে। `/shop/shoes?size=42` যায় `https://shop.example.com/shoes?size=42`-এ।
+
+**পুরো site নতুন domain-এ সরে গেছে।** পুরনো site-এ: `/*` থেকে `https://new-example.com`-এ, **301 স্থায়ী**,
+**পাথের বাকি অংশ রাখুন**-এ টিক দিয়ে। প্রতিটা page নতুন domain-এর একই page-এ যায়।
+
+**অস্থায়ী একটা sale page।** `/offer` থেকে `/eid-sale-2026`-এ, **302 অস্থায়ী**।
+
+## Extra domain-গুলোকে main domain-এ পাঠান
+
+কোনো site-এর [extra domain](/guides/websites/websites/#domains-and-extra-domains) থাকলে **রিডাইরেক্ট** card-এ
+আপনার main domain সহ **অন্য ডোমেইনগুলো …-এ পাঠান** (Send the other domains to …) দেখায়।
+
+এটা চালু থাকলে প্রতিটা extra domain-এর ভিজিটর অন্য যেকোনো নিয়মের আগে **301** redirect দিয়ে main domain-এর একই
+page-এ যান। যেমন, main domain `example.com` আর extra domain `www.example.com` হলে
+`https://www.example.com/contact?x=1` যায় `https://example.com/contact?x=1`-এ।
+
+এতে search engine প্রতিটা page-এর জন্য একটাই address পায়। HTTPS certificate তখনো extra domain-গুলো cover
+করে, তাই redirect HTTPS-এও কাজ করে।
+
+<Aside type="note">
+সবাই শেষে `www.example.com`-এ পৌঁছাক চাইলে website বানানোর সময় domain হিসেবে `www.example.com` আর extra domain
+হিসেবে `example.com` দিন। Main domain পরে বদলানো যায় না।
+</Aside>
+
+## Hotlink protection
+
+*Hotlinking* হলো যখন অন্য কোনো website আপনার ছবি বা video নিজের page-এ বসায়, ফলে তাদের ভিজিটররা সেটা আপনার
+server থেকে download করেন। Hotlink protection এমন request ফিরিয়ে দেয়।
+
+<Steps>
+
+1. Website খুলে **হটলিংক সুরক্ষা** (Hotlink protection) খুঁজুন।
+
+2. **ফাইলগুলো হটলিংক থেকে রক্ষা করুন** (Protect files from hotlinking)-এ টিক দিন।
+
+3. **ফাইলের ধরন** (File types) check করুন। Default list হলো
+   `jpg, jpeg, png, gif, webp, avif, svg, mp4, webm, mp3`। ধরনগুলো comma দিয়ে আলাদা করুন।
+
+4. **যেসব সাইট এগুলো দেখাতে পারবে** (Sites that may embed them)-এর নিচে partner site-গুলো যোগ করুন, প্রতি
+   লাইনে একটা। `*.example.com` দিলে `example.com`-এর সব subdomain অনুমতি পায়।
+
+5. **পরিবর্তন সেভ করুন**-এ click করুন।
+
+</Steps>
+
+### কীভাবে সিদ্ধান্ত নেয়
+
+Browser যখন বলে request টা অন্য site-এর কোনো page থেকে আসছে (`Referer` header), তখন protected ধরনের file-এর
+request **403 Forbidden** দিয়ে ফিরিয়ে দেওয়া হয়। এই request-গুলো সবসময় অনুমতি পায়:
+
+- এই website-এর নিজের domain-গুলোর (main domain আর প্রতিটা extra domain) page থেকে আসা request;
+- আপনার list-এ দেওয়া site-গুলো থেকে আসা request;
+- যেসব request-এ কোনো `Referer`-ই নেই, যেমন কেউ সরাসরি ছবির address খুললে, অনেক app, আর কিছু privacy setting।
+
+Check করার সময় `http`/`https` আর port number গোনা হয় না। File-এর ধরন বড় হাতের আর ছোট হাতের অক্ষরের পার্থক্য
+না দেখে মেলানো হয়, তাই `jpg` দিলে `PHOTO.JPG`-ও protected থাকে।
+
+<Aside type="caution">
+`*.example.com` শুধু subdomain-এর সাথে মেলে, যেমন `cdn.example.com` আর `www.example.com`, কিন্তু
+`example.com`-এর নিজের সাথে না। দুটোই অনুমতি দিতে `example.com` আর `*.example.com` দুটোই লিখুন।
+</Aside>
+
+সীমা: ১ থেকে ৪০টা file-এর ধরন (শুধু অক্ষর আর সংখ্যা, যেমন `jpg`), আর সর্বোচ্চ ৫০টা অনুমতি পাওয়া site।
+
+**উদাহরণ।** আপনার site `example.com`, আর একজন partner, `partner.com`, আপনার product-এর ছবি দেখাতে পারবে।
+`jpg, png, webp` protect করুন আর `partner.com`-কে অনুমতি দিন। `partner.com`-এ ছবি load হয়; একই ছবি
+`copycat.net`-এ 403 পায়; নতুন tab-এ `https://example.com/photo.jpg` খুললে তখনো কাজ করে।
+
+## সমস্যা সমাধান
+
+**Redirect কিছুই করে না।** Save করার পর site-এ **চালু** (Live) দেখাচ্ছে কি না check করুন, তারপর একটা private
+browser window-তে test করুন: আপনার browser হয়তো পুরনো কোনো স্থায়ী redirect মনে রেখেছে। List-এ ওপরের কোনো
+redirect আগেই মিলে যাচ্ছে কি না check করুন।
+
+**আমার নিজের site-এই ছবি ভেঙে যাচ্ছে।** Site যে domain-গুলোতে খোলা হয় তার প্রতিটা এই website-এর main domain
+বা extra domain কি না নিশ্চিত হন। অন্য site থেকে আসা page (CDN, আলাদা একটা shop) অবশ্যই **যেসব সাইট এগুলো
+দেখাতে পারবে**-তে থাকতে হবে।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" description="Main আর extra domain।" />
+	<LinkCard title="Log আর traffic" href="/guides/websites/logs-traffic/" description="Request log-এ redirect (3xx) আর ফিরিয়ে দেওয়া request (403) দেখুন।" />
+</CardGrid>

@@ -1,0 +1,215 @@
+---
+title: REST API
+description: আজকের দিনে ekPanel-এর JSON API কীভাবে কাজ করে, কীভাবে sign in করায় আর আপনাকে রক্ষা করে, এর error, role আর endpoint group।
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+Web UI যা কিছু করে, সব `/api/v1`-এর নিচের একটা JSON API দিয়ে যায়। আজকের দিনে এই API কীভাবে কাজ
+করে, এই page-এ তা বোঝানো হয়েছে, যাতে আপনি এটা পড়তে পারেন, UI debug করতে পারেন, বা সাবধানে কিছু
+কাজ script দিয়ে করতে পারেন।
+
+<Aside type="caution" title="এখনো stable public API নয়">
+API-এর এখনো কোনো stable version-এর প্রতিশ্রুতি নেই। **API token, একটা OpenAPI description আর
+`ekpanel` command line tool আসবে phase 4b-তে** (দেখুন [roadmap](/project/roadmap/))। ততদিন API
+browser-এর মতো একই session cookie দিয়ে sign in করে, আর commit থেকে commit-এ endpoint বদলে যেতে পারে।
+</Aside>
+
+## মূল কথা
+
+- **Base address:** `https://<your panel>/api/v1`
+- **Format:** ভেতরে আর বাইরে JSON। Request body পাঠাতে হবে `application/json` হিসেবে (file upload
+  `application/octet-stream` ব্যবহার করে)।
+- **Body size:** প্রতি JSON request-এ সর্বোচ্চ 1 MB। Body-তে অচেনা field থাকলে request ফিরিয়ে দেওয়া
+  হয়, যাতে টাইপের ভুল চোখ এড়িয়ে না যায়। File upload যায় সর্বোচ্চ 512 KB-এর টুকরো করে।
+- **Health check:** `GET /api/v1/health`-এর জন্য sign in লাগে না, আর এটা উত্তর দেয়
+  `{"status":"ok","version":"…"}`। Panel চালু হয়েছে কিনা দেখতে installer এটা ব্যবহার করে।
+
+## Sign in করা
+
+API একটা session cookie ব্যবহার করে, browser যেটা পায় সেটাই।
+
+<Steps>
+
+1. `POST /api/v1/auth/login` দিয়ে sign in করুন:
+
+   ```bash
+   curl -sS -c cookies.txt -H 'Content-Type: application/json' \
+     -d '{"email":"you@example.com","password":"your password"}' \
+     https://panel.example.com/api/v1/auth/login
+   ```
+
+   Account-এ two-factor authentication থাকলে প্রথম উত্তর হবে `401`, code `totp_required`। তখন
+   একই request আবার পাঠান, সাথে `"totp_code":"123456"` যোগ করে।
+
+2. পরের প্রতিটা request-এর সাথে cookie পাঠান:
+
+   ```bash
+   curl -sS -b cookies.txt https://panel.example.com/api/v1/sites
+   ```
+
+3. কাজ শেষ হলে sign out করুন, যাতে panel-এও session শেষ হয়:
+
+   ```bash
+   curl -sS -b cookies.txt -X POST https://panel.example.com/api/v1/auth/logout
+   ```
+
+</Steps>
+
+Session সম্পর্কে:
+
+- সাধারণ install-এ cookie-টা `__Host-ekpanel_session` (plain-HTTP development-এ `ekpanel_session`)।
+  এটা `HttpOnly`, `SameSite=Lax`, আর HTTPS-এ `Secure`।
+- একটা session ৭ দিন থাকে। Panel এর token-এর শুধু একটা SHA-256 hash রাখে।
+- আপনার account-এ **অন্য সব ডিভাইস থেকে সাইন আউট** বাকি সব session শেষ করে দেয়
+  (`POST /api/v1/auth/sessions/revoke-others`)।
+- একটা address থেকে, বা একটা email address-এর জন্য ১০ বার sign in ব্যর্থ হলে, ১৫ মিনিট sign in
+  ফিরিয়ে দেওয়া হয় (code `too_many_attempts`)।
+
+<Aside type="danger">
+একটা session cookie আপনার password-এর মতোই শক্তিশালী। `cookies.txt` গোপন রাখুন আর পরে মুছে
+ফেলুন। Administrator-এর session কোনো script-এ রাখবেন না যা কেউ না দেখে নিজে নিজে চলে: সীমিত
+scope-এর API token-এর জন্য অপেক্ষা করুন (phase 4b)।
+</Aside>
+
+## Cross-site request থেকে সুরক্ষা
+
+Panel শুধু নিজের page থেকে আসা পরিবর্তন (`GET`, `HEAD` আর `OPTIONS` ছাড়া যেকোনো কিছু) গ্রহণ করে।
+এমন প্রতিটা request-কে তিনটা check পার হতে হয়:
+
+| Check | কখন ফিরিয়ে দেওয়া হয় | Error |
+| --- | --- | --- |
+| `Sec-Fetch-Site` header | এটা আছে আর এর value `same-origin` বা `none` নয় | `403 cross_site` |
+| `Origin` header | এটা আছে আর এটা panel-এর নিজের address নয় | `403 cross_site` |
+| Content type | এমন body পাঠানো হয়েছে যা `application/json` বা `application/octet-stream` নয় | `415 json_required` |
+
+HTML form JSON পাঠাতে পারে না, তাই অন্য site-এর কোনো page panel-এ submit করতে পারে না। `curl`-এর
+মতো tool `Sec-Fetch-Site` বা `Origin` কোনোটাই পাঠায় না, তাই JSON পাঠালে এগুলো পার হয়ে যায়। Live
+view (server statistics, terminal) হলো WebSocket, আর এগুলোও অন্য site-এর page ফিরিয়ে দেয়।
+
+এর ওপরে, প্রতিটা উত্তরের সাথে থাকে একটা কড়া Content-Security-Policy, যাতে inline script চলে না,
+আর `X-Frame-Options: DENY`।
+
+## Error
+
+প্রতিটা error-এর আকার একই:
+
+```json
+{ "code": "invalid_credentials", "message": "email or password is not correct" }
+```
+
+- `code` স্থির আর machine পড়তে পারে। Web UI এটা অনুবাদ করে (ভাষার file-গুলোতে key
+  `errors.<code>`), তাই আপনার script-এ সবসময় `code` check করুন, কখনো `message` নয়।
+- `message` হলো API-এর উত্তর পড়া মানুষের জন্য ছোট একটা English ব্যাখ্যা।
+
+সাধারণ code:
+
+| HTTP status | Code | মানে |
+| --- | --- | --- |
+| 400 | `invalid_body` | Body খালি, valid JSON নয়, বা এতে অচেনা field আছে। |
+| 401 | `unauthenticated` | আপনি sign in করেননি, বা session-এর মেয়াদ শেষ। |
+| 401 | `totp_required` | Password ঠিক ছিল; two-factor code-ও পাঠান। |
+| 403 | `forbidden` | আপনার role এটা করতে পারে না। |
+| 403 | `cross_site` | Request অন্য site থেকে এসেছে। |
+| 404 | `not_found` | এটা নেই, **অথবা এটা আপনার নয়**। |
+| 413 | `body_too_large` | Body সীমার চেয়ে বড়। |
+| 415 | `json_required` | Body `application/json` হিসেবে পাঠান। |
+| 429 | `too_many_attempts` | অনেকবার ব্যর্থ হয়েছে; অপেক্ষা করে আবার চেষ্টা করুন। |
+| 500 | `internal` | Panel-এ কিছু একটা গোলমাল হয়েছে; বিস্তারিত এর log-এ আছে। |
+
+Feature-গুলো নিজেদের code যোগ করে, যেমন customer-এর package-এ FTP না থাকলে `ftp_not_allowed`।
+
+## Role
+
+| Role | কী ব্যবহার করতে পারে |
+| --- | --- |
+| **Administrator** (`admin`) | সবকিছু। |
+| **Customer** (`customer`) | নিজের website, database, app, DNS zone, email, cron job আর notification, তাদের package-এর সীমার মধ্যে। যে server-গুলো তারা ব্যবহার করতে পারে সেগুলো দেখে, কিন্তু server, backup, package বা অন্য customer manage করতে পারে না। |
+| **Reseller** (`reseller`) | <Badge text="এখনো নয়" variant="caution" /> Database-এ role-টা আছে, কিন্তু এখনো কোনো endpoint এটা গ্রহণ করে না। Reseller আসবে phase 4e-তে। |
+
+Customer-রা কখনো এমন কিছু দেখে না যা তাদের নয়: অন্য কারো website চাইলে `404` আসে, ঠিক যেমন না
+থাকা website-এর জন্য আসে। কোনো administrator একজন customer-এর ওপর **তাঁর হয়ে ঢুকুন** ব্যবহার করলে
+এক ঘণ্টার জন্য customer-এর অধিকার নিয়ে কাজ করেন, audit log-এ নিজের নামেই লেখা থাকেন, আর
+customer-এর password বা two-factor setting বদলাতে পারেন না।
+
+কিছু কাজের জন্য password (আর two-factor code) নতুন করে নিশ্চিত করতে হয়: web terminal খুললে এটা
+`POST /api/v1/auth/confirm` দিয়ে চায়, আর এই নিশ্চিতকরণ ১৫ মিনিট থাকে।
+
+প্রতিটা পরিবর্তন audit log-এ লেখা হয় (`GET /api/v1/audit`, শুধু administrator)।
+
+## Endpoint group
+
+সব path `/api/v1`-এর নিচে। `{id}` হলো কোনো জিনিসের লম্বা ID, panel-এর address-এ যেমন থাকে।
+
+### সবার জন্য খোলা
+
+| Endpoint | কীসের জন্য |
+| --- | --- |
+| `GET /health` | Panel চালু আছে কিনা, আর কোন version। |
+| `GET /setup/status`, `POST /setup` | Setup token দিয়ে প্রথম administrator। |
+| `POST /auth/login` | Sign in। |
+| `POST /hooks/git/{id}` | GitHub, GitLab, Gitea, Forgejo আর Gogs থেকে আসা Git webhook। Session নয়, app-এর webhook secret দিয়ে check করা হয়। |
+
+### আপনার account (sign in করা যেকোনো user)
+
+| Endpoint | কীসের জন্য |
+| --- | --- |
+| `/auth/me`, `/auth/logout` | আপনি কে, আপনার ভাষা, sign out। |
+| `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable` | Two-factor authentication। |
+| `/auth/sessions/revoke-others`, `/auth/confirm`, `/auth/impersonation/end` | Session, password নিশ্চিত করা, **তাঁর হয়ে ঢুকুন** শেষ করা। |
+
+### Administrator আর customer
+
+| Group | Endpoint শুরু হয় |
+| --- | --- |
+| Usage, password, notification | `/me/usage`, `/auth/password`, `/notifications` |
+| Website | `/sites` (আর SFTP, FTP, SSH key, file, log, traffic, web setting, certificate, malware finding-এর জন্য `/sites/{id}/...`) |
+| WordPress আর PHP app | `/wordpress`, `/sites/{id}/wordpress/...`, `/php-apps`, `/sites/{id}/app` |
+| PHP version | `/php-versions` |
+| Database | `/databases` |
+| Cloudflare DNS | `/dns/cloudflare`, `/dns/zones` |
+| Built-in DNS | `/dns/hosted`, `/dns/templates` |
+| App আর Git deploy | `/catalog`, `/apps` (আর start, stop, log, terminal, deployment, preview-এর জন্য `/apps/{id}/...`) |
+| Email | `/mail/servers`, `/mail/domains`, `/mail/mailboxes`, `/mail/forwarders` |
+| Cron job | `/cron` |
+| Server আর task (শুধু পড়া) | `GET /servers`, `GET /tasks` |
+
+### শুধু administrator
+
+| Group | Endpoint শুরু হয় |
+| --- | --- |
+| Customer আর package | `/customers`, `/packages` |
+| Server | `/servers` (যোগ করা, মোছা, connection command, address, live statistics, metrics, service, terminal, PHP extension, usage, traffic) |
+| Server security | `/servers/{id}/security/...` (CrowdSec, ban, alert, automatic update, country, malware) |
+| Firewall | `/servers/{id}/firewall` |
+| Email server | `/servers/{id}/mail` |
+| Name server | `/dns/nameservers` |
+| Backup | `/backups` |
+| Notification setting | `/settings/notifications` |
+| Audit log | `/audit` |
+
+Method-সহ পুরো তালিকা আছে main repository-র
+[`internal/api/server.go`](https://github.com/ekPanel/ekpanel/blob/dev/internal/api/server.go)-এ।
+Request আর উত্তরের field হলো এর পাশের handler-গুলোর Go type, আর UI যে TypeScript type ব্যবহার করে
+সেগুলো আছে [`web/src/lib/api.ts`](https://github.com/ekPanel/ekpanel/blob/dev/web/src/lib/api.ts)-এ।
+
+## Agent-এর endpoint
+
+Agent-রা mutual TLS দিয়ে একটা আলাদা listener-এর (port 7443) সাথে কথা বলে: `/api/v1/agent/enroll`,
+`/api/v1/agent/renew` আর WebSocket `/api/v1/agent/connect`। এগুলো মানুষ বা script-এর জন্য নয়।
+দেখুন [Architecture](/concepts/architecture/)।
+
+## সীমা আর যা এখনো নেই
+
+- এখনো কোনো API token নেই: শুধু session cookie (phase 4b)।
+- এখনো কোনো OpenAPI description আর API docs site নেই (phase 4b)।
+- API-এর জন্য এখনো কোনো `ekpanel` command line tool নেই, আর কোনো Terraform provider-ও নেই (phase 4b)।
+- Release না আসা পর্যন্ত endpoint আগে থেকে না জানিয়ে বদলাতে পারে।
+
+## সম্পর্কিত
+
+- [Security model](/concepts/security-model/)
+- [Configuration](/reference/configuration/)
+- [Roadmap](/project/roadmap/)

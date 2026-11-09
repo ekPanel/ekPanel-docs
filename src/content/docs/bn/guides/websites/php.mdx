@@ -1,0 +1,210 @@
+---
+title: PHP
+description: পাশাপাশি একাধিক PHP version, version বদলানো, প্রতিটা site-এর PHP settings, প্রতিটা server-এর PHP extension, আর প্রতিটা site-এর PHP-FPM pool কীভাবে কাজ করে।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+প্রতিটা PHP website তার PHP code চালায় নিজের PHP-FPM pool দিয়ে, নিজের Linux account হিসেবে, আপনার বেছে
+নেওয়া PHP version-এ। একই server-এর আলাদা আলাদা site একই সময়ে আলাদা PHP version ব্যবহার করতে পারে।
+
+## PHP version
+
+ekPanel পাশাপাশি এই version-গুলো দেয়:
+
+| Version | মন্তব্য |
+| --- | --- |
+| PHP 8.5 | |
+| PHP 8.4 | Recommended; নতুন site-এর জন্য আগে থেকেই বেছে রাখা |
+| PHP 8.3 | |
+| PHP 8.2 | |
+| PHP 8.1 | |
+| PHP 7.4 | শুধু পুরনো application-এর জন্য। PHP project থেকে এটা আর security fix পায় না |
+
+Package-গুলো আসে Ondřej Surý-র PHP repository থেকে (Ubuntu-তে Launchpad PPA, Debian-এ `packages.sury.org`),
+যেখানে প্রতিটা release-এর জন্য সব version আছে। ekPanel repository যোগ করে আর কোনো version install করে
+**যখন প্রথমবার কোনো site-এর সেটা দরকার হয়**, তাই server-এ শুধু আপনার ব্যবহার করা version-গুলোই থাকে। কোনো
+version প্রথমবার install হতে কয়েক মিনিট লাগতে পারে।
+
+কোনো site যদি এমন customer-এর হয় যার [package](/guides/admin/customers/)-এ PHP version-এর list দেওয়া আছে,
+তাহলে শুধু সেই version-গুলোই দেখানো আর গ্রহণ করা হয়।
+
+## Site-এর PHP version বদলান
+
+<Steps>
+
+1. Website খুলুন। **সেটিংস** (Settings)-এ নতুন **PHP ভার্সন** (PHP version) বেছে নিন।
+
+2. **পরিবর্তন সেভ করুন** (Save changes)-এ click করুন। Site-এ প্রথমে **চালু হচ্ছে…** (Applying…), তারপর
+   **চালু** (Live) দেখায়।
+
+</Steps>
+
+বদলানোর সময় site বন্ধ থাকে না। Agent প্রথমে নতুন version-এর pool চালু করে, তার socket-এর জন্য অপেক্ষা করে,
+তারপর web server-কে সেদিকে point করে, আর তারপরই পুরনো pool সরায়। একটা test-এ (test VM-এ) টানা load-এর মধ্যে
+version বদলানোর সময় ৪৫৭টা request-এর প্রতিটার উত্তর এসেছিল।
+
+<Aside type="caution">
+Live site-এর version বদলানোর আগে check করুন আপনার application নতুন version support করে কি না।
+[PHP error log](/guides/websites/logs-traffic/#php-error-log)-এ দেখা যায় কী ভাঙছে। আগের version-এ ফেরাও একই
+ভাবে হয়।
+</Aside>
+
+PHP site-কে static (শুধু file) বানাতে **সাইটের ধরন** (Type of site)-এর নিচে **স্ট্যাটিক** (Static) বেছে নিন।
+এর PHP pool সরিয়ে ফেলা হয় আর `.php` file আর চালানো হয় না।
+
+<Aside type="danger">
+Static site `public_html`-এর প্রতিটা file যেমন আছে তেমনই দেখায়, `.php` file-ও। PHP file তখনো থেকে গেলে
+ভিজিটররা তাদের source code download করতে পারবেন, `wp-config.php`-এর মতো configuration file-এ থাকা password
+সহ। Site-কে static-এ বদলানোর আগে PHP application সরিয়ে ফেলুন।
+</Aside>
+
+## প্রতিটা site-এর PHP settings
+
+প্রতিটা PHP site-এ একটা **PHP সেটিংস** (PHP settings) card আছে, যেখানে এই `php.ini` value-গুলো থাকে। Field-এ
+দেখানো default ব্যবহার করতে field খালি রাখুন।
+
+| Setting | Default | যেসব value চলে | কী করে |
+| --- | --- | --- | --- |
+| `memory_limit` | `256M` | `1M` থেকে `8192M` (বা `8G`) | একটা request কতটা memory ব্যবহার করতে পারবে |
+| `upload_max_filesize` | `64M` | `1M` থেকে `10240M` (বা `10G`) | সবচেয়ে বড় upload করা file |
+| `post_max_size` | `64M` | `1M` থেকে `10240M` (বা `10G`) | সবচেয়ে বড় form বা upload request |
+| `max_execution_time` | `120` | `0` থেকে `86400` সেকেন্ড | একটা request কত সেকেন্ড চলতে পারবে; `0` মানে কোনো সীমা নেই |
+| `max_input_time` | `120` | `-1` থেকে `86400` সেকেন্ড | একটা request-এর data নিতে কত সেকেন্ড; `-1` হলে execution time ব্যবহার হয় |
+| `max_input_vars` | `1000` | `100` থেকে `100000` | একটা request-এ কতগুলো form field |
+| `max_file_uploads` | `20` | `1` থেকে `1000` | একবারের upload-এ কতগুলো file |
+| `session.gc_maxlifetime` | `1440` | `60` থেকে `2592000` সেকেন্ড | অলস session কত সেকেন্ড পরে পরিষ্কার করা হবে |
+| `display_errors` | `Off` | `On` বা `Off` | Page-এ error দেখাবে কি না। Live site-এ এটা বন্ধ রাখুন |
+| `short_open_tag` | `Off` | `On` বা `Off` | `<?php`-এর পাশাপাশি `<?`-ও চলবে কি না |
+| `allow_url_fopen` | `On` | `On` বা `Off` | PHP web address-কে file-এর মতো খুলতে পারবে কি না |
+| `date.timezone` | `UTC` | একটা time zone-এর নাম, যেমন `Asia/Dhaka` | Date function-গুলো যে time zone ব্যবহার করে |
+
+Size হলো একটা সংখ্যা, তারপর `M` বা `G`, যেমন `512M` বা `2G`।
+
+বদলাতে:
+
+<Steps>
+
+1. Website খুলে **PHP সেটিংস** খুঁজুন।
+
+2. নতুন value লিখুন। বদলানো setting-এর নাম bold-এ দেখায়।
+
+3. **পরিবর্তন সেভ করুন**-এ click করুন। নতুন value দিয়ে site-এর PHP pool reload হয়।
+
+</Steps>
+
+Application-গুলো চাইলে নিজেরাই এই value বাড়াতে পারে (যেমন WordPress বাড়ায়), শুধু `allow_url_fopen` ছাড়া,
+যেটা কেবল panel বদলাতে পারে।
+
+<Aside type="tip">
+Upload-এর জন্য `post_max_size` অন্তত `upload_max_filesize`-এর সমান বড় হতে হবে, কারণ upload টা request-এরই অংশ।
+</Aside>
+
+শুধু table-এর setting-গুলোই বদলানো যায়। Panel আর agent একই নিয়মে প্রতিটা value check করে, তাই কোনো value
+কখনো PHP-র configuration-এ অন্য লাইন যোগ করতে পারে না। কিছু [PHP app](/guides/websites/php-apps/) install
+হওয়ার সময় একটা value set করে: Moodle `max_input_vars`-কে `5000` করে।
+
+## PHP extension
+
+Extension install হয় **প্রতিটা server আর প্রতিটা PHP version অনুযায়ী**, তাই সেই server-এ ওই version ব্যবহার
+করা প্রতিটা site-এ এটা খাটে। শুধু administrator-রা এগুলো বদলাতে পারেন।
+
+<Steps>
+
+1. **সার্ভার** (Servers) খুলুন, তারপর server টা।
+
+2. **PHP এক্সটেনশন** (PHP extensions) card-এ **PHP সংস্করণ** (PHP version) বেছে নিন।
+
+3. Install করতে কোনো extension-এ টিক দিন, বা সরাতে টিক তুলে দিন। Task চলার সময় এতে **বদলানো হচ্ছে…**
+   (Changing…) দেখায়।
+
+</Steps>
+
+প্রতিটা পরিবর্তনের পর server-এ ওই version-এর প্রতিটা PHP-FPM master reload হয় (system-এর আর customer-দের),
+তাই আপনাকে আর কিছু না করেই site-গুলো পরিবর্তন পেয়ে যায়।
+
+### Locked extension
+
+এগুলো প্রতিটা PHP version-এর সাথে install হয় আর সরানো যায় না। এগুলোতে **সবসময় থাকে** (Always installed)
+দেখায়:
+
+`cli`, `common`, `fpm`, `mysql`, `pgsql`, `curl`, `gd`, `mbstring`, `xml`, `zip`, `intl`,
+`bcmath`, `opcache`
+
+### Optional extension
+
+এই ১৭টা যোগ করা আর সরানো যায়। প্রতিটা হলো `php<version>-<name>` package:
+
+| Extension | সাধারণ ব্যবহার |
+| --- | --- |
+| `apcu` | PHP application-এর জন্য in-memory cache |
+| `bz2` | bzip2 compression |
+| `gmp` | খুব বড় সংখ্যা নিয়ে হিসাব |
+| `igbinary` | ছোট আকারের serializer, কিছু cache এটা ব্যবহার করে |
+| `imagick` | ImageMagick দিয়ে ছবি process করা |
+| `imap` | IMAP দিয়ে mail পড়া |
+| `ldap` | Directory sign-in (LDAP) |
+| `mailparse` | Email message parse করা |
+| `memcached` | Memcached client |
+| `mongodb` | MongoDB driver |
+| `msgpack` | MessagePack serializer |
+| `redis` | Redis client, cache আর session-এর জন্য |
+| `soap` | SOAP web service |
+| `sqlite3` | SQLite database |
+| `tidy` | HTML পরিষ্কার করা |
+| `xdebug` | Debugging আর profiling। PHP-কে ধীর করে দেয়; live server-এ চালু রেখে দেবেন না |
+| `yaml` | YAML file |
+
+কোনো PHP version প্রথমবার install হওয়ার সময় `imagick`-ও একবার install করার চেষ্টা করা হয়, তাই এটা হয়তো
+আগে থেকেই আছে।
+
+<Aside type="note">
+Card-এ যদি লেখা থাকে এখনো কোনো PHP version install হয়নি, তাহলে আগে একটা PHP website যোগ করুন: কোনো version
+সেটা ব্যবহার করা প্রথম site-এর সাথেই install হয়। Card-এর জন্য server online থাকতে হবে।
+</Aside>
+
+## PHP-FPM pool কীভাবে কাজ করে
+
+PHP-FPM হলো সেই program যেটা web server-এর জন্য PHP code চালায়। একটা *pool* হলো নিজস্ব settings সহ PHP
+process-এর একটা দল। ekPanel **প্রতিটা PHP site-কে তার নিজের একটা pool** দেয়।
+
+প্রতিটা site-এর pool:
+
+- **site-এর Linux account** হিসেবে চলে, তাই PHP শুধু ওই site-এর file বদলাতে পারে;
+- `open_basedir` দিয়ে site-এর home folder-এ সীমাবদ্ধ থাকে (`/home/<account>/` আর `/usr/share/php/`), তাই
+  কোনো script অন্য site-এর file খুলতে পারে না;
+- upload, session আর temporary file রাখে `/home/<account>/tmp`-এ;
+- PHP error লেখে `/home/<account>/logs/php-error.log`-এ;
+- এমন একটা socket-এ শোনে যেটা শুধু web server ব্যবহার করতে পারে, যেমন
+  `/run/php/ekpanel-<site id>-php8.4.sock`;
+- process চালু করে **দরকার হলে**: একসাথে সর্বোচ্চ ৫টা, কাজ ছাড়া ৩০ সেকেন্ড থাকলে প্রতিটা বন্ধ হয়, আর ৫০০টা
+  request-এর পর বদলে নতুন একটা আসে। যে site-এ কোনো ভিজিটর নেই সেটা কোনো PHP memory ব্যবহার করে না।
+
+Pool কোথায় থাকে:
+
+- **Administrator-দের website** তাদের version-এর জন্য system-এর PHP-FPM ব্যবহার করে (`php8.4-fpm.service`),
+  pool file থাকে `/etc/php/<version>/fpm/pool.d/`-এ।
+- **Customer-দের website** চলে customer-এর নিজের একটা PHP-FPM master-এর অধীনে, customer-এর systemd slice-এর
+  ভেতরে, যেখানে package-এর memory আর CPU সীমা থাকে। কোনো script package-এর অনুমতির চেয়ে বেশি memory ব্যবহার
+  করলে শুধু ওই একটা PHP process বন্ধ হয়; customer-এর বাকি request কাজ করতে থাকে।
+
+<Aside type="caution">
+এই pool file আর web server file ekPanel লেখে। হাতে করা পরিবর্তন পরের বার apply করার সময় overwrite হয়ে যায়।
+</Aside>
+
+## সীমা আর যা এখনো নেই
+
+- প্রতিটা site-এর PHP process-এর সংখ্যা (৫) panel থেকে বদলানো যায় না।
+- ওপরের table-এর বাইরের setting প্রতিটা site-এর জন্য আলাদা করে set করা যায় না।
+- Extension প্রতিটা server আর version অনুযায়ী, প্রতিটা site অনুযায়ী না।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="Log আর traffic" href="/guides/websites/logs-traffic/" description="কোনো পরিবর্তনের পর PHP error খুঁজে বের করুন।" />
+	<LinkCard title="PHP app" href="/guides/websites/php-apps/" description="Joomla, Drupal, Moodle আর Laravel।" />
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+</CardGrid>

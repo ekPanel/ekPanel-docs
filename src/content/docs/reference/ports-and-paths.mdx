@@ -1,0 +1,161 @@
+---
+title: Ports and paths
+description: Every network port ekPanel and the services it sets up use, and the important files and folders on a server.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This page lists the ports ekPanel listens on or opens, and where it keeps files on a server.
+Use it when you set up a cloud firewall, look for a log, or want to know what a folder is for.
+
+## Ports
+
+### Always
+
+| Port | Protocol | Who listens | Reachable from | What for |
+| --- | --- | --- | --- | --- |
+| 8080 | TCP | the panel (`ekpanel`) | this server only (`127.0.0.1`) | Web UI and API. Caddy forwards HTTPS traffic to it. |
+| 7443 | TCP | the panel | everywhere | Agents connect here with mutual TLS. Only the panel's server listens on it. |
+| 80 | TCP | Caddy | everywhere | HTTP, redirects to HTTPS, and Let's Encrypt's certificate checks. |
+| 443 | TCP and UDP | Caddy | everywhere | HTTPS for the panel, every website and app, and webmail. UDP is HTTP/3. |
+| 22 | TCP | OpenSSH | everywhere | SSH and SFTP. ekPanel keeps whatever ports `sshd` really uses open. |
+| 5432 | TCP | PostgreSQL | this server only | The panel's database, and customers' PostgreSQL databases on this server. |
+
+Agents only connect **out** to the panel. A managed server does not need an open port for the
+panel to reach it, so it works behind NAT. Only the panel's server must accept TCP 7443 from
+your other servers.
+
+<Aside type="tip" title="Cloud firewalls">
+Many providers have a firewall in their web console, outside the server. Open TCP 80, 443 and
+22 there for every server, and TCP 7443 on the panel's server. Open the other ports below
+only when you use the feature.
+</Aside>
+
+### When you use a feature
+
+| Port | Protocol | Service | When | Notes |
+| --- | --- | --- | --- | --- |
+| 3306 | TCP | MariaDB | MariaDB database on the server | Local connections only. |
+| 20000–29999 | TCP | Docker apps | Docker and Git apps | Published on `127.0.0.1` only; Caddy routes the app's domain to it. Git apps take two ports in a row for zero-downtime releases. |
+| 25 | TCP | Stalwart (mail) | Email turned on | Incoming mail (SMTP). |
+| 465 | TCP | Stalwart | Email turned on | Sending mail from mail apps, TLS from the start. |
+| 587 | TCP | Stalwart | Email turned on | Sending mail from mail apps, STARTTLS. |
+| 993 | TCP | Stalwart | Email turned on | IMAP over TLS. |
+| 995 | TCP | Stalwart | Email turned on | POP3 over TLS. |
+| 21 | TCP | Pure-FTPd | Any website has FTP on | FTP over TLS only. |
+| 30000–30100 | TCP | Pure-FTPd | Any website has FTP on | FTP passive data ports. |
+| 53 | TCP and UDP | PowerDNS | The server is a name server | Listens on the server's own addresses. |
+
+### Internal ports (loopback only)
+
+These listen on `127.0.0.1` and are never opened in the firewall. They are listed so you know
+what they are, and so you do not put something else there.
+
+| Port | Service | Notes |
+| --- | --- | --- |
+| 18900 | Stalwart management API | The agent signs in with a random password kept in `/etc/ekpanel/mail/admin.env`. |
+| 18910 | CrowdSec local API | Moved off CrowdSec's default 8080, which is the panel's. |
+| 18920 | PowerDNS API | Its key is in `/etc/powerdns/ekpanel-api.key`. |
+| 53 on `127.0.0.53` | systemd-resolved | The system's own resolver. PowerDNS leaves this address alone. |
+
+### Firewall rules ekPanel manages
+
+When you turn on the firewall on a server's page, ekPanel manages `ufw` and always keeps these
+open, so you cannot lock yourself out by mistake:
+
+- SSH, on the ports `sshd` really listens on (22 if they cannot be read)
+- 80/tcp, 443/tcp, 443/udp
+- 7443/tcp
+
+It also opens the mail ports while email is on, 21 and 30000–30100 while a website uses FTP,
+and 53 (TCP and UDP) while the server is a name server. When the firewall is "not managed",
+ekPanel leaves any existing firewall alone, and you must open these ports yourself.
+
+The installer itself adds rules for 80, 443 and 7443 only if `ufw` is already active.
+
+## Paths on a server
+
+### ekPanel's own files
+
+| Path | What it is |
+| --- | --- |
+| `/usr/local/bin/ekpanel` | The panel program (panel's server only). |
+| `/usr/local/bin/ekpanel-agent` | The agent program (every server). |
+| `/etc/ekpanel/panel.env` | The panel's settings. See [Configuration](/reference/configuration/). |
+| `/etc/ekpanel/agent.json` | The agent's credential: certificate and key. Root only. |
+| `/var/lib/ekpanel/` | The panel's data folder: setup token, agent CA, `secret.key`. Owned by the `ekpanel` user. |
+| `/var/lib/ekpanel-agent/` | The agent's own state (what it created, firewall and traffic state). |
+| `/etc/ekpanel/tls/` | The self-signed certificate for the panel, when installed without `--domain`. |
+| `/usr/local/lib/ekpanel/` | Tools the agent downloads and checks: WP-CLI, Railpack, Stalwart. |
+
+### Websites
+
+Each website has its own Linux account, and its files live in that account's home folder.
+
+| Path | What it is |
+| --- | --- |
+| `/home/<account>/public_html` | The website's files. |
+| `/home/<account>/logs/php-error.log` | The website's PHP error log. |
+| `/home/<account>/tmp` | Temporary files. Not included in backups. |
+| `/home/<account>/.trash` | The file manager's trash. Not included in backups. |
+| `/etc/ekpanel/caddy/sites/<site id>.caddy` | The website's Caddy configuration. Written by the agent; do not edit. |
+| `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | The same for an app with a domain. |
+| `/etc/ekpanel/caddy/sites/webmail.caddy` | Webmail, when email is on. |
+| `/var/log/caddy/site-<site id>.log` | The website's request log (JSON). |
+| `/var/log/caddy/app-<app id>.log` | An app's request log. |
+| `/etc/php/<version>/fpm/pool.d/` | PHP-FPM pools of the administrators' websites. |
+| `/etc/ekpanel/php/` | PHP-FPM of customers' websites, one PHP master per customer and version. |
+| `/etc/ekpanel/certs/` | Certificates uploaded for websites. |
+| `/etc/ekpanel/cron/` | Scripts of cron jobs. |
+| `/etc/ekpanel/ssh/` | SFTP keys, in root-owned files the site accounts cannot change. |
+| `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH settings that lock SFTP into each site's folder. |
+
+`<account>` is the website's Linux account, shown as **Linux account** on the website's page.
+The ID of a website or app is the long ID in its address in the panel.
+
+### Apps, backups and security
+
+| Path | What it is |
+| --- | --- |
+| `/srv/ekpanel/apps/<name>` | A Docker app's Compose project. Root only. |
+| `/srv/ekpanel/builds` | Git deploy builds. |
+| `/var/backups/ekpanel` | Backups kept on the server's own disk. |
+| `/etc/ekpanel/backup/` | Backup settings, encryption key and S3 keys. Root only. |
+| `/var/lib/ekpanel/quarantine` | Files moved away by the malware scan. Only root can read it. |
+| `/var/lib/ekpanel/geo/` | DB-IP's country list for country blocking, refreshed monthly. |
+| `/etc/ekpanel/countries.nft` | The country blocking rules, loaded at boot by `ekpanel-countries.service`. |
+
+### Email, DNS and FTP
+
+| Path | What it is |
+| --- | --- |
+| `/etc/ekpanel/mail/` | Mail server settings, including `admin.env` with the API password. |
+| `/var/lib/ekpanel-mail` | Stalwart's data: mailboxes and their mail. |
+| `/var/lib/ekpanel-webmail` | Roundcube's data. |
+| `/etc/powerdns/pdns.conf` | PowerDNS settings, written by the agent. |
+| `/var/lib/powerdns/pdns.sqlite3` | PowerDNS's zones. |
+| `/etc/pure-ftpd/` | Pure-FTPd settings and its own user list. |
+
+<Aside type="caution">
+The agent writes most of these files and rewrites them when they differ from what the panel
+wants. Changes made by hand are usually undone at the next apply (at the latest within 10
+minutes). Change things in the panel instead.
+</Aside>
+
+## On your computer (development)
+
+| Port or path | What it is |
+| --- | --- |
+| `127.0.0.1:8080` | The panel from `make dev`. |
+| `127.0.0.1:7443` | Its agent listener. |
+| `localhost:5173` | The Vite dev server from `make dev-ui`. |
+| `.data/` | The development data folder: embedded database, setup token, `agent.json`. Delete it to start over. |
+| `127.0.0.1:2222`, `8443`, `17443` | SSH, HTTPS and the agent port of the [test VM](/development/test-vm/). |
+
+## Related
+
+- [Configuration](/reference/configuration/)
+- [Firewall](/guides/security/firewall/)
+- [Troubleshooting](/reference/troubleshooting/)

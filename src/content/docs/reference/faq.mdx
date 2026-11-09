@@ -1,0 +1,154 @@
+---
+title: FAQ
+description: Honest answers to common questions about ekPanel, its state, requirements, licence and how it compares to other panels.
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Short, honest answers to the questions people ask most. If yours is not here, see
+[Support](/project/support/).
+
+## Is ekPanel ready for production?
+
+**Not yet.** ekPanel is in early development and has had **no release**. Everything described
+in these docs works and was tested on a test server (a local virtual machine), but it has not
+run real hosting for real customers yet. Some parts were never tried against the real outside
+service: Cloudflare's API was tested against a fake copy of it, and email was not tried with
+mail to and from the internet.
+
+Use it to try things out, test, and help us find problems. Do not host anything important on
+it until the first release. The [roadmap](/project/roadmap/) shows what comes before that:
+signed releases, an installer that downloads them, and self-updates.
+
+## What does "ek" mean?
+
+*ek* (এক) is Bangla for "one": one panel for your whole hosting. Write the name **ekPanel**,
+with a small e and a capital P.
+
+## Which operating systems does it run on?
+
+The installer accepts **Ubuntu 24.04 or newer** (24.04, 24.10, 25.x, 26.x) and **Debian 12 or
+13**, on **amd64** (x86_64) or **arm64** (aarch64) processors. It needs a fresh server, as root.
+
+Testing so far has been on Ubuntu 24.04. Other Linux distributions (AlmaLinux, Rocky Linux…)
+are not supported yet. See [Requirements](/start/requirements/).
+
+## Do I need Docker?
+
+**No.** The panel, the agent and websites (static, PHP, WordPress) run without Docker. When you
+add your first Docker app, Git app or catalogue service on a server, the agent installs Docker
+from the distribution's packages there. Servers without apps never get Docker.
+
+For development you do not need Docker either: `make dev` starts its own embedded PostgreSQL.
+
+## Can I use it with Cloudflare?
+
+**Yes, and it is the recommended way to run DNS.** Connect your Cloudflare account with an API
+token, and every website and app gets its DNS records at Cloudflare, kept in sync. You can turn
+Cloudflare's proxy on or off per record. Behind the proxy, ekPanel's logs, traffic charts and
+CrowdSec bans see visitors' real addresses (Caddy trusts the `CF-Connecting-IP` header only
+from Cloudflare's own addresses).
+
+Two things to know:
+
+- This was tested against a fake copy of Cloudflare's API, not yet the real one.
+- Behind Cloudflare's proxy, a CrowdSec ban only stops visitors who come to your server
+  directly. Requests through Cloudflare come from Cloudflare's addresses, which ekPanel never
+  bans.
+
+See [Cloudflare DNS](/guides/dns/cloudflare/).
+
+## Can I use it without Cloudflare?
+
+Yes. Point your domains at your server at any DNS host, or run your own name servers with
+ekPanel (PowerDNS, with DNSSEC). See [Your own name servers](/guides/dns/name-servers/).
+
+## Is it free? What does the licence allow?
+
+ekPanel is free software under the **GNU Affero General Public License v3.0**
+(`AGPL-3.0-only`). You can use it for any purpose, including commercial hosting, and you can
+study, change and share it.
+
+The one extra rule of the AGPL: if you run a **changed** version of ekPanel as a service for
+other people (for example, your customers sign in to it), you must offer those people the
+source code of your changed version under the same licence. Running it unchanged needs nothing.
+See [Licence](/project/license/).
+
+## Which languages does it speak?
+
+The panel is in **English** and **বাংলা (Bangla)**, both complete. Notifications are sent in
+each person's own language. The UI is ready for right-to-left languages such as Arabic, and new
+languages are plain JSON files. See [Translating](/development/translating/).
+
+These docs are in English and Bangla too.
+
+## How is it different from cPanel, aaPanel or Coolify?
+
+ekPanel puts what those panels do into one:
+
+- **Classic web hosting**, like cPanel and aaPanel: PHP websites with versions side by side, a
+  file manager, SFTP and FTP, databases, email, DNS, WordPress tools, backups.
+- **App deployment**, like Coolify: Docker images, Compose files, Git deploys with zero-downtime
+  releases, rollbacks and pull request previews, and a catalogue of one-click services.
+
+Other differences:
+
+- It is open source (AGPL), and there is no paid edition.
+- One panel manages **many servers**. Each server runs a small agent that connects out to the
+  panel, so servers behind NAT work too.
+- The panel keeps the **desired state** of every website and app; the agent makes the server
+  match it and repairs drift by itself. See [Desired state](/concepts/desired-state/).
+- The agent only accepts **typed operations** from a fixed list. There is no endpoint that
+  runs arbitrary shell commands.
+- It is built for many languages from the start.
+
+What it does **not** have yet, compared to cPanel: resellers, importers for cPanel backups,
+moving sites between servers, a WAF, and billing integrations. These are in
+[phase 4](/project/roadmap/).
+
+## Can I sell hosting with it?
+
+You can give **customers** their own accounts with **packages**: limits on websites, databases,
+apps, disk, memory and CPU (memory and CPU are enforced by the kernel), PHP versions, servers,
+email and FTP. Customers sign in to the same panel and see only what they own.
+
+Not there yet: reseller accounts, white-label branding, suspending a customer, bandwidth limits,
+and billing integrations (WHMCS, Blesta, Paymenter). And there is no release yet, so do not sell
+hosting on it today. See [Customers and packages](/guides/admin/customers/).
+
+## Can I import my sites from cPanel or another panel?
+
+Not yet. Importers for cPanel backups, aaPanel and Coolify are planned for phase 4d. Today you
+can add a website and upload its files with the file manager or SFTP, and import a database
+with your usual tools.
+
+## Does it phone home?
+
+There is no telemetry: ekPanel does not report anything about you to the project. The panel
+contacts outside services only for features you set up, such as Cloudflare's API or your
+notification channels (Telegram, Discord, Slack, webhooks, your SMTP server).
+
+Servers download what they install from the usual places: the distribution's package mirrors,
+Caddy's, CrowdSec's and the PHP package repositories, the projects' own release pages for
+tools such as WP-CLI, Railpack and Stalwart (each checked against its published checksum), and
+DB-IP's country list once a month if you use country blocking. The panel's fonts are
+self-hosted, so it does not call font CDNs.
+
+## Where is my data?
+
+On your servers. The panel's database is PostgreSQL on the panel's server; websites, databases,
+mail and backups are on the servers you manage (or in your own S3-compatible storage for
+backups). See [Ports and paths](/reference/ports-and-paths/).
+
+## How do I get help?
+
+Read these docs first, especially [Troubleshooting](/reference/troubleshooting/). Then see
+[Support](/project/support/): GitHub Discussions and issues once the main repository is public,
+and email until then.
+
+<Aside type="note">
+Found a security problem? Do not post it publicly. See the
+[security policy](/project/security-policy/).
+</Aside>

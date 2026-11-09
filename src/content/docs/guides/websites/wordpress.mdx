@@ -1,0 +1,263 @@
+---
+title: WordPress
+description: Install WordPress in one click, then keep it updated safely, harden it, and work on a staging copy before changing the live site.
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+ekPanel installs WordPress in one click and then looks after it: updates that undo themselves if
+they break the site, automatic update rules, plugin switches, hardening and staging copies. It also
+finds WordPress sites you installed yourself.
+
+## Install WordPress
+
+You can install WordPress when you add a website, or later on an existing PHP site.
+
+### When adding a website
+
+In **Add website**, choose **PHP** and tick **Install WordPress**. ekPanel creates the database and
+installs WordPress as soon as the site is ready. It uses your email address for the admin account
+and picks a user name from it (`rahim.k@example.com` becomes `rahim.k`). The WordPress language
+follows the panel's language: Bangla panel, Bangla WordPress (`bn_BD`); otherwise English.
+
+### On an existing site
+
+<Steps>
+
+1. Open the website. It must be a **PHP** site, and its `public_html` must be empty (the
+   ekPanel welcome page is fine), so none of your files are overwritten.
+
+2. In the **Install WordPress** card, fill in:
+   - **Site title**: up to 100 characters. It starts as the domain.
+   - **Admin user name**: 3 to 60 letters, digits and `. _ @ -`.
+   - **Admin email**: where WordPress sends its messages.
+   - **WordPress language**: one of 14 languages, shown in their own script: English, বাংলা,
+     हिन्दी, اردو, العربية, Español, Français, Deutsch, Português (Brasil), Bahasa Indonesia,
+     Türkçe, Русский, 简体中文, 日本語.
+
+3. Click **Install WordPress**.
+
+4. **Copy the admin password now.** It is shown only once; ekPanel does not keep it.
+
+5. Wait about a minute. You can leave the page. Then click **Open WordPress admin**
+   (`https://<your domain>/wp-admin/`).
+
+</Steps>
+
+### What the installer does
+
+1. Creates a MariaDB database and user named `wp_<site account>`, with a random password. It counts
+   as one database in the owner's package.
+2. Downloads WP-CLI once per server and checks it against its published SHA-512 checksum.
+3. As the site's account: downloads WordPress, writes `wp-config.php`, sets `FS_METHOD` to
+   `direct`, installs WordPress and creates your admin account. For a language other than English,
+   it adds that language's translation.
+4. Makes `wp-config.php` readable only by the site's account (permissions `600`).
+
+The admin and database passwords exist only in memory. WP-CLI receives them on its input, never on
+a command line other accounts could see. If the panel restarts before the install starts, the
+task fails with a message to start it again.
+
+Because the files belong to the same account PHP runs as, plugins, themes and updates install
+from inside WordPress without asking for FTP details.
+
+## The WordPress page
+
+**WordPress** in the menu lists every WordPress site you can see, with:
+
+| Column | What it shows |
+| --- | --- |
+| **Website** | The site, and "Staging copy of …" for staging copies |
+| **Version** | The installed WordPress version |
+| **Needs attention** | Available core, plugin and theme updates, maintenance mode, files with loose permissions, or **Cannot be read**. Otherwise **Up to date** |
+| **Automatic updates** | The site's rules |
+| **Checked** | When ekPanel last looked |
+
+ekPanel looks at **every PHP site about once a day**, so WordPress you installed by hand (or
+restored from elsewhere) shows up too. Click **Look for WordPress** to look at every PHP site now.
+
+## The toolkit on the site page
+
+On a WordPress site, the site page shows the toolkit. Click **Check now** to read the site again.
+
+### Updates that undo themselves
+
+Click **Update** next to a plugin or theme, **Update all**, or the **Update to …** buttons under
+**WordPress core**. When both are available, the core section offers the newest release of your
+current branch (security and maintenance releases) and the newest version overall.
+
+Updates run as a task, one at a time:
+
+<Steps>
+
+1. ekPanel checks that the home page answers before it starts.
+
+2. For a plugin or theme, it copies the current files aside, then updates.
+
+3. After each update it fetches the site's home page again. A server error (5xx), or WordPress's
+   "There has been a critical error" page, or a PHP fatal error, counts as broken.
+
+4. If the update broke the site, the old files are put back. For core, the previous version's core
+   files are downloaded again, and `wp-content` is left alone.
+
+</Steps>
+
+The result of each item is listed: **updated**, **broke the site, so the previous version was put
+back**, **failed, nothing changed**, or **already up to date**. Any update that was undone or
+failed also sends a **WordPress update** notification to the site's owner.
+
+<Aside type="caution">
+The check only looks at the home page, and only works when the home page was healthy before.
+A plugin that breaks another page (checkout, the admin area) is not noticed. Rolling back core
+puts back the old core files but does not undo the database upgrade the new version made. Keep
+[backups](/guides/data/backups/) and try big updates on a [staging copy](#staging-copies) first.
+</Aside>
+
+### Automatic updates
+
+Under **Automatic updates**, choose for each site:
+
+- **Core:** **None**, **Security releases** (the newest release of the installed branch), or
+  **All versions**;
+- **Plugins** and **Themes**: ticked to update them too.
+
+ekPanel checks every day and updates by itself, with the same safety: each update is checked and
+undone if it breaks the site. These updates are marked **automatic** in the last update's result.
+A server that is offline is skipped until it is back.
+
+### Plugins and themes
+
+The **Plugins** and **Themes** lists show each item's title, version, status (**On**, **Off**,
+**Always on** for must-use plugins, **Drop-in**, **Parent theme**) and available update.
+
+- **Turn on** and **Turn off** switch a plugin. Turning off works without loading plugins, so you
+  can switch off a plugin that breaks the site, even when WP-CLI itself cannot start with it.
+- Themes can be updated here. Choosing the active theme, and installing or deleting plugins and
+  themes, are done in WordPress itself.
+
+### Settings
+
+- **Maintenance mode**: visitors see a short "briefly unavailable" page; you can still sign in.
+- When `WP_DEBUG` is on, the toolkit warns: "Debug mode (WP_DEBUG) is on. Turn it off on a live
+  site". Change it in `wp-config.php`.
+
+### Hardening
+
+Common protections that do not change how the site works for visitors:
+
+| Option | What it does |
+| --- | --- |
+| **No editing of plugin and theme code from the dashboard** | Sets `DISALLOW_FILE_EDIT` in `wp-config.php`, so a stolen admin password cannot be used to add code. |
+| **Block xmlrpc.php** | The web server answers `403` for `/xmlrpc.php`, an old remote interface used for password guessing. The block editor and apps using the REST API keep working. Some old mobile apps and plugins (Jetpack, for example) use XML-RPC; check before turning it on. |
+| **No PHP in the uploads folder** | The web server refuses `.php`, `.phtml` and `.phar` files under `wp-content/uploads`, so a script uploaded through a weak plugin cannot run. |
+| **Fix permissions** | Shown when files or folders could be changed by other accounts. Removes write permission for "others" and makes `wp-config.php` readable only by the site's account. |
+
+The two web server options are part of the website's configuration, so they apply even if
+WordPress itself is broken.
+
+## Staging copies
+
+A staging copy is a private copy of your site, at `staging.<your domain>`, with its own files and
+database. Try updates, new plugins or a new design there, then push the result to the live site.
+
+### Make a staging copy
+
+<Steps>
+
+1. Open the live WordPress site. In **Staging**, click **Make a staging copy**.
+
+2. Wait while ekPanel makes the copy. The card shows where it is.
+
+3. Open the copy at `https://staging.<your domain>/` and sign in with your live site's user name
+   and password.
+
+</Steps>
+
+ekPanel:
+
+- creates a new PHP website `staging.<your domain>` with the live site's PHP version, and the same
+  kind of certificate (a site with its own uploaded certificate gets a free one for the copy);
+- creates a database for it. The copy counts as **one website and one database** in the owner's
+  package;
+- copies all files and the database, and replaces the live addresses with the staging address
+  everywhere, also inside serialized data;
+- asks search engines not to index the copy.
+
+<Aside type="note">
+`staging.<your domain>` must point at the server for its free certificate, like any website. If the
+domain is on [Cloudflare](/guides/dns/cloudflare/) or on
+[ekPanel's own name servers](/guides/dns/name-servers/), the record is made for you.
+</Aside>
+
+A live site can have one staging copy, and a staging copy cannot have its own copy. The copy is
+an ordinary website in the **Websites** list, so you can open its files, logs and settings.
+
+### Push to live and refresh from live
+
+On the staging copy's page:
+
+- **Push to live** makes the live site like the staging copy.
+- **Refresh from live** makes the staging copy like the live site again. Changes made only on
+  staging are replaced.
+
+Choose what to copy:
+
+- **Files**: plugins, themes, uploads and WordPress itself. The target keeps its own
+  `wp-config.php`.
+- **Database**: posts, pages, settings, users and orders.
+
+<Aside type="danger">
+Pushing the database replaces the live site's whole database. Orders, comments and sign-ups that
+arrived on the live site since you made or refreshed the copy are lost from the live site. On a
+shop or a busy site, push **Files** only, or refresh from live just before you push.
+</Aside>
+
+While copying:
+
+- the target shows a maintenance page;
+- before anything is overwritten, the target's database is saved to
+  `tmp/ekpanel-before-copy-<time>.sql` in its home folder, and files that the copy replaces or
+  removes are kept in `tmp/ekpanel-before-copy-<time>-files`;
+- addresses are changed to the target's domain;
+- the live site keeps its own search engine setting, and a refreshed staging copy stays hidden from
+  search engines.
+
+ekPanel does not delete those saved copies. Remove them in the
+[file manager](/guides/websites/files/) when you no longer need them; they count toward disk space.
+
+Copying the database needs both sites to use the same table prefix, which is the case for copies
+made by ekPanel.
+
+## Limits and what is not there yet
+
+- Installing, deleting and choosing plugins and themes happens in WordPress, not in the panel.
+- Only the home page is checked after an update.
+- A failed install is not cleaned up for you. If `public_html` is no longer empty, empty it in the
+  file manager before you try again.
+- Tested on a test server (VM): updates that broke a site were undone, security releases of core,
+  maintenance mode, hardening, and a staging copy pushed to live.
+
+## Troubleshooting
+
+**"The website folder must be empty".** Move or delete the files in `public_html` (the ekPanel
+welcome page may stay), then install again.
+
+**"WordPress needs a PHP site".** Switch the site's **Type of site** to **PHP** in **Settings**.
+
+**The site shows "Cannot be read".** WordPress is there but WP-CLI could not read it, often because
+of a broken plugin or a broken `wp-config.php`. Check the
+[PHP error log](/guides/websites/logs-traffic/#php-error-log).
+
+**Staging copy has a certificate warning.** `staging.<your domain>` does not point at the server
+yet. Add the DNS record, then wait a minute.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="PHP settings" href="/guides/websites/php/" description="Memory, upload sizes and more." />
+	<LinkCard title="Backups" href="/guides/data/backups/" />
+	<LinkCard title="Malware scans" href="/guides/security/malware/" />
+</CardGrid>

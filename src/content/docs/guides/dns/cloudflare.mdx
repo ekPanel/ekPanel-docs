@@ -1,0 +1,317 @@
+---
+title: Cloudflare DNS
+description: Connect a Cloudflare account so ekPanel makes and keeps the DNS records of your websites, apps and email, and manage the zone from the panel.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+ekPanel can keep your domains' DNS at [Cloudflare](https://www.cloudflare.com/). You connect
+your Cloudflare account once, pick a domain, and from then on every website, app and mail
+domain on it gets its DNS records by itself, kept up to date when you add, move or delete
+things.
+
+<Aside type="caution" title="Not yet tried against the real Cloudflare API">
+The Cloudflare integration was tested against an in-memory copy of Cloudflare's API, in Go
+tests and in a test VM. It has not yet been tried with a real Cloudflare account and domain.
+If something behaves differently for you, please tell us (see [support](/project/support/)).
+</Aside>
+
+## Before you start
+
+- A Cloudflare account (the free plan is enough).
+- A domain, either already in that Cloudflare account or one you can add to it.
+- At least one website or app on that domain in ekPanel, so there is something to make
+  records for. You can also add the domain first; records appear as soon as you add a site.
+- Your server needs a public address. ekPanel finds it by itself; for a server behind NAT
+  or a load balancer, set it under **Public addresses for DNS** on the server's page.
+
+<Aside type="note">
+A domain is kept **either** at Cloudflare **or** on [ekPanel's own name servers](/guides/dns/name-servers/),
+not both. If the domain is already on one, the other refuses it with "This domain is
+already managed in ekPanel."
+</Aside>
+
+## Make a Cloudflare API token
+
+ekPanel talks to Cloudflare with an API token: a key that allows only what you tick.
+
+<Steps>
+
+1. In Cloudflare, open **My Profile → API Tokens**
+   ([dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)).
+   The **DNS** page in ekPanel links there too (**open API tokens**).
+
+2. Choose **Create Custom Token** and give it a name such as `ekPanel`.
+
+3. Add exactly these permissions:
+
+   | Scope   | Item             | Access |
+   | ------- | ---------------- | ------ |
+   | Zone    | DNS              | Edit   |
+   | Zone    | Zone Settings    | Edit   |
+   | Zone    | Cache Purge      | Purge  |
+   | Zone    | Zone             | Edit   |
+   | Account | Account Settings | Read   |
+
+   Under **Zone Resources**, choose all zones, or only the ones ekPanel should manage.
+
+4. Create the token and copy it. Cloudflare shows it only once.
+
+</Steps>
+
+What each permission is for:
+
+| Permission                  | Used for                                                           |
+| --------------------------- | ------------------------------------------------------------------ |
+| Zone · DNS · Edit           | Making, changing and deleting records                              |
+| Zone · Zone Settings · Edit | Reading the SSL/TLS mode and switching it to Full (strict)         |
+| Zone · Cache Purge · Purge  | The **Purge cache** button                                         |
+| Zone · Zone · Edit          | Adding a new domain to Cloudflare from ekPanel                     |
+| Account · Account Settings · Read | Finding your account, which adding a new domain needs        |
+
+<Aside type="tip">
+You can leave out **Account Settings: Read** if you only manage domains that are already in
+Cloudflare. ekPanel then says "This token cannot see its account, so new domains are added
+in Cloudflare itself", and you add new domains in Cloudflare's dashboard first. Without
+**Zone Settings: Edit**, the SSL/TLS card says "The token may not read this setting."
+</Aside>
+
+## Connect the account
+
+<Steps>
+
+1. Open **DNS** in the panel's menu. Scroll to the **Cloudflare** section.
+
+2. Under **Connect Cloudflare**, give the account a **Name** if you like (it is optional and
+   only tells accounts apart; without one, ekPanel uses the Cloudflare account's name).
+
+3. Paste the token into **API token** and choose **Connect Cloudflare**.
+
+</Steps>
+
+ekPanel checks the token with Cloudflare first. If Cloudflare refuses it, you see
+"Cloudflare refused the token. Check that it is active and has the permissions listed."
+A good token is stored encrypted and is never shown again.
+
+You can connect more than one account with **Connect another account**. The list under
+**Cloudflare accounts** shows each one and how many of its domains ekPanel manages.
+
+<Aside type="note" title="Customers">
+Customers can connect their own Cloudflare accounts. Their domains only ever get records for
+their own websites and apps. An administrator's domains can hold records for anyone's sites
+on that domain.
+</Aside>
+
+## Add a domain
+
+In the **Cloudflare** section, choose **Add a domain**. The dialog has two parts.
+
+<Tabs>
+<TabItem label="A domain already in Cloudflare">
+
+<Steps>
+
+1. If you connected more than one account, pick the **Cloudflare account**.
+
+2. Leave **Proxy new records through Cloudflare** ticked, or untick it (see
+   [Proxied or DNS only](#proxied-or-dns-only) below).
+
+3. Under **Your domains in Cloudflare**, choose **Manage** next to the domain. Domains that
+   ekPanel already manages show **Managed** instead.
+
+</Steps>
+
+</TabItem>
+<TabItem label="A new domain">
+
+<Steps>
+
+1. Under **Add a new domain to Cloudflare**, type the domain, such as `example.com`.
+
+2. Choose **Add to Cloudflare**. ekPanel adds the domain to your Cloudflare account and
+   opens it.
+
+3. The domain shows <Badge text="Waiting for nameservers" variant="caution" /> with two
+   Cloudflare name servers. At the registrar where you bought the domain, replace its name
+   servers with these two. Cloudflare activates the domain once it sees them, usually within
+   an hour.
+
+</Steps>
+
+This needs the **Account Settings: Read** permission.
+
+</TabItem>
+</Tabs>
+
+ekPanel starts a sync right away and opens the domain's page.
+
+## The records ekPanel makes
+
+For every host name under the domain, ekPanel makes the records it needs and marks them with
+the comment `Managed by ekPanel` (you see it in Cloudflare's dashboard too). In the panel they
+carry an <Badge text="ekPanel" variant="success" /> badge.
+
+| What                                     | Records                                         | Proxied?         |
+| ---------------------------------------- | ----------------------------------------------- | ---------------- |
+| Each website, its extra domains, apps and previews | `A` (IPv4) and `AAAA` (IPv6) pointing at its server | Zone default, switchable per record |
+| The mail host name (such as `mail.example.com`) | `A` and `AAAA` pointing at the mail server     | Never            |
+| Each mail domain                          | `MX`, SPF, DKIM, DMARC and TLS reporting records | Never (not proxiable) |
+
+An `A` record is made only if the server has a public IPv4 address, and an `AAAA` record only
+if it has a public IPv6 address. ekPanel uses the address you set by hand under **Public
+addresses for DNS**, or else the first public address the server reports (never a private,
+shared-NAT or site-local one).
+
+A host name goes into the **most specific** zone that holds it. If you manage both
+`example.com` and `shop.example.com`, the records for `www.shop.example.com` go into
+`shop.example.com`.
+
+### When records change
+
+ekPanel syncs a zone after every change to a website, app or mail domain, and checks every
+zone every 10 minutes. You can also choose **Sync now** on the domain's page. A sync:
+
+- creates records for new host names,
+- updates records when a server's address changes,
+- deletes records that nothing needs any more, but only if nobody changed them since,
+- makes a record again if someone deleted it by hand while a site still needs it.
+
+ekPanel only ever changes or deletes records **it made** and that **nobody changed since**.
+Your own records are left alone. TXT records at the same name with another purpose (such as
+a site verification) are left alone too.
+
+The **Records** column on the DNS page counts the records ekPanel made in each zone, and
+**Synced** shows when the last sync ran.
+
+## Proxied or DNS only
+
+Cloudflare's proxy (the orange cloud) means visitors connect to Cloudflare, which forwards
+the request to your server. It hides the server's address and caches files. **DNS only**
+means visitors connect to your server directly.
+
+- **Proxy new records through Cloudflare** sets the default for records ekPanel creates. It
+  is ticked by default. You can change it later under **Settings** on the domain's page.
+- Each `A`, `AAAA` or `CNAME` record has its own switch in the **Proxy** column: choose
+  **Proxied** or **DNS only** to flip it. ekPanel keeps your choice on later syncs.
+- Mail records are always DNS only: Cloudflare's proxy carries only web traffic.
+
+## Things to check
+
+When a sync finds something it should not change by itself, the domain shows
+<Badge text="things to check" variant="caution" /> and its page lists them under **Needs your
+attention**.
+
+| What it says | What happened | What to do |
+| --- | --- | --- |
+| "`A www.example.com` was changed in Cloudflare to X; ekPanel would set Y." | Someone edited a record ekPanel made. | If the change was a mistake, choose **Use ekPanel's value**. If you want to keep it, leave it; ekPanel will not overwrite it. |
+| "`A www.example.com` is already used (X); ekPanel would set Y." | A record ekPanel did not make is in the way: one of the same type at that name, or a `CNAME`. | Choose **Use ekPanel's value** to replace it (a `CNAME` in the way is deleted), or delete or rename your record in the zone editor. |
+| "server *name* has no public address yet; set it on the server's page." | The server has no public IPv4 or IPv6 address that ekPanel can use. | Open the server's page and set its address under **Public addresses for DNS**. |
+
+**Use ekPanel's value** writes ekPanel's record right away, without waiting for the next sync.
+
+A domain that shows <Badge text="Sync failed" variant="danger" /> could not be synced at all,
+usually because Cloudflare refused a request. The error is kept with the zone; check that the
+token is still active and has the permissions above.
+
+## The zone editor
+
+The domain's page lists **every** record in the Cloudflare zone, sorted by name, with
+ekPanel's records marked.
+
+To add a record, choose **Add record**, pick the **Type**, and fill in **Name** and
+**Content**:
+
+| Type    | Content                                    | Example                       |
+| ------- | ------------------------------------------ | ----------------------------- |
+| `A`     | An IPv4 address                            | `203.0.113.10`                |
+| `AAAA`  | An IPv6 address                            | `2001:db8::10`                |
+| `CNAME` | A host name                                | `example.netlify.app`         |
+| `MX`    | The mail server's host name, plus a **Priority** (0 to 65535) | `mail.example.net` |
+| `TXT`   | Text on one line, up to 4096 characters    | `v=spf1 include:_spf.example.net ~all` |
+| `CAA`   | Flags, tag and quoted value                | `0 issue "letsencrypt.org"`   |
+| `NS`    | A name server's host name                  | `ns1.example.net`             |
+
+For **Name**, write `www`, `@` for the domain itself, or a full name in the zone such as
+`blog.example.com`. Only `A`, `AAAA` and `CNAME` records can be proxied.
+
+Records you made can be edited (pencil) and deleted (bin). Records ekPanel made cannot: they
+follow the website or app they belong to and go when it goes. Of those, you can only switch the
+proxy. Records of other types that exist in Cloudflare (such as `SRV`) are listed, and you can
+delete them here, but changing them is refused; edit those in Cloudflare's dashboard.
+
+## SSL/TLS mode
+
+Cloudflare's SSL/TLS mode decides how Cloudflare connects to your server when a record is
+proxied. The **SSL/TLS mode** card shows the domain's current mode:
+
+| Mode            | What it means                                                  | ekPanel says        |
+| --------------- | -------------------------------------------------------------- | ------------------- |
+| Off             | No HTTPS for visitors                                          | Not recommended     |
+| Flexible        | HTTPS to Cloudflare, then **unencrypted** to your server       | Not recommended     |
+| Full            | Encrypted to your server, certificate not checked              | Not recommended     |
+| Full (strict)   | Encrypted to your server, certificate checked                  | Recommended         |
+
+Your sites on ekPanel have their own valid certificates, so **Full (strict)** encrypts all
+the way and checks it. If the mode is anything else, choose **Use Full (strict)**.
+
+<Aside type="caution">
+With **Flexible**, a site that redirects HTTP to HTTPS can end in a redirect loop, and traffic
+between Cloudflare and your server is not encrypted. Use Full (strict).
+</Aside>
+
+## Purge the cache
+
+**Purge cache** at the top of the domain's page empties Cloudflare's whole cache of the
+domain. Use it after you change files (such as CSS or images) that Cloudflare keeps serving
+in their old version.
+
+## Visitors' real addresses
+
+When a record is proxied, every request reaches your server from one of Cloudflare's
+addresses. Cloudflare passes the visitor's own address in the `CF-Connecting-IP` header.
+
+ekPanel's web server (Caddy) trusts that header **only** for requests coming from
+[Cloudflare's published address ranges](https://www.cloudflare.com/ips/). So your access
+logs, traffic charts and [CrowdSec](/guides/security/crowdsec/) see the visitor's real
+address, while a forged header from anywhere else is ignored.
+
+## Stop managing a domain
+
+Under **Settings** on the domain's page, choose **Stop managing**. ekPanel stops keeping the
+domain's records in sync; the domain stays in Cloudflare.
+
+Tick **Also delete the records ekPanel made** to remove them from Cloudflare too. Records
+someone changed by hand are never deleted. Your websites and apps on this domain then stop
+being reachable by name.
+
+To disconnect a whole Cloudflare account, choose the bin next to it under **Cloudflare
+accounts**. Its domains stop being kept in sync; their records stay in Cloudflare.
+
+## Limits and what is not there yet
+
+- Not yet tried against the real Cloudflare API (see the note at the top).
+- Wildcard certificates through DNS (DNS-01) are not there yet.
+- The zone editor offers `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `CAA` and `NS` only.
+- See the [roadmap](/project/roadmap/) for what comes next.
+
+## Troubleshooting
+
+**The domain stays on "Waiting for nameservers".** The registrar still has the old name
+servers, or the change has not spread yet. Check them with `dig NS example.com +short`.
+
+**No records appear.** Check that the site's domain is under this zone, that the server has a
+public address, and choose **Sync now**. A host name that belongs to a customer only goes into
+that customer's own zones or an administrator's.
+
+**Visitors see a redirect loop or "too many redirects".** The SSL/TLS mode is probably
+Flexible. Choose **Use Full (strict)**.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="ekPanel's own name servers" href="/guides/dns/name-servers/" description="Answer DNS from your own servers instead of Cloudflare." />
+	<LinkCard title="Email" href="/guides/dns/email/" description="Mail domains whose records ekPanel publishes to Cloudflare." />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="How bans work for visitors who come through Cloudflare." />
+</CardGrid>

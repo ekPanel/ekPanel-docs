@@ -1,0 +1,289 @@
+---
+title: Email
+description: Run email on your server with Stalwart and Roundcube webmail, add mail domains, mailboxes and forwarders, and get the DNS records right.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+ekPanel can run email on your own servers: mailboxes such as `info@example.com`, forwarders,
+auto-replies and webmail. It uses [Stalwart](https://stalw.art/) as the mail server (SMTP,
+IMAP and POP3, with a spam filter and DKIM signing) and [Roundcube](https://roundcube.net/) as
+webmail.
+
+<Aside type="caution" title="Not yet tried with real outside mail">
+Email was tested in a test VM: mail between mailboxes, forwarders, the catch-all, auto-replies,
+webmail and IMAP all worked. It has **not** yet been tried with real mail to and from the
+internet, which needs a server with port 25 open and reverse DNS. Treat it as a preview until
+then.
+</Aside>
+
+## Before you start
+
+Running a mail server that other providers trust takes more than software. Check these with
+your server provider **before** you rely on it:
+
+- **Outgoing port 25 is open.** Many providers block it on new servers until you ask. Without
+  it, your server can receive mail but not send it.
+- **Reverse DNS (PTR) can be set.** Your provider sets the name that the server's IP address
+  points back to. It should be your mail host name, such as `mail.example.com`. Many mail
+  servers refuse mail without it.
+- **The IP address is not on a spam blocklist.** Addresses that a previous customer used for
+  spam can be listed.
+
+ekPanel's [delivery check](#check-delivery) tests all three for you once email is on.
+
+You also need a **mail host name**: a name of its own, such as `mail.example.com`, pointing at
+the server. It is where other mail servers deliver, where mail apps connect, and where webmail
+opens. No website or app may use it.
+
+## Turn on email for a server
+
+Only administrators do this, once per server.
+
+<Steps>
+
+1. Open **Email**. In the **Mail servers** card, choose **Turn on email** next to the server.
+
+2. Enter the **Mail host name**, such as `mail.example.com`.
+
+3. Choose the **Certificate**:
+   - **Let's Encrypt** (the host name must already point at this server), for real use;
+   - **Self-signed (for testing)**: mail apps and browsers will warn about it.
+
+4. Choose **Turn on email**. It takes a minute or two.
+
+</Steps>
+
+What happens on the server:
+
+- The agent downloads **Stalwart 1.0.3**, checks it against its published SHA-256, and runs it
+  as the `ekpanel-mail` service. Its management API listens on `127.0.0.1:18900` only; the
+  agent signs in with a random password kept in a root-only file.
+- Stalwart keeps exactly these listeners: SMTP **25**, submission **465** (TLS) and **587**
+  (STARTTLS), IMAPS **993** and POP3S **995**.
+- These ports are opened in the [managed firewall](/guides/security/firewall/), if ekPanel
+  manages it.
+- **Roundcube 1.7.5** (also a checked download) is installed as webmail at
+  `https://<mail host name>/`, with its own PHP-FPM pool and account.
+- The web server (Caddy) gets a certificate for the mail host name, and the agent hands the same
+  certificate to the mail server, again after every renewal.
+
+The server then shows <Badge text="Running" variant="success" />. **Turn off** stops the mail
+server and keeps its data, but only once the server has no mail domains left ("Delete the
+server's mail domains first").
+
+## Add a mail domain
+
+<Steps>
+
+1. On the **Email** page, choose **Add mail domain**.
+
+2. Enter the **Domain**, such as `example.com`. Mail will be addressed to `name@example.com`.
+
+3. If there are several servers with email, pick the **Server**. Administrators can also pick
+   the customer who owns the domain.
+
+4. Choose **Add domain**. It shows **Applying** and then **Active**.
+
+</Steps>
+
+Rules:
+
+- Customers can add email only for domains of their own websites or apps (the domain itself,
+  or the domain of its `www.` name). Otherwise: "Add a website with this domain first."
+- The mail host name itself cannot be a mail domain.
+- A domain can have email only once in the panel.
+- The customer's [package](/guides/admin/customers/) limits mail domains, mailboxes and mailbox
+  size, and mail counts toward the package's disk space.
+
+<Aside type="danger">
+**Delete mail domain** deletes every mailbox of the domain with all its mail, and its
+forwarders. This cannot be undone.
+</Aside>
+
+## Mailboxes
+
+A **mailbox** stores mail and can be read with webmail or a mail app.
+
+<Steps>
+
+1. Open the mail domain and choose **Add mailbox**.
+
+2. Enter the **Address** (the part before the `@`). Use lowercase letters, digits and
+   `. _ + -`, starting and ending with a letter or digit, such as `info` or `sales.team`.
+
+3. Enter a **Password** of at least 10 characters, or leave it empty and the panel makes one.
+
+4. Set the **Size (MB)**, or leave it empty for no limit (if the package allows it).
+
+5. Choose **Create mailbox**.
+
+</Steps>
+
+A password the panel made is **shown only once**. Save it in a password manager or give it to
+the mailbox's owner. **New password** later makes a fresh random password, again shown once.
+Mailbox passwords are stored only as SHA-512 crypt hashes.
+
+The mailbox list shows how much each mailbox uses ("… of …" when it has a size limit).
+
+### Forwarding and auto-replies
+
+Open a mailbox to change its settings.
+
+- **Forwarding**: addresses that get a copy of every message, one per line, up to 20. They may
+  be mailboxes here or anywhere else. Untick **Keep a copy in this mailbox** to forward only;
+  a mailbox that keeps no copy must forward somewhere.
+- **Auto-reply**: tick **Answer incoming mail automatically**, then write a **Subject** (one
+  line, up to 200 characters) and a **Message** (up to 4000 characters). **From** and **Until**
+  dates are optional; without them, the auto-reply stays on until you turn it off. Each sender
+  gets the answer at most once a day.
+
+Forwarding and auto-replies are one filter script per mailbox that ekPanel writes. Mail apps
+cannot change it (ManageSieve is off).
+
+## Forwarders
+
+A **forwarder** is an address without a mailbox that passes mail on, such as `sales@` to
+several people.
+
+Choose **Add forwarder**, enter the address, and list the addresses under **Forward to**, one
+per line (up to 20, here or anywhere else). An address is either a mailbox or a forwarder, not
+both. After you delete a forwarder, mail to that address is refused.
+
+## Catch-all
+
+Normally, mail to an address that does not exist is refused. In the **Catch-all** card you can
+pick a mailbox that gets it instead. Choose **Off: refuse unknown addresses** to turn it off.
+
+<Aside type="caution">
+A catch-all attracts spam: spammers send to made-up addresses at your domain. Use it only if you
+really need it.
+</Aside>
+
+## Webmail
+
+Webmail opens at `https://<mail host name>/`, for example `https://mail.example.com/`. The
+mail domain's page has an **Open webmail** button.
+
+Sign in with the **whole address** (`info@example.com`) and the mailbox's password. Webmail
+allows three failed sign-ins a minute. Its installer and configuration files are not reachable
+from the web.
+
+## Mail app settings
+
+The mail domain's page lists these under **Mail apps and webmail**. They work in Thunderbird,
+Outlook and phone mail apps.
+
+| Setting             | Value                                              |
+| ------------------- | -------------------------------------------------- |
+| Server              | the mail host name, such as `mail.example.com`     |
+| User name           | the whole address, such as `info@example.com`      |
+| IMAP (incoming)     | port **993**, SSL/TLS                              |
+| POP3 (incoming)     | port **995**, SSL/TLS                              |
+| SMTP (sending)      | port **465** SSL/TLS, or **587** STARTTLS          |
+
+Plain, unencrypted IMAP (143) and POP3 (110) are not offered. A mailbox can only send as its own
+address; sending as another address is refused.
+
+## DNS records
+
+For mail to arrive, and for other servers to trust the mail you send, each mail domain needs
+these DNS records. Stalwart makes a DKIM key for every domain, and ekPanel reads the records
+from it:
+
+| Record | Name | Starts with | What it does |
+| --- | --- | --- | --- |
+| `MX` | `example.com` | the mail host name | Tells other servers where to deliver mail for the domain |
+| `TXT` (SPF) | `example.com` | `v=spf1` | Lists which servers may send mail for the domain |
+| `TXT` (DKIM) | `<selector>._domainkey.example.com` | `v=DKIM1;` | The public key that checks the signature on your mail |
+| `TXT` (DMARC) | `_dmarc.example.com` | `v=DMARC1;` | Tells receivers what to do with mail that fails SPF and DKIM |
+| `TXT` (TLS reporting) | `_smtp._tls.example.com` | `v=TLSRPTv1;` | Where other servers report problems with encrypted delivery |
+
+The mail host name also needs `A` (and `AAAA`) records pointing at the server.
+
+The **DNS records** card on the mail domain's page shows the exact values once the mail server
+has set up the domain ("The records appear once the mail server has set up the domain").
+
+How they get into DNS depends on where the domain's DNS is:
+
+<Tabs>
+<TabItem label="Cloudflare">
+
+If the domain is a [Cloudflare zone managed by ekPanel](/guides/dns/cloudflare/), ekPanel
+publishes the records there and keeps them current. The card says "ekPanel keeps these records
+in the Cloudflare zone …" with a link to the zone. Mail records are always **DNS only** (not
+proxied): Cloudflare's proxy carries only web traffic. Other TXT records at the same names,
+such as site verifications, are left alone.
+
+</TabItem>
+<TabItem label="ekPanel's name servers">
+
+If the domain is on [ekPanel's own name servers](/guides/dns/name-servers/), ekPanel adds the
+records to the zone by itself. You see them in grey with **By ekPanel** on the zone's page. If
+you keep your own record for the same purpose (your own SPF record, say), yours is used and the
+zone page lists it under **Records ekPanel could not add**.
+
+The mail domain's page still lists the records with copy buttons and the text "Add these
+records where this domain's DNS is hosted"; with ekPanel's name servers, you do **not** need to
+add them.
+
+</TabItem>
+<TabItem label="Anywhere else">
+
+Add each record at the company that hosts the domain's DNS. Use the copy button next to each
+value. Some DNS hosts want the name without the domain (`_dmarc` instead of
+`_dmarc.example.com`); check their help.
+
+</TabItem>
+</Tabs>
+
+The mail host name's `A` and `AAAA` records are made automatically only when the host name is
+in a zone of an administrator that ekPanel manages (at Cloudflare or on its name servers).
+Otherwise, add them yourself.
+
+## Check delivery
+
+On the **Email** page, choose **Check delivery** next to the server. The check asks: "Will other
+mail servers accept this server's mail?"
+
+| Check | Good result | If not |
+| --- | --- | --- |
+| The mail host name's address | "mail.example.com points at this server." | Add an `A` record for the host name pointing at the address shown. |
+| Outgoing port 25 | "This server can reach other mail servers on port 25." | "Outgoing port 25 is blocked…": ask your provider to open it. |
+| Reverse name (PTR) of each public address | "The reverse name of this address is mail.example.com." | Ask your provider to set the reverse DNS of the address to the mail host name. |
+| Blocklists | "Not listed on any of the 3 blocklists checked." | Ask for removal on the blocklist's website. |
+
+The blocklists asked are Spamhaus ZEN (`zen.spamhaus.org`), SpamCop (`bl.spamcop.net`) and
+Barracuda (`b.barracudacentral.org`), for the server's IPv4 addresses. Spamhaus does not answer
+queries from large public DNS resolvers; then the check says it "Could not ask" that list. That
+is not a listing.
+
+To test port 25, the server connects to one of Gmail's mail servers on port 25 and waits for its
+greeting.
+
+## How it works (short)
+
+The panel keeps the whole mail setup of each server: host name, domains, mailboxes and
+forwarders. Each change is sent to the server's agent, which checks everything again and
+applies it to Stalwart through its API. Passwords never reach the agent, only their hashes.
+When a domain's DNS records change, ekPanel syncs DNS. If something fails, the domain shows
+**Error** with the reason, and an **Email problem** notification goes out.
+
+## Limits and what is not there yet
+
+- Not yet tried with real outside mail (see the note at the top).
+- One mail host name per server; per-domain host names are not there yet.
+- No automatic setup for mail apps (autoconfig) yet; enter the settings above by hand.
+- No mailing lists yet.
+- Wildcard certificates through DNS (DNS-01) are not there yet.
+- See the [roadmap](/project/roadmap/).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="Let ekPanel publish mail records to Cloudflare." />
+	<LinkCard title="ekPanel's own name servers" href="/guides/dns/name-servers/" description="Mail records added to your own zones automatically." />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Mail ports are opened for you." />
+</CardGrid>

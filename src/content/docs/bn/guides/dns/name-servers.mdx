@@ -1,0 +1,357 @@
+---
+title: ekPanel-এর নিজের name server
+description: PowerDNS দিয়ে আপনার ekPanel server-এই নিজের DNS চালান, panel-এ zone রাখুন, template ব্যবহার করুন, আর DNSSEC দিয়ে domain sign করুন।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+[Cloudflare](/guides/dns/cloudflare/)-এর বদলে আপনার নিজের server-ই আপনার domain-গুলোর DNS-এর উত্তর দিতে পারে।
+কোন কোন ekPanel server name server হবে সেটা আপনি বেছে নেন, domain যোগ করেন, আর ekPanel প্রতিটা zone panel-এ
+রাখে আর name server-গুলোতে পাঠায়। Cloudflare-এর মতোই website, app আর email-এর record নিজে থেকে তৈরি হয়।
+
+**Name server** হলো এমন একটা server, যেটা DNS-এর প্রশ্নের উত্তর দেয়, যেমন "`www.example.com`-এর address
+কী?"। **Zone** মানে একটা domain-এর সব DNS record।
+
+## শুরু করার আগে
+
+- Name server শুধু administrator-রাই চালু করেন। তারপর customer-রা নিজেদের domain-এর zone যোগ করতে পারেন।
+- পারলে অন্তত **দুটো** server ব্যবহার করুন, সম্ভব হলে আলাদা provider-এ বা আলাদা জায়গায়। তাহলে একটা বন্ধ
+  থাকলেও DNS চলতে থাকে। একটা server দিয়েও চলে, কিন্তু তখন সেটা বন্ধ হলে DNS-ও বন্ধ হয়ে যায়, আর অনেক
+  registrar অন্তত দুটো name server চায়।
+- প্রতিটা name server-এর একটা public address লাগবে। Internet-এর অন্য server-গুলোকে port 53-এ এটার কাছে
+  পৌঁছাতে পারতে হবে।
+- Name server-গুলোর host name ঠিক করুন, যেমন `ns1.example.com` আর `ns2.example.com`। এরা যে domain-এর নিচে
+  (এখানে `example.com`), সেটা নিজে resolve হতে হবে; দেখুন
+  [Registrar-এ name server বসান](#set-the-name-servers-at-the-registrar)।
+- আপনার provider-এর যদি server-এর সামনে নিজস্ব firewall থাকে (প্রায়ই একে security group বলে), সেখানেও port
+  53, TCP আর UDP দুটোই খুলে দিন। ekPanel শুধু server-এর ভেতরের firewall চালায়।
+
+## পুরো ব্যাপারটা কীভাবে মেলে
+
+| ভূমিকা | কী করে |
+| --- | --- |
+| **Primary** (একটা) | Panel থেকে প্রতিটা zone নেয়, যেগুলোতে DNSSEC চালু সেগুলো sign করে, প্রশ্নের উত্তর দেয়, আর zone-গুলো secondary-দের কাছে পাঠায়। |
+| **Secondary** (যতগুলো খুশি) | Zone transfer দিয়ে primary থেকে প্রতিটা zone কপি করে, আর নিজেও প্রশ্নের উত্তর দেয়। |
+
+আসল হিসাব থাকে panel-এ। Panel primary-কে প্রতিটা zone পুরোটা পাঠায়; primary শুধু যা বদলেছে সেটুকু লেখে, তাই
+zone-এর **serial** (এর version number) কেবল তখনই বাড়ে, যখন সত্যিই কিছু বদলায়। তারপর primary secondary-দের
+জানায় (একটা DNS `NOTIFY`), আর তারা নতুন কপি নিয়ে আসে (একটা zone transfer, `AXFR`)। কোনো `NOTIFY` হারিয়ে
+গেলে secondary-রা নিজেরাই আবার দেখে নেয়।
+
+## Name server চালু করুন
+
+<Steps>
+
+1. **DNS** খুলুন। **ekPanel-এর name server** (ekPanel name servers) অংশে **Name server** (Name servers) card
+   খুঁজে **Name server চালু করুন** (Set up name servers) বেছে নিন (পরে: **বদলান** (Change))।
+
+2. প্রতিটা name server-এর জন্য একটা সারি পূরণ করুন:
+   - **সার্ভার** (Server): আপনার যুক্ত server-গুলোর একটা।
+   - **Host name**: এর নাম, যেমন `ns1.example.com`।
+   - **Zone transfer-এর ঠিকানা** (Address for zone transfers): server-এর public address ব্যবহার করতে খালি
+     রাখুন, অথবা অন্য একটা দিন (নিচে দেখুন)।
+   - **Primary**: ঠিক একটা server-এর জন্য বেছে নিন (প্রথম সারিটা শুরুতে primary থাকে)।
+
+   প্রতিটা বাড়তি name server-এর জন্য **Server যোগ করুন** (Add a server) বেছে নিন।
+
+3. **সংরক্ষণ** (Save) বেছে নিন। ekPanel প্রতিটা server-এ একটা task হিসেবে PowerDNS install আর configure করে।
+
+</Steps>
+
+এরপর প্রতিটা server-এর address আর অবস্থা দেখায়: চালু হলে version-সহ **PowerDNS**, তৈরি হওয়ার সময় **চালু
+হচ্ছে** (Setting up), অথবা নিচে error-সহ **মিলানো ব্যর্থ** (Sync failed)।
+
+Panel এমন তালিকা নেয় না, যেখানে:
+
+- কোনো server primary নয়, বা একাধিক server primary ("choose one primary name server"),
+- একই server বা host name দুবার আছে,
+- কোনো host name নেই ("enter a host name such as ns1.example.com"),
+- দুই বা তার বেশি server থাকলে কোনো একটার zone transfer-এর address নেই ("… has no public address for zone
+  transfers; enter one")।
+
+### Zone transfer-এর ঠিকানা
+
+Primary আর secondary-দের মধ্যে zone transfer আর `NOTIFY` message প্রতিটা server-এর public address ব্যবহার
+করে। আপনার server-গুলো যদি একটা private network শেয়ার করে, তাহলে এর বদলে private address দিতে পারেন, যাতে
+transfer ওই network-এর ভেতরেই থাকে। Primary transfer দেয় **শুধু** secondary-দের address-এ, আর secondary-রা
+`NOTIFY` নেয় **শুধু** primary-র address থেকে।
+
+### কী install হয়
+
+প্রতিটা name server-এ agent:
+
+- distribution-এর package থেকে PowerDNS install করে (`pdns-server`, `pdns-backend-sqlite3`, `sqlite3`), zone
+  রাখে একটা SQLite file-এ (`/var/lib/powerdns/pdns.sqlite3`), তাই কোনো database server লাগে না;
+- `/etc/powerdns/pdns.conf` লেখে (এটা ekPanel চালায়; সেখানে হাতে বদলালে overwrite হয়ে যায়), আর
+  `/etc/powerdns/pdns.d` থেকে package-এর example file-গুলো সরিয়ে দেয়;
+- PowerDNS-এর API চালু করে শুধু `127.0.0.1:18920`-এ, `/etc/powerdns/ekpanel-api.key`-এ একটা random key দিয়ে,
+  যেটা শুধু root আর PowerDNS পড়তে পারে;
+- PowerDNS-কে server-এর নিজের address-গুলোর port 53-এ শোনায় (Docker-এর bridge-এ নয়)। সব address-এ শোনে না,
+  কারণ `systemd-resolved` আগে থেকেই `127.0.0.53:53` ব্যবহার করে;
+- ekPanel firewall চালালে [managed firewall](/guides/security/firewall/)-এ port 53 (TCP আর UDP) খুলে দেয়।
+
+PowerDNS নিজের পরিচয় জানায় না: এর version-এর উত্তর হলো `anonymous`।
+
+তালিকা থেকে কোনো server সরালে সেখানে PowerDNS বন্ধ আর disable করা হয়। এর zone-গুলো এর database-এ থেকে যায়,
+আবার যোগ করলে কাজে লাগবে।
+
+## Domain যোগ করুন
+
+<Steps>
+
+1. **DNS** পাতায় **ekPanel-এর name server** অংশে **Domain যোগ করুন** (Add a domain) বেছে নিন।
+
+2. **ডোমেইন** (Domain) লিখুন, যেমন `example.com`।
+
+3. Template থাকলে **Template**-এ একটা বেছে নিন, অথবা **Template ছাড়া** (No template) রেখে দিন।
+
+4. **Domain যোগ করুন** বেছে নিন। Domain-এর পাতা খোলে, primary এটা পাওয়া পর্যন্ত **চালু হচ্ছে** দেখায়, তারপর
+   <Badge text="চলছে" variant="success" />।
+
+5. Registrar-এ domain-এর name server বসান (নিচে দেখুন)।
+
+</Steps>
+
+Panel একটা domain নেয় না:
+
+- name server চালু করার আগে ("আগে ekPanel-এর name server চালু করুন (DNS পাতায়)।"),
+- যেটা domain নয়, বা `com` বা `co.uk`-এর মতো public suffix ("example.com-এর মতো একটা domain দিন।"),
+- যেটা এখানে বা Cloudflare-এ আগে থেকেই ekPanel-এ আছে ("এই ডোমেইন আগে থেকেই ekPanel-এ চালু আছে।")।
+
+### Customer-দের নিয়ম
+
+Customer-রা zone যোগ করতে পারেন শুধু:
+
+- **নিজেদের** website বা app-এর domain-এর জন্য: site-এর domain নিজে, অথবা যে domain-এর নিচে এটা আছে
+  (`shop.example.com` আছে এমন customer `example.com` বা `shop.example.com` যোগ করতে পারেন)। নইলে: "আগে এই
+  domain-এ একটা website বা app যোগ করুন।";
+- যেটা অন্য কোনো account-এর zone-এর ভেতরে নয়, আর অন্য account-এর zone নিজের ভেতরে ধারণও করে না ("এই domain
+  অন্য account-এর domain-এর ভেতরে, বা সেটাকে ধারণ করে।")।
+
+Customer-এর zone-এ শুধু সেই customer-এর নিজের website, app আর email-এর record-ই বসে।
+
+## Zone editor
+
+Domain-এর পাতায় একটা **Record** (Records) table আছে। আপনার record-গুলো আগে থাকে, আর সেগুলো বদলানো (পেন্সিল)
+বা মোছা (বিন) যায়। তার নিচে ধূসর রঙে, **ekPanel-এর** (By ekPanel) badge-সহ থাকে ekPanel-এর বানানো record;
+সেগুলো নিজে থেকেই বদলায়।
+
+Record যোগ করতে **Record যোগ করুন** (Add a record) বেছে নিয়ে **নাম** (Name), **ধরন** (Type), **মান** (Value),
+`MX` আর `SRV`-এর জন্য একটা **Priority**, আর **TTL** পূরণ করুন।
+
+### নাম
+
+| আপনি লিখলে          | Zone `example.com`-এ এর মানে |
+| ------------------ | ------------------------------ |
+| `@` (বা কিছু না)    | `example.com`                  |
+| `www`              | `www.example.com`              |
+| `_dmarc`           | `_dmarc.example.com`           |
+| `*`                | `*.example.com` (একটা wildcard)   |
+| `www.example.com`  | `www.example.com` (আগে থেকেই zone-এর ভেতরে, যেমন আছে তেমন রাখা হয়) |
+| `www.example.com.` | `www.example.com` (শেষে বিন্দু মানে "এটাই পূর্ণ নাম") |
+
+নাম `_` দিয়ে শুরু হতে পারে (যেমন DKIM আর SRV-এর ক্ষেত্রে), আর `*` শুধু প্রথম অংশ হতে পারে।
+
+### Record-এর ধরন
+
+| ধরন     | মান                                                  | উদাহরণ                           |
+| ------- | --------------------------------------------------- | ------------------------------- |
+| `A`     | একটা IPv4 address                                    | `203.0.113.10`                  |
+| `AAAA`  | একটা IPv6 address                                    | `2001:db8::10`                  |
+| `CNAME` | অন্য একটা host name                                  | `example.net`                   |
+| `MX`    | Mail server-এর host name; **Priority**-ও দিন          | `mail.example.net`, priority `10` |
+| `TXT`   | **উদ্ধৃতিচিহ্ন ছাড়া** লেখা, printable ASCII, সর্বোচ্চ 4000 অক্ষর | `v=spf1 include:_spf.example.net ~all` |
+| `SRV`   | Weight, port আর target; **Priority**-ও দিন। নাম `_` দিয়ে শুরু হতে হবে | `_sip._tcp`-এ `5 5060 sip.example.com` |
+| `CAA`   | Flags (`0` বা `128`), tag (`issue`, `issuewild` বা `iodef`) আর উদ্ধৃতিচিহ্নের ভেতরে একটা মান | `0 issue "letsencrypt.org"` |
+| `NS`    | একটা **subdomain**-এর name server                    | `dev`-এ `ns1.other.net`        |
+
+মানের ভেতরের host name শেষের বিন্দু ছাড়া লিখুন; ekPanel সেটা যোগ করে দেয়। লম্বা TXT লেখা আপনার হয়ে 255 অক্ষরের
+string-এ ভাগ করা হয়।
+
+নিয়মগুলো, যেগুলো panel আর agent দুজনেই যাচাই করে:
+
+- **TTL** (অন্য server কত সেকেন্ড উত্তরটা মনে রাখতে পারবে) 60 থেকে 604800; default হলো 3600।
+- **Priority** 0 থেকে 65535, আর শুধু `MX` আর `SRV`-এর priority থাকে।
+- একটা `CNAME` নিজের নামে একা থাকতে হবে, আর domain নিজে (`@`) `CNAME` হতে পারে না; সেখানে `A` আর `AAAA`
+  record ব্যবহার করুন।
+- Domain নিজের `NS` record ekPanel বসায়; আপনি `NS` যোগ করতে পারেন শুধু subdomain-এর জন্য (একটা subdomain অন্য
+  name server-এর হাতে দিতে)।
+- একটা zone-এ সর্বোচ্চ 2000 record থাকতে পারে, আর একই record দুবার যোগ করা যায় না ("এই record আগে থেকেই
+  আছে।")।
+
+## নিজে থেকে তৈরি হওয়া record
+
+Cloudflare-এর মতোই ekPanel এই record-গুলো নিজে থেকে zone-এ যোগ করে আর হালনাগাদ রাখে:
+
+| Record | কীসের জন্য | TTL |
+| --- | --- | --- |
+| `A` / `AAAA` | Domain-এর নিচের প্রতিটা website (আর তার extra domain) আর app, আর mail host name যদি এই domain-এ থাকে | 300 |
+| `MX`, SPF, DKIM, DMARC, TLS reporting | এই domain-এর প্রতিটা [mail domain](/guides/dns/email/) | 3600 |
+| `NS` | Domain নিজে, প্রতিটা name server-এর জন্য একটা | 3600 |
+| `A` / `AAAA` (glue) | যেসব name server-এর host name এই domain-এর ভেতরে | 3600 |
+
+Address-এর ছোট TTL (300 সেকেন্ড) থাকায় কোনো site দ্রুত অন্য server-এ সরানো যায়।
+
+Zone-এর `SOA` record-এ primary name server-এর নাম থাকে, আর contact হিসেবে `hostmaster.<domain>`; refresh
+10800, retry 3600, expire 604800, আর negative-answer TTL 3600 সেকেন্ড।
+
+### যখন আপনার record পথ আটকায়
+
+ekPanel যে record বানাত, তার সাথে **একই নাম আর ধরনের** record আপনি রাখলে **আপনারটাই ব্যবহার হয়**। `TXT`-এর
+ক্ষেত্রে এটা তখনই ধরা হয়, যখন দুটো একই কাজের জন্য (যেমন দুটো `v=spf1` record); site verification-এর একটা TXT
+record ekPanel-এর SPF-এর পাশে দিব্যি থাকতে পারে। ওই নামে একটা `CNAME` থাকলে সেটা সবসময় ekPanel-এর record আটকে
+দেয়।
+
+আটকে যাওয়া প্রতিটা record **যেসব record ekPanel যোগ করতে পারেনি** (Records ekPanel could not add)-এর নিচে
+তালিকায় থাকে, যেমন:
+
+> A www.example.com: 203.0.113.10-এর বদলে আপনার record (A 198.51.100.7) ব্যবহার হচ্ছে। ekPanel-এরটা চাইলে আপনারটা মুছুন।
+
+ekPanel-এর record-কে জায়গা দিতে আপনার record মুছে দিন। "server *name*-এর public ঠিকানা নেই"-এর মতো লাইন মানে
+ekPanel-এর কাছে point করার মতো কোনো address নেই: server-এর পাতায় **DNS-এর জন্য পাবলিক ঠিকানা** (Public
+addresses for DNS)-এ একটা দিন।
+
+## Template
+
+Template হলো এমন কিছু record, যেগুলো এটা দিয়ে বানানো প্রতিটা নতুন domain-এ যোগ হয়, যেমন অন্য provider-এর
+mail বা একটা verification record। শুধু administrator-রা template বানান; domain যোগ করেন এমন যে কেউ একটা বেছে
+নিতে পারেন।
+
+<Steps>
+
+1. **DNS** পাতার **Template** (Templates) card-এ **নতুন template** (New template) বেছে নিন।
+
+2. একটা **Template-এর নাম** (Template name) দিন (সর্বোচ্চ 60 অক্ষর)।
+
+3. Record যোগ করুন। নাম domain অনুযায়ী: `@` মানে domain নিজে, `www` মানে `www.<domain>`। মানের যেখানে domain-এর
+   নাম বসবে, সেখানে `{domain}` লিখুন।
+
+4. **সংরক্ষণ** বেছে নিন। প্রতিটা record এমনভাবে যাচাই হয়, যেন domain-টা `example.com`।
+
+</Steps>
+
+যেমন, অন্য জায়গায় host করা mail-এর জন্য একটা template:
+
+| নাম      | ধরন   | মান                                       | Priority |
+| -------- | ----- | ----------------------------------------- | -------- |
+| `@`      | `MX`  | `mx1.mailhost.example`                    | `10`     |
+| `@`      | `TXT` | `v=spf1 include:_spf.mailhost.example ~all` |        |
+| `_dmarc` | `TXT` | `v=DMARC1; p=none; rua=mailto:postmaster@{domain}` |  |
+
+`shop.example.org`-এ যোগ করলে শেষ record-টা হয়ে যায় `_dmarc.shop.example.org`, আর মান
+`rua=mailto:postmaster@shop.example.org`।
+
+একটা template-এ সর্বোচ্চ 100 record থাকতে পারে। এর record-গুলো নতুন zone-এর সাধারণ record হয়ে যায়, যেগুলো অন্য
+যেকোনো record-এর মতোই বদলাতে পারবেন। Template মুছলে এটা দিয়ে বানানো domain-গুলোতে কোনো পরিবর্তন হয় না।
+
+## Registrar-এ name server বসান
+
+একটা domain ekPanel-এর name server ব্যবহার করে তখনই, যখন এর **registrar** (যে company থেকে domain কিনেছেন) এদের
+দিকে point করে। কী দিতে হবে, domain-এর পাতায় **Registrar-এর জন্য name server** (Name servers for the
+registrar)-এর নিচে ঠিক সেটাই দেখায়।
+
+<Steps>
+
+1. আপনার registrar-এ sign in করে domain-এর DNS বা name server settings খুলুন।
+
+2. এখনকার name server-গুলো বদলে তালিকার গুলো দিন, যেমন `ns1.example.com` আর `ns2.example.com`।
+
+3. পাতায় **glue record**-ও দেখালে সেগুলো যোগ করুন (নিচে দেখুন)।
+
+4. অপেক্ষা করুন। Registrar-এর পরিবর্তন সবার কাছে পৌঁছাতে কয়েক মিনিট থেকে এক-দুই দিন লাগতে পারে।
+
+</Steps>
+
+### Glue record
+
+Name server-গুলোর নাম যদি **domain-এর নিজের ভেতরেই** হয় (`example.com`-এর জন্য `ns1.example.com`), তাহলে
+`example.com`-এর name server আগে থেকে না জানলে কেউ `ns1.example.com` খুঁজে পাবে না। Registrar এই চক্র ভাঙে
+**glue record** দিয়ে: name server-গুলোর address, যেগুলো registry-তে রাখা থাকে। Registrar-রা এদের বলে glue
+record, child name server, host record বা "register name server"।
+
+তখন পাতায় দেখায় কোন address-গুলো দিতে হবে, যেমন:
+
+```text
+ns1.example.com → 203.0.113.10, 2001:db8::10
+ns2.example.com → 198.51.100.20
+```
+
+Name server বদলানোর **আগে** এগুলো `example.com`-এর registrar-এ যোগ করুন। ekPanel একই address-গুলো zone-এর
+ভেতরেও বসিয়ে দেয়।
+
+যেসব অন্য domain `ns1.example.com` ব্যবহার করে, তাদের কোনো glue লাগে না, শুধু name server-এর নাম। `example.com`
+যদি অন্য কোথাও থাকে (ekPanel-এর name server-এ নয়), তাহলে সেখানে `ns1` আর `ns2`-এর জন্য `A` (আর `AAAA`) record
+নিজে যোগ করুন।
+
+### কাজ করছে কিনা দেখুন
+
+```bash
+dig @203.0.113.10 example.com SOA +short   # ask your primary directly
+dig example.com NS +short                  # what the world sees, once the registrar changed
+```
+
+Domain-এর পাতার **Zone serial** আর `SOA` উত্তরের serial মিলতে হবে।
+
+## DNSSEC
+
+DNSSEC আপনার domain-এর উত্তরগুলো sign করে, যাতে ভিজিটর আর আপনার name server-এর মাঝখানে কেউ সেগুলো জাল করতে না
+পারে। এর দুটো অংশ লাগে: আপনার name server zone sign করে, আর registrar একটা **DS record** প্রকাশ করে, যেটা আপনার
+signing key-এর নিশ্চয়তা দেয়।
+
+### চালু করুন
+
+<Steps>
+
+1. Domain-এর পাতায় **DNSSEC** card-এ **DNSSEC চালু করুন** (Turn on DNSSEC) বেছে নিন।
+
+2. **Zone sign হচ্ছে…** (Signing the zone…) লেখা থাকা পর্যন্ত অপেক্ষা করুন। Primary zone sign করে (ECDSA
+   P-256, NSEC record-সহ), তারপর secondary-রা sign করা zone কপি করে।
+
+3. Card-এ চারটে field-সহ **Registrar-এ এই DS record দিন:** (Enter this DS record at the registrar:) দেখায়।
+   এগুলো registrar-এর DNSSEC settings-এ দিন:
+
+   | Field           | উদাহরণ                      | মানে                                   |
+   | --------------- | --------------------------- | ------------------------------------- |
+   | **Key tag**     | `18326`                     | Key চেনার একটা নম্বর                    |
+   | **Algorithm**   | `13` (ECDSAP256SHA256)      | Zone কীভাবে sign করা হয়                |
+   | **Digest type** | `2` (SHA-256)               | Key-এর fingerprint কীভাবে বানানো হয়     |
+   | **Digest**      | একটা লম্বা hexadecimal string | Key-এর fingerprint; copy বাটন ব্যবহার করুন |
+
+4. Registrar DS record প্রকাশ করলেই domain সুরক্ষিত।
+
+</Steps>
+
+কিছু registrar DS record-এর বদলে DNSKEY (public key) চায়। ekPanel শুধু DS record দেখায়; আপনার registrar-এর
+DNSKEY লাগলে সেটা এখনো panel থেকে কপি করা যায় না।
+
+<Aside type="danger" title="DNSSEC ঠিক ক্রমে বন্ধ করুন">
+আপনার zone আর sign করা না থাকা অবস্থায় registrar যদি তখনো DS record প্রকাশ করে, তাহলে যেসব resolver DNSSEC
+যাচাই করে তারা আপনার domain-কে জাল ধরে নেয়, আর অনেক ভিজিটরের কাছে domain **resolve হওয়া বন্ধ হয়ে যায়**।
+
+1. আগে registrar থেকে DS record সরান।
+2. এক-দুই দিন অপেক্ষা করুন, যতক্ষণ না resolver-রা এটা ভুলে যায়।
+3. তারপর **DNSSEC বন্ধ করুন** (Turn off DNSSEC) বেছে নিন। Panel ঠিক এই কথাটাই নিশ্চিত করতে বলে।
+</Aside>
+
+## Domain সরান
+
+Domain-এর পাতার উপরে **Domain সরান** (Remove domain) zone-টা ekPanel-এর name server থেকে নামিয়ে দেয়; সেখানে
+এর record-এর উত্তর দেওয়া বন্ধ হয়ে যায়। আগে registrar-এ domain-কে অন্য কোথাও point করুন। DNSSEC চালু থাকলে,
+উপরের মতো আগে DS record সরান।
+
+## সীমা আর যা এখনো নেই
+
+- Record-এর ধরন: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `CAA` আর `NS` (subdomain-এর জন্য)।
+- আগের zone file import এখনো নেই; [importer](/project/roadmap/) পরিকল্পনায় আছে।
+- DNS দিয়ে wildcard certificate (DNS-01) এখনো নেই।
+- DNSSEC শুধু DS record (SHA-256) দেখায়, DNSKEY নয়।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="এর বদলে domain Cloudflare-এ রাখুন, ekPanel থেকে চালান।" />
+	<LinkCard title="Email" href="/guides/dns/email/" description="Mail record, যেগুলো ekPanel আপনার zone-এ যোগ করে।" />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Name server-এ port 53 আপনার হয়ে খুলে দেওয়া হয়।" />
+</CardGrid>

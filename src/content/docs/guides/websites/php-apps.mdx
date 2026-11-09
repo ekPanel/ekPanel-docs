@@ -1,0 +1,168 @@
+---
+title: PHP apps
+description: Install Joomla, Drupal (with Drush), Moodle or Laravel into an empty PHP website in one click, with its own database and checked downloads.
+sidebar:
+  order: 6
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Besides [WordPress](/guides/websites/wordpress/), ekPanel installs four PHP applications into an
+empty website: a content system, a structured-content system, a learning platform and a framework.
+Each gets a MariaDB database of its own.
+
+## What you can install
+
+| Application | Version installed | Needs PHP | Admin sign-in | Folder the website serves |
+| --- | --- | --- | --- | --- |
+| **Joomla**: websites and portals with many extensions | 6.2.0 | 8.3 or newer | `/administrator/` | `public_html` |
+| **Drupal**: structured content for larger sites | 11 (newest 11.x), with Drush 13 | 8.3 or newer | `/user/login` | `public_html/web` |
+| **Moodle**: courses, quizzes and classes | 5.2.4 | 8.3 or newer | `/login/index.php` | `public_html/public` |
+| **Laravel**: a fresh app to build on | 13 (newest 13.x) | 8.3 or newer | none | `public_html/public` |
+
+The panel greys out an application whose PHP need the site does not meet: "Needs PHP 8.3 or newer;
+change the site's PHP version first". See [Switch a site's PHP version](/guides/websites/php/#switch-a-sites-php-version).
+
+## Install an application
+
+<Steps>
+
+1. [Add a PHP website](/guides/websites/websites/#add-a-website) with PHP 8.3 or newer, or use an
+   existing one whose `public_html` is empty (the ekPanel welcome page is fine).
+
+2. On the site page, find **Other applications** and choose one.
+
+3. Fill in the **Site title** (up to 100 characters). For Joomla, Drupal and Moodle also fill in
+   the **Admin user name** (3 to 60 letters, digits and `. _ @ -`; Moodle makes it lowercase) and
+   the **Admin email**.
+
+4. Click **Install …**.
+
+5. **Copy the admin password now.** It is shown only once; ekPanel does not keep it. Laravel has no
+   admin account, so it has no password.
+
+6. Wait a few minutes. You can leave the page. When it is done, the card shows **Open … admin**
+   (or **Visit site** for Laravel).
+
+</Steps>
+
+A site can have one application. An application, or WordPress, cannot be added on top of another.
+
+## How downloads are checked
+
+Nothing is installed from a download that has not been checked.
+
+- **Joomla** and **Moodle** come as their official release archives (Joomla from its GitHub
+  releases, Moodle from `packaging.moodle.org`). The agent checks each archive against the SHA-256
+  checksum the publisher lists, which is written into ekPanel. A download that does not match is
+  refused: "the download does not match its published checksum".
+- **Drupal** and **Laravel** are made with Composer, which takes their packages from Packagist.
+  ekPanel uses one pinned Composer version (2.11.1), downloaded once per server from Composer's
+  GitHub releases and checked against its SHA-256.
+
+The installers run as the site's own Linux account. Passwords reach them through the environment,
+which only that account can read, never as command-line arguments that other accounts could see.
+
+## The database
+
+Each installation gets a new MariaDB database and user, named after the application and the
+site's account:
+
+| Application | Database |
+| --- | --- |
+| Joomla | `jo_<site account>` |
+| Drupal | `dr_<site account>` |
+| Moodle | `mo_<site account>` |
+| Laravel | `la_<site account>` |
+
+The database password is random and is written only into the application's configuration file.
+The database counts as one database in the owner's [package](/guides/admin/customers/). You find it
+on the [Databases](/guides/data/databases/) page like any other.
+
+## Notes per application
+
+### Joomla
+
+- Installed with Joomla's command-line installer, with a random table prefix (such as `j3f9a_`).
+- The `installation` folder is removed afterwards, and `configuration.php` is readable only by the
+  site's account.
+
+### Drupal
+
+- Made from `drupal/recommended-project` (version 11), with **Drush** 13 added, and installed with
+  the standard profile.
+- The website serves `public_html/web`; Composer's files and `vendor` stay outside it.
+- To run Drush, use the full PHP path with Drush's PHP file, from `public_html`. For example, in
+  a [cron job](/guides/websites/cron/) on a PHP 8.4 site:
+
+  ```bash
+  /usr/bin/php8.4 vendor/drush/drush/drush.php cron
+  ```
+
+### Moodle
+
+- Version 5.2.4. Moodle 5.3 needs MariaDB 11.4, and Ubuntu 24.04 and Debian 12 ship 10.11, so
+  ekPanel installs the 5.2 branch.
+- The website serves `public_html/public`.
+- `max_input_vars` is set to `5000` for the site, as Moodle requires.
+- Uploaded files live in `/home/<account>/moodledata`, outside the website.
+- Moodle's background tasks need its cron script every minute. ekPanel adds a
+  [cron job](/guides/websites/cron/) named **Moodle** for you: `admin/cli/cron.php` with the
+  site's PHP version, every minute, time zone UTC, time limit 60 minutes. Leave it on.
+- Moodle is installed in English.
+
+### Laravel
+
+- Made from `laravel/laravel` (version 13). There is no admin account.
+- The website serves `public_html/public`.
+- ekPanel writes `public_html/.env` from Laravel's example, with `APP_URL` and the MariaDB
+  database details, then runs `key:generate`, `migrate` and `storage:link`.
+- The `.env` file is never served, like every hidden file.
+- Upload your own code with [SFTP](/guides/websites/files/#sftp) (or the file manager), then run
+  its migrations. For Laravel's scheduler, add a [cron job](/guides/websites/cron/) every minute:
+
+  ```bash
+  /usr/bin/php8.4 artisan schedule:run
+  ```
+
+## If an install fails
+
+The card shows "The install failed: …" with the reason. ekPanel then puts things back as they were:
+
+- `public_html` is emptied again (and `moodledata` removed for Moodle);
+- the application's database is emptied.
+
+So you can fix the cause and click install again. The second attempt reuses the same database with
+a new password.
+
+Common causes are the server not reaching the download site or Packagist, or the site not being
+ready yet. If the panel restarts before the install starts, it fails with a message to start it
+again, because the one-time passwords were only in memory.
+
+<Aside type="note">
+For Drupal, Moodle and Laravel the website already serves the application's folder (`web` or
+`public`) when the install starts. After a failed install that folder is gone, so the site shows
+no page until an install succeeds.
+</Aside>
+
+## PrestaShop is not available
+
+PrestaShop 9 does not publish a download with a checksum yet. ekPanel only installs software it
+can check, so PrestaShop is not offered. You can still upload it yourself into an empty PHP
+website.
+
+## Limits and what is not there yet
+
+- ekPanel installs the application but does not update it. Use each application's own updater.
+- Each application is installed with fixed versions that come with ekPanel.
+- Tested on a test server (VM): all four installed and answered, each admin password worked, and
+  Moodle's cron ran.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="WordPress" href="/guides/websites/wordpress/" />
+	<LinkCard title="Cron jobs" href="/guides/websites/cron/" />
+	<LinkCard title="PHP" href="/guides/websites/php/" />
+	<LinkCard title="Databases" href="/guides/data/databases/" />
+</CardGrid>

@@ -1,0 +1,130 @@
+---
+title: Account-এর নিরাপত্তা
+description: Two-factor sign-in, sign-in alert, একটা ভালো password আর অন্য device থেকে sign out করে আপনার panel account সুরক্ষিত রাখুন।
+sidebar:
+  order: 6
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+আপনার ekPanel account root access-সহ server চালায়, তাই এটা ভালোভাবে সুরক্ষিত রাখা দরকার। এই পাতায় আছে two-factor
+sign-in, নতুন sign-in নিয়ে alert, password আর session। এখানকার সবকিছু menu-র **আপনার অ্যাকাউন্ট → নিরাপত্তা**
+(Your account → Security)-এ পাবেন, administrator আর customer দুজনের জন্যই।
+
+## Two-factor sign-in
+
+Two-factor authentication (2FA) চালু থাকলে sign in করতে password-এর সাথে আপনার ফোনের একটা app-এর ৬ সংখ্যার code-ও
+লাগে। কেউ আপনার password চুরি বা অনুমান করে ফেললেও ঢুকতে পারবে না।
+
+ekPanel standard সময়-ভিত্তিক code (TOTP) ব্যবহার করে, তাই যেকোনো authenticator app কাজ করে, যেমন Google
+Authenticator, Aegis বা 1Password।
+
+### চালু করুন
+
+<Steps>
+
+1. **আপনার অ্যাকাউন্ট → নিরাপত্তা** খুলুন। **টু-ফ্যাক্টর অথেনটিকেশন** (Two-factor authentication) card-এ
+   <Badge text="বন্ধ" variant="caution" /> দেখায়।
+
+2. **টু-ফ্যাক্টর অথেনটিকেশন চালু করুন** (Turn on two-factor authentication) বেছে নিন।
+
+3. আপনার authenticator app দিয়ে QR code scan করুন। Scan করতে না পারলে "স্ক্যান করতে পারছেন না? তাহলে এই কী অ্যাপে
+   টাইপ করুন:"-এর নিচে দেখানো key টাইপ করুন।
+
+4. App-এ দেখানো **৬ সংখ্যার কোড** (6-digit code) লিখে **নিশ্চিত করে চালু করুন** (Confirm and turn on) বেছে নিন।
+
+</Steps>
+
+Card-এ এখন <Badge text="চালু" variant="success" /> দেখায়। সঠিক code দিয়ে নিশ্চিত না করা পর্যন্ত কিছুই বদলায় না,
+তাই আধা-সম্পূর্ণ setup কখনো আপনাকে আটকে দেয় না।
+
+এখন থেকে email আর password দেওয়ার পর sign-in পাতা জিজ্ঞেস করে: "অথেনটিকেটর অ্যাপ খুলে ekPanel-এর ৬ সংখ্যার
+কোডটা লিখুন।" Code প্রতি ৩০ সেকেন্ডে বদলায়; ঘড়ি সামান্য এদিক-ওদিক হলে যাতে সমস্যা না হয়, তাই এখনকার code-এর ঠিক
+আগের বা পরের code-ও মেনে নেওয়া হয়।
+
+<Aside type="danger" title="ফিরে ঢোকার একটা উপায় রাখুন">
+ekPanel-এ **এখনো কোনো recovery code নেই**, আর অন্য কোনো administrator-এর জন্য কারও two-factor sign-in বন্ধ করার
+কোনো বাটনও নেই। ফোন হারালে access-ও হারাবেন।
+
+- Setup করার সময় key-টা ("স্ক্যান করতে পারছেন না?"-এর নিচের লেখা) একটা password manager-এ রেখে দিন, অথবা এমন
+  authenticator app ব্যবহার করুন যেটা code-এর backup রাখে।
+- দ্বিতীয় একজন administrator-কে two-factor sign-in-সহ তাঁর নিজের account দিন, যাতে panel কখনো একটা ফোনের ওপর
+  নির্ভর না করে।
+</Aside>
+
+### বন্ধ করুন
+
+**টু-ফ্যাক্টর অথেনটিকেশন বন্ধ করুন** (Turn off two-factor authentication) বেছে নিন, আপনার password দিন, আর নিশ্চিত
+করুন। Sign-in-এর মতোই বারবার ভুল password দেওয়া সীমিত।
+
+### প্রত্যেক administrator-এর এটা ব্যবহার করা উচিত
+
+[সার্ভার নিরাপত্তা](/guides/security/overview/) পাতার checklist সেই administrator-দের তালিকা দেখায়, যাঁরা শুধু
+password দিয়ে sign in করেন ("1 জন অ্যাডমিনিস্ট্রেটর শুধু পাসওয়ার্ড দিয়ে সাইন ইন করেন:" আর তাঁদের email)। তাঁদের
+প্রত্যেককে two-factor sign-in চালু করতে বলুন।
+
+<Aside type="note">
+যে administrator কোনো **customer হিসেবে** sign in করেন (তাঁকে সাহায্য করতে), তিনি customer-এর password বা
+two-factor settings দেখতে বা বদলাতে পারেন না। পাতায় লেখা থাকে: "এই সেটিংগুলো গ্রাহকের নিজের। আপনার নিজেরটা বদলাতে
+নিজের অ্যাকাউন্টে ফিরুন।"
+</Aside>
+
+## Sign-in alert
+
+গত ৯০ দিনে যে address থেকে sign in করেননি, সেখান থেকে sign in করলে ekPanel আপনাকে ওই address-সহ একটা **নতুন ঠিকানা
+থেকে সাইন-ইন** (Sign-in from a new address) alert পাঠায়। কোনো account-এর একেবারে প্রথম sign-in এর মধ্যে ধরা হয়
+না।
+
+Alert panel-এর ঘণ্টার নিচে দেখা যায়, আর **আপনার অ্যাকাউন্ট → নোটিফিকেশন** (Your account → Notifications)-এ আপনার
+বেছে নেওয়া channel-গুলোতে যায় (email, Telegram, Discord, Slack বা একটা webhook)। দেখুন
+[Notification](/guides/admin/notifications/)।
+
+Sign in-টা যদি আপনি নিজে না করে থাকেন, সাথে সাথে password বদলান (এতে অন্য সব device থেকেও sign out হয়ে যায়) আর
+two-factor sign-in চালু করুন।
+
+## Password
+
+- Password-এ **অন্তত ১০ অক্ষর** থাকতে হবে। যত লম্বা তত ভালো; password manager একটা বানিয়ে দিতে পারে।
+- Password শুধু argon2id hash হিসেবে রাখা হয়, কখনো পড়া যায় এমনভাবে নয়।
+- বদলাতে **পাসওয়ার্ড** (Password) card খুলে **এখনকার পাসওয়ার্ড** (Current password) আর একটা **নতুন পাসওয়ার্ড**
+  (New password) দিন, তারপর **পাসওয়ার্ড বদলান** (Change password) বেছে নিন। এতে অন্য সব device থেকে আপনি sign
+  out হয়ে যান; এই device-এ sign in থাকে।
+- Administrator **গ্রাহক** (Customers)-এর নিচে **নতুন পাসওয়ার্ড** (New password) দিয়ে কোনো customer-কে নতুন random
+  password দিতে পারেন। এটা মাত্র একবারই দেখানো হয়, আর customer সব জায়গা থেকে sign out হয়ে যান। এতে customer-এর
+  two-factor setting বদলায় না। দেখুন [Customer](/guides/admin/customers/)।
+
+### অনেকবার চেষ্টা
+
+১৫ মিনিটের মধ্যে ১০ বার sign-in ব্যর্থ হলে, এক address থেকে হোক বা এক email address-এর জন্য, sign-in থামিয়ে
+রাখা হয়: "অনেকবার চেষ্টা করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।" প্রতিটা ব্যর্থ sign-in audit log-এ লেখা হয়।
+
+## Session
+
+- Sign in করলে ওই device-এ **৭ দিন** sign in থাকেন, আর প্রতিবার panel ব্যবহার করলে ৭ দিন আবার নতুন করে শুরু হয়।
+- যে computer আর ব্যবহার করেন না সেখানে sign in করে থাকলে **সাইন ইন থাকা ডিভাইস** (Signed-in devices) card-এ
+  **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বেছে নিন। আপনি যে device ব্যবহার করছেন সেটায় sign
+  in থাকে।
+- Customer হিসেবে sign in করা administrator-এর সময় এক ঘণ্টায় সীমিত।
+- গত ১৫ মিনিটে password না দিয়ে থাকলে [web terminal](/guides/apps/terminal/) খোলার সময় আবার password (আর two-factor
+  code) চাওয়া হয়।
+
+Session cookie হলো `HttpOnly`, `SameSite=Lax` আর (HTTPS-এ) `__Host-` prefix-সহ `Secure`, তাই পাতার script বা অন্য
+site এগুলো পড়তে বা পাঠাতে পারে না।
+
+## যা এখনো নেই
+
+- **Passkey** (device-এর fingerprint বা face দিয়ে sign in, WebAuthn) পরিকল্পনায় আছে।
+- **Sign in থাকা device-এর তালিকা**, যেখান থেকে প্রতিটা আলাদা করে বন্ধ করা যাবে, পরিকল্পনায় আছে; আজ আপনি অন্য সব
+  device থেকে একসাথে sign out করতে পারেন।
+- Script আর অন্য program-এর জন্য **API token** পরিকল্পনায় আছে, scope আর মেয়াদসহ।
+- Two-factor sign-in-এর **recovery code** এখনো নেই।
+
+দেখুন [roadmap](/project/roadmap/)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="সার্ভার নিরাপত্তা" href="/guides/security/overview/" description="Checklist, two-factor sign-in ছাড়া administrator-সহ।" />
+	<LinkCard title="Notification" href="/guides/admin/notifications/" description="Sign-in alert কোথায় পাঠানো হয়।" />
+	<LinkCard title="Security model" href="/concepts/security-model/" description="ekPanel কীভাবে account আর server সুরক্ষিত রাখে।" />
+</CardGrid>

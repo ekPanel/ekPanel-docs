@@ -1,0 +1,87 @@
+---
+title: সাহায্য
+description: ekPanel নিয়ে কোথায় সাহায্য পাবেন, আর কীভাবে এমন bug report লিখবেন যার উত্তর তাড়াতাড়ি আসে।
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel বানাচ্ছেন স্বেচ্ছাসেবকরা। কোথায় সাহায্য চাইবেন, আর কীভাবে চাইলে কেউ সত্যিই আপনাকে সাহায্য
+করতে পারবে, এই page-এ তা বলা আছে।
+
+## কোথায় সাহায্য পাবেন
+
+| কোথায় | কীসের জন্য | কখন পাওয়া যায় |
+| --- | --- | --- |
+| **এই docs** | Install করা, প্রতিটা feature, [সমস্যা সমাধান](/reference/troubleshooting/) আর [সাধারণ প্রশ্ন](/reference/faq/), English আর বাংলায় | এখনই |
+| **Email:** ekpanelbd@gmail.com | প্রশ্ন, bug report আর আইডিয়া, যতদিন main repository private | এখনই |
+| **GitHub issues** | Bug report আর feature request, template-সহ | Main repository public হলে। Docs নিয়ে issue এখনই [docs repository](https://github.com/ekPanel/ekPanel-docs)-তে দেওয়া যায়। |
+| **GitHub Discussions** | প্রশ্ন আর আইডিয়া | Main repository public হলে |
+| Community chat | | এখনো কোনো chat (Discord, Telegram…) নেই। |
+
+<Aside type="danger" title="Security সমস্যা">
+কখনো public-এ vulnerability post করবেন না। [নিরাপত্তা নীতি](/project/security-policy/) মেনে চলুন।
+</Aside>
+
+কোনো paid support নেই। মানুষ যখন পারেন তখন সাহায্য করেন; পরিষ্কার report-এর উত্তর সবচেয়ে তাড়াতাড়ি আসে।
+
+## জিজ্ঞেস করার আগে
+
+<Steps>
+
+1. এই docs-এ খুঁজুন, বিশেষ করে [সমস্যা সমাধান](/reference/troubleshooting/)।
+
+2. Log দেখুন। বেশিরভাগ সমস্যা একটা message রেখে যায়:
+
+   ```bash
+   sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
+   ```
+
+3. দেখে নিন আপনি একটা হালনাগাদ build চালাচ্ছেন কিনা। প্রথম release-এর আগে ekPanel দ্রুত বদলায়।
+
+</Steps>
+
+## ভালো bug report লেখা
+
+যে report থেকে কেউ সমস্যাটা আবার ঘটাতে পারে, সেটা fix হয়। এগুলো দিন:
+
+- **কী ঘটেছে**: আপনি কী করেছেন, কী আশা করেছিলেন, আর তার বদলে কী ঘটেছে। Error message হুবহু copy করুন,
+  বা একটা screenshot দিন।
+- **আবার ঘটানোর ধাপ**: নম্বর দিয়ে, এমন একটা শুরুর অবস্থা থেকে যা যে কেউ পেতে পারে ("একটা নতুন install,
+  একটা PHP website যোগ করুন, তারপর…")।
+- **ekPanel-এর version**: panel-এর server-এ `ekpanel version` চালান (আর সংশ্লিষ্ট server অন্য হলে সেখানে
+  `ekpanel-agent version`)।
+- **Server-এর operating system**, যেমন Ubuntu 24.04, আর দরকার হলে processor-এর ধরন (amd64 বা arm64)।
+- ঘটনার সময়ের **log**:
+
+  ```bash
+  sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
+  ```
+
+  ekPanel-এর set up করা কোনো service-এর সমস্যা হলে তার log-ও দিন (`caddy`, `php8.4-fpm`,
+  `ekpanel-mail`, `pdns`… দেখুন [log কোথায় থাকে](/reference/troubleshooting/#where-the-logs-are))।
+
+<Aside type="caution" title="আগে secret সরিয়ে দিন">
+Log আর screenshot-এ password, key, token, email address আর এমন domain name থাকতে পারে যা আপনি গোপন
+রাখতে চান। কিছু পাঠানোর আগে এগুলো সরিয়ে দিন বা বদলে দিন।
+</Aside>
+
+প্রতি report-এ একটা সমস্যা। কয়েকটা পেলে কয়েকটা report পাঠান।
+
+## Feature request
+
+নিজের ভাষায় বলুন আপনি কী করতে চান আর আজ সেটা কেন কঠিন, আর জানা থাকলে অন্য panel (cPanel, aaPanel,
+Coolify…) সেটা কীভাবে করে। আগে [roadmap](/project/roadmap/) দেখে নিন: হয়তো এটা আগেই plan করা আছে।
+
+## অনুবাদ
+
+কোনো ভুল বা বাদ পড়া অনুবাদ পেয়েছেন? বলুন কোন ভাষা, কোথায় দেখা যায়, এখন কী লেখা আছে, আর কী লেখা উচিত।
+একটা screenshot সাহায্য করে। দেখুন [অনুবাদ](/development/translating/)।
+
+## সম্পর্কিত
+
+- [সাধারণ প্রশ্ন](/reference/faq/)
+- [সমস্যা সমাধান](/reference/troubleshooting/)
+- [Contributing](/development/contributing/)
+- [আচরণবিধি](/project/code-of-conduct/)

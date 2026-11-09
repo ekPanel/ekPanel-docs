@@ -1,0 +1,174 @@
+---
+title: App catalogue
+description: Install ready-made services such as Uptime Kuma, n8n, Nextcloud or Vaultwarden in one click, with passwords generated for you.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The **app catalogue** is a list of ready-made services you can install with one click: monitoring,
+automation, a password manager, a blog, your own cloud. Each one is a Compose file that the ekPanel
+project wrote and reviewed. You only choose a name, a server and a domain; ekPanel makes the
+passwords and keys.
+
+## Before you start
+
+- A connected server with enough free memory. Each service shows how much it needs.
+- A domain or subdomain for the service, such as `status.example.com`, with its DNS pointing at the
+  server (or managed by ekPanel through [Cloudflare](/guides/dns/cloudflare/) or the
+  [built-in name servers](/guides/dns/name-servers/)). Every service except Redis is used through
+  its domain, so the domain is required.
+- Docker is installed automatically on first use, as for any [Docker app](/guides/apps/docker-apps/).
+
+## Install a service
+
+<Steps>
+
+1. Open **Apps** and click **Catalogue** (or, on an empty Apps page, "install a ready-made service
+   from the catalogue").
+
+2. Find the service: type in **Search the catalogue**, or pick a **Category**. Each card shows a
+   short description and "Needs about … of memory".
+
+3. Click **Install**.
+
+4. Fill in the **Install** dialog:
+   - **Name**: the app's name on the server (lowercase letters, digits and dashes).
+   - **Server** (shown when you have more than one).
+   - **For** (administrators only): yourself ("Administrators (no package)"), or a customer who
+     will own the app.
+   - **Domain**: "The service is used through this domain. Point its DNS at the server first;
+     HTTPS is set up for it." Next to it, the **SSL certificate (HTTPS)**: **Automatic, free** or
+     **Self-signed**.
+   - Under **What will run, and a memory limit**: the images that will be downloaded, and an
+     optional memory limit for the main service.
+
+5. Click **Install**. ekPanel creates the app, generates its secrets and starts it. The first start
+   of a large service (Nextcloud, Ghost) can take a few minutes.
+
+6. Open the app's page. It shows the service's notes ("what to do next") and, under
+   **Sign-in details**, the user names, passwords and tokens you need. Click **Show** to see a
+   value.
+
+</Steps>
+
+<Aside type="caution">
+Several services let **the first visitor** create the administrator account: Uptime Kuma, n8n,
+Gitea, Memos, Ghost and Vaultwarden. Open the app right after installing and create your account
+before anyone else finds the address.
+</Aside>
+
+## The services
+
+There are 14 services today.
+
+| Service | Category | Memory it needs | Images | Generated for you |
+| --- | --- | --- | --- | --- |
+| Uptime Kuma | Monitoring | 256 MB | `louislam/uptime-kuma:2` | nothing; the first visitor creates the admin |
+| Grafana | Monitoring | 256 MB | `grafana/grafana:latest` | admin password (user `admin`) |
+| n8n | Automation | 512 MB | `docker.n8n.io/n8nio/n8n:latest` | `N8N_ENCRYPTION_KEY` |
+| Gitea | Development | 256 MB | `gitea/gitea:1` | nothing; finish the setup page |
+| IT Tools | Development | 64 MB | `corentinth/it-tools:latest` | nothing |
+| Vaultwarden | Security | 128 MB | `vaultwarden/server:latest` | admin page token (`ADMIN_TOKEN`) |
+| Umami | Analytics | 512 MB | `ghcr.io/umami-software/umami:postgresql-latest`, `postgres:17-alpine` | database password, app secret |
+| Ghost | Publishing | 768 MB | `ghost:6-alpine`, `mysql:8.4` | database password |
+| listmonk | Publishing | 256 MB | `listmonk/listmonk:latest`, `postgres:17-alpine` | admin password (user `admin`), database password |
+| Nextcloud | Productivity | 1 GB | `nextcloud:32-apache`, `postgres:17-alpine` | admin password (user `admin`), database password |
+| Memos | Productivity | 128 MB | `neosmemo/memos:stable` | nothing; the first account becomes admin |
+| Excalidraw | Productivity | 64 MB | `excalidraw/excalidraw:latest` | nothing; drawings stay in the browser |
+| ntfy | Notifications | 64 MB | `binwiederhier/ntfy:latest` | nothing; add a user in its shell first |
+| Redis | Databases | 128 MB | `redis:8-alpine` | `REDIS_PASSWORD` |
+
+Notes the panel shows for some of them:
+
+- **n8n**: keep `N8N_ENCRYPTION_KEY`. Credentials saved in n8n cannot be read without it.
+- **Vaultwarden**: create your account, then set `SIGNUPS_ALLOWED` to `false` in the app's
+  variables so nobody else can sign up. The admin page at `/admin` asks for the token.
+- **Umami**: sign in as `admin` with the password `umami`, and change it right away. (This is
+  Umami's own default, not a generated password.)
+- **Ghost**: the first start takes a minute or two while the database is set up. Then open
+  `/ghost` on the domain to create the owner account. Newsletters need a mail service, set up in
+  Ghost.
+- **listmonk**: add your SMTP server in listmonk's **Settings → SMTP** to send mail.
+- **ntfy**: nobody can use it until you add a user. Open the app's
+  [shell](/guides/apps/terminal/) and run `ntfy user add --role=admin yourname`.
+- **Redis**: it has no domain. Websites and apps on the same server connect to
+  `127.0.0.1:<port>` (the app page shows the port) with the password from **Sign-in details**. It
+  cannot be reached from other servers.
+
+## Generated passwords and keys
+
+Every install gets fresh secrets, made on the panel at the moment you click **Install**:
+
+- **Passwords** are 24 letters and digits, without look-alike characters (no `0`/`O`, `1`/`l`)
+  and without symbols, so they are safe to paste into URLs, shell commands and config files.
+- **Keys** are 64 hexadecimal digits (256 bits), for encryption keys and app secrets.
+
+They are stored as the app's **environment variables**, so you can see and change them in the
+app's **Settings**. Values made from the domain (such as `ROOT_URL=https://status.example.com/`)
+change with it when you change the app's domain.
+
+<Aside type="note">
+**Sign-in details** show the app's variables, not what the service has stored. If you change the
+admin password inside Grafana or Nextcloud, the old value stays in the panel.
+</Aside>
+
+## How templates are reviewed
+
+Each service is a Compose file in the ekPanel source (`internal/catalog/templates/`), with a short
+description of its variables in `internal/catalog/catalog.go`. Automated tests check every
+template for these rules:
+
+- No `ports:` or `expose:`: ekPanel publishes the web port on `127.0.0.1` itself and puts the
+  domain with HTTPS in front.
+- No `privileged`, `cap_add`, `devices:`, `security_opt`, `network_mode`, `pid:`, `ipc:`,
+  `userns_mode`, `cgroup_parent`, `sysctls` or `volumes_from`, and no Docker socket.
+- Named volumes only, never folders of the host.
+- No `build:`, `env_file`, `extends:` or `include:`: everything that runs is in the one file.
+- Every image in the file is declared, so a [package](/guides/admin/customers/) can allow or
+  refuse the service by its images.
+- Every `${VARIABLE}` in the file is declared, and every declared variable is used.
+- The description and category are translated in the panel.
+
+When a **customer** installs a service, the agent on the server checks the same kind of rules
+again before it starts anything (see
+[What ekPanel checks in a Compose file](/guides/apps/docker-apps/#what-ekpanel-checks-in-a-compose-file)),
+and runs every container of the app inside the customer's memory and CPU limits.
+
+The project tested all 14 services in a test VM: each was installed, answered over HTTPS and was
+removed without leaving volumes behind.
+
+## Who can install what
+
+- **Administrators** can install every service, for themselves or for a customer.
+- **Customers** can install a service when their package allows **all** of its images (see
+  **Allowed Docker images** in [packages](/guides/admin/customers/#package-limits)). A service
+  their package does not allow is marked **Not in your package**. Customers cannot paste their own
+  Compose files; catalogue services are the exception because they are reviewed.
+- An installed service counts as one app in the customer's package.
+
+## After installing
+
+An installed service is an ordinary Compose app that remembers its template and version
+("From the catalogue, template version 1" on its page). You manage it like any
+[Docker app](/guides/apps/docker-apps/): logs, restart, stop, **Update image**, shell, delete.
+
+You can change the domain, the variables and the limits. The Compose file and the port stay the
+template's: "The Compose file and port come from the catalogue."
+
+## Limits and what is not there yet
+
+- **Updating an installed service to a newer template version** is not there yet. **Update image**
+  pulls newer images for the same tags, but the Compose file stays as it was installed.
+- **Services that need more than one domain or port** are not in the catalogue yet.
+- More services will come. To suggest one, open an issue in the
+  [main repository](https://github.com/ekPanel). To add one yourself, see
+  [Adding a feature](/development/adding-a-feature/).
+- [Backups](/guides/data/backups/) do not include app volumes yet. Nextcloud files, Vaultwarden
+  vaults and Gitea repositories are not backed up by ekPanel.
+
+## Related
+
+- [Docker apps](/guides/apps/docker-apps/): Run any image or Compose file.
+- [Customers and packages](/guides/admin/customers/): Which images customers may run.

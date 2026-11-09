@@ -1,0 +1,211 @@
+---
+title: Adding a feature
+description: How a feature goes through ekPanel from the agent to the UI, following the real FTP feature file by file.
+sidebar:
+  order: 5
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+A feature in ekPanel usually touches every layer: what the agent does on a server, what the
+panel stores, the API, the UI and its translations, tests, and the docs. This page walks
+through one real, small feature, **FTP over TLS per website** (commit `e0e4d19`, part 3f of the
+roadmap), file by file, so you can follow the same path for your own.
+
+## The feature
+
+Each website can turn on an FTP login of its own. FTP is encrypted only (FTPS), locked into the
+website's home folder, and its ports are open in the firewall only while some website uses it.
+The password is shown once and only its hash is stored. Customers may use FTP only if their
+package includes it.
+
+The commit changed 21 files. Here they are in the order you would write them.
+
+## Two ways to change a server
+
+Before you start, decide how your feature reaches the server:
+
+| Kind | When | How | Examples |
+| --- | --- | --- | --- |
+| **Desired state** | Something that should *exist* and stay that way | Add fields to a spec that the panel sends in `state.apply`. The agent converges to it on every apply. | Websites, apps, firewall, FTP, email |
+| **One-off operation** | An action that happens once, or a question | Add an operation name (`Op…` in `internal/agentproto`) and a `case` in the agent's `Dispatch` (`internal/agent/ops.go`). The panel calls it through the hub, usually from a task. | Restart a service, run a malware scan, list bans |
+
+FTP is desired state: "this website has FTP with this password hash". If the agent restarts,
+the server is reinstalled, or someone deletes a file, the next apply puts it back.
+
+<Aside type="caution" title="Typed operations only">
+Never add a way to send a shell command, a file path from the browser, or a configuration
+snippet to the agent. Send typed fields, and let the agent build commands and files from them
+after checking every value itself.
+</Aside>
+
+## Step by step
+
+<Steps>
+
+1. **The protocol: `internal/agentproto/proto.go`**
+
+   Add the fields the agent needs to the spec, with JSON names and a comment:
+
+   ```go
+   // FTP (over TLS only) with a login of its own, locked into the site's home folder.
+   FTPEnabled      bool   `json:"ftp_enabled,omitempty"`
+   FTPPasswordHash string `json:"ftp_password_hash,omitempty"` // SHA-512 crypt
+   ```
+
+   FTP also added `FTPPassiveIP` to `StateApplyParams` (for servers behind NAT), an `FTP` flag
+   to `FirewallSpec`, and the list of ports:
+
+   ```go
+   var FTPPorts = []string{"21/tcp", "30000:30100/tcp"}
+   ```
+
+   Use `omitempty` for new fields, so an older agent and a newer panel (or the other way round)
+   still understand each other.
+
+2. **The agent: `internal/agent/ftp.go`, `sites.go`, `firewall.go`**
+
+   `ftp.go` holds the whole feature on the server: `applyFTP` installs Pure-FTPd when the first
+   website needs it, writes its settings (TLS required, no anonymous or system logins, passive
+   ports 30000-30100), keeps its user list to the websites with FTP, and stops it when none is
+   left. A failure is reported on the websites concerned, not on the whole server.
+
+   The agent checks input again, even though the panel already did. In `validateSite`
+   (`sites.go`):
+
+   ```go
+   if sp.FTPPasswordHash != "" && !cryptHashRE.MatchString(sp.FTPPasswordHash) {
+       return errors.New("invalid FTP password hash")
+   }
+   ```
+
+   `stateApply` calls `a.applyFTP(...)` after the websites are applied, and `firewall.go` opens
+   `FTPPorts` while the spec says so.
+
+   Follow the agent's habits: write files only when their content changed, never touch
+   accounts or data the agent did not create, and never delete data except on an explicit
+   delete.
+
+3. **The agent's test: `internal/agent/ftp_test.go`**
+
+   Agent tests run against a fake system: a temporary folder as the root file system, and a
+   recorder of the commands the agent would run. `TestApplyFTP` checks the user list, the
+   settings files (TLS required, no system logins, the passive address), the certificate, that
+   Pure-FTPd is restarted, and that it is stopped with an empty user list once the last website
+   turns FTP off. Nothing touches your computer.
+
+4. **The database: `internal/db/migrations/0025_ftp.sql`**
+
+   ```sql
+   ALTER TABLE sites ADD COLUMN ftp_enabled boolean NOT NULL DEFAULT false;
+   ALTER TABLE sites ADD COLUMN ftp_password_hash text;
+   ALTER TABLE packages ADD COLUMN ftp boolean NOT NULL DEFAULT false;
+   ```
+
+   Migrations are applied in name order when the panel starts. Add a new file with the next
+   number; never edit one that is already merged. Only the hash is stored, never the password.
+
+5. **The store: `internal/store/sites.go`, `customers.go`**
+
+   Add the columns to the `Site` struct (the hash with `json:"-"`, so it never reaches the
+   browser), to `siteColumns` and `scanSite`, and write a method for the change:
+
+   ```go
+   // SetSiteFTP turns FTP on (with a new password hash) or off (forgetting the password).
+   func (s *Store) SetSiteFTP(ctx context.Context, id string, enabled bool, passwordHash *string) (Site, error)
+   ```
+
+   It also raises the site's `generation` and sets its state to `pending`: that is how the panel
+   knows the server has not applied the change yet. `customers.go` got the package's `FTP` flag.
+
+6. **The reconcile: `internal/tasks/tasks.go`**
+
+   `Runner.Reconcile` builds a server's complete desired state. FTP added a few lines: a site
+   gets FTP in its spec only if it has a password hash **and** its owner's package allows FTP,
+   the firewall opens the FTP ports if any site uses it, and servers behind NAT get their public
+   address as `FTPPassiveIP`. This is where package limits become real: if a package loses FTP,
+   the next reconcile turns it off on the server.
+
+7. **The API: `internal/api/ftp.go`, `server.go`**
+
+   Two routes in `server.go`, in the group for administrators and customers:
+
+   ```go
+   r.Post("/sites/{id}/ftp", s.handleSetFTP)
+   r.Post("/sites/{id}/ftp/password", s.handleResetFTPPassword)
+   ```
+
+   The handler follows the usual pattern:
+
+   - read the JSON body with `readJSON` (unknown fields are refused);
+   - load the site with `loadSite`, which also checks ownership (a customer gets `404` for
+     someone else's site);
+   - check the package (`ftp_not_allowed` if it has no FTP);
+   - make a password, store only its hash, return the password once;
+   - write the **audit log**: `s.audit(r, "site.ftp_enabled", site.Domain, …)`;
+   - queue a reconcile of the server: `s.queueReconcile(r, site.ServerID)`.
+
+   Errors use `writeError` with a stable code, such as `ftp_disabled` ("turn on FTP first").
+
+8. **The API test: `internal/api/ftp_test.go`**
+
+   API tests run the real panel against a real (embedded) PostgreSQL, enrol a fake agent over
+   mutual TLS, and look at the `state.apply` the agent receives. `TestFTP` turns FTP on, checks
+   that the spec and the firewall carry it and that a password came back once, resets it, turns
+   it off, and checks that a customer without FTP in their package is refused.
+
+9. **The UI: `web/src/components/SiteSFTP.tsx`, `SiteDetailPage.tsx`, `lib/api.ts`**
+
+   Add the new fields to the TypeScript types in `web/src/lib/api.ts` (`ftp_enabled` on `Site`,
+   `ftp` on `Package`). The `SiteFTP` card shows the host, port 21, the encryption, the user
+   name, the one-time password with a copy button, and the buttons to turn FTP on or off. The
+   website page shows it with `<SiteFTP site={s} server={server.data} />`; the customers page
+   got a checkbox for the package.
+
+   Every text in it is `t("ftp.…")`, numbers and dates go through `web/src/lib/format.ts`, and
+   the layout uses logical classes (`ms-`, `pe-`…) so right-to-left languages work.
+
+10. **Translations: `web/src/i18n/locales/en.json` and `bn.json`**
+
+    FTP added a new `ftp` section (title, intro, buttons, notes), error texts
+    (`errors.ftp_not_allowed`, `errors.ftp_disabled`), audit log texts
+    (`audit.actions.site.ftp_enabled`, `ftp_disabled`, `ftp_password_reset`) and the package
+    option (`packages.ftp`). Add the Bangla if you can; `npm run i18n:check` lists what is
+    missing either way.
+
+11. **Test it on a real server**
+
+    Build, copy and install in the [test VM](/development/test-vm/), then try every path. For
+    FTP that was: plain FTP refused, FTPS sign-in and an upload served by the website, no way out
+    of the home folder, root and other accounts refused, the password reset, the firewall ports
+    opened and closed, and Pure-FTPd stopped when no website used FTP any more.
+
+12. **Document it**
+
+    Update `README.md` (what works), `PLAN.md` (the part's checklist), `SECURITY.md` (the
+    promises the feature makes), and these docs: a guide page, and anything in the
+    [reference](/reference/ports-and-paths/) that changed (FTP added ports 21 and 30000-30100).
+
+</Steps>
+
+## Checklist
+
+Before you open the pull request:
+
+- [ ] Typed fields only; no commands or paths from the browser reach the agent
+- [ ] Every value checked in the panel **and** again in the agent
+- [ ] Secrets stored only as hashes (or sealed with `secretbox`), never logged, shown once
+- [ ] Ownership checked for customers; package limits enforced in the reconcile
+- [ ] An audit log entry for every change, with its text in `audit.actions`
+- [ ] Errors with a stable `code`, translated in `errors`
+- [ ] UI text in `en.json` (and `bn.json` if you can); `npm run i18n:check` passes
+- [ ] Tests for the agent and the API; `make test` and `gofmt -l .` clean
+- [ ] Tried in the test VM, including failures and turning it off again
+- [ ] Docs updated, or an issue on the docs repository says what to add
+
+## Related
+
+- [Repository layout](/development/repository/)
+- [Desired state](/concepts/desired-state/)
+- [Security model](/concepts/security-model/)
+- [Contributing](/development/contributing/)

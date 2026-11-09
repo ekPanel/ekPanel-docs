@@ -1,0 +1,149 @@
+---
+title: Firewall
+description: Let ekPanel manage each server's ufw firewall, open ports and block addresses, and see which ports always stay open.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+A firewall decides which incoming connections reach your server. ekPanel can manage the
+server's `ufw` firewall for you: it blocks everything coming in except SSH, your websites, the
+ekPanel agent and the ports you open, and opens the ports for email, FTP and DNS by itself when
+you use them.
+
+## Before you start
+
+- Only administrators manage the firewall.
+- It is on each server's own page: open **Servers**, choose the server, and scroll to the
+  **Firewall** card.
+- If your provider also has a firewall in front of the server (often called a security
+  group), that one is separate. Ports must be open in both.
+
+## The three modes
+
+| Mode | What it means |
+| --- | --- |
+| Unmanaged (the default) | The card says "ekPanel is not managing this server's firewall". ekPanel leaves whatever firewall the server has as it is: it does not install, change or turn off anything. |
+| **On** | ekPanel installs `ufw` if needed, blocks incoming connections by default, allows all outgoing ones, and keeps the rules below in place. |
+| **Off** | ekPanel turns `ufw` off. Every port that a program listens on can be reached from the internet. Your rules are kept for when you turn it on again. |
+
+To leave **Off** and hand the firewall back to the server, choose **Stop managing**.
+
+## Turn the firewall on
+
+<Steps>
+
+1. On the server's page, in the **Firewall** card, choose **Turn on firewall**.
+
+2. Read the dialog. Anything reached from outside that is not listed (a game server, a database
+   used by other machines) stops working until you open its port.
+
+3. Choose **Turn on firewall**. The card shows <Badge text="Turning on…" variant="caution" />,
+   then <Badge text="On" variant="success" /> once the server has applied it.
+
+</Steps>
+
+The card says when the server last checked the firewall ("Checked by the server …"), and shows
+any error it reported.
+
+To turn it off, choose **Turn off** and confirm.
+
+## Ports that are always open
+
+While the firewall is on, these stay open no matter what rules you add:
+
+| Port | For |
+| --- | --- |
+| SSH, on every port `sshd` listens on | Signing in to the server. ekPanel reads the ports with `sshd -T`; if it cannot, it keeps port 22 open. |
+| 80/tcp | HTTP (it redirects to HTTPS and lets certificates renew) |
+| 443/tcp and 443/udp | HTTPS, including HTTP/3 |
+| 7443/tcp | The ekPanel agent |
+
+So if you moved SSH to port 2222, port 2222 stays open, and you cannot lock yourself out of SSH
+by turning on the firewall.
+
+## Ports opened automatically
+
+ekPanel opens these while a feature needs them, and closes them when it stops:
+
+| Feature | Ports |
+| --- | --- |
+| [Email](/guides/dns/email/) is on for the server | 25, 465, 587, 993, 995 (TCP) |
+| Any website on the server has FTP turned on | 21 and the passive ports 30000–30100 (TCP) |
+| The server is one of [ekPanel's name servers](/guides/dns/name-servers/) | 53 (TCP and UDP) |
+
+## Add a rule
+
+Under **Add a rule**, choose what the **Rule** does:
+
+- **Open a port**: allow connections to a port or range.
+- **Block an address**: refuse connections from an address or range.
+
+| Field | Open a port | Block an address |
+| --- | --- | --- |
+| **Port or range** | Required: `8080`, or a range such as `6000-6010` | Optional; empty blocks every port |
+| **Protocol** | TCP, UDP, or TCP and UDP | TCP, UDP, or TCP and UDP (every protocol when no port is given) |
+| **Only from** / **Address or range** | Optional: limit to one address or network | Required: `203.0.113.9` or `203.0.113.0/24`, IPv4 or IPv6 |
+| **Note** | Optional, up to 200 characters, to remember why | Same |
+
+Choose **Add rule**. The rule appears in the list, for example:
+
+- "Port 8080 (TCP) open to anywhere"
+- "Port 5432 (TCP) open to 198.51.100.4"
+- "Block everything from 203.0.113.0/24"
+- "Block port 25 (TCP) from 192.0.2.7"
+
+Remove a rule with the bin next to it. A server can have up to 200 rules.
+
+<Aside type="tip">
+To let one other machine reach a database, open its port **only from** that machine's address,
+not to anywhere.
+</Aside>
+
+## You cannot block yourself
+
+When you add a **Block an address** rule, the panel checks the address you are using to reach
+the panel. If the address or range you entered contains it, the rule is refused with "that
+would block your own address". This keeps you from cutting off your own access in one click.
+
+The check knows only the address your browser uses for the panel. If you reach the server's SSH
+from another network, make sure you do not block that one.
+
+## How it works
+
+The panel keeps the mode and rules; each change is applied by the server's agent as a task.
+The agent:
+
+- adds every rule it makes with the comment `ekpanel`, and remembers them in
+  `/var/lib/ekpanel-agent/firewall.json`;
+- puts **block** rules first, so they win over any allow rule;
+- applies only the differences, since each `ufw` call reloads the firewall;
+- puts back its own rules if someone removed them by hand, and leaves rules **you added by
+  hand** in `ufw` alone.
+
+Blocks made by [CrowdSec](/guides/security/crowdsec/) and [country
+blocking](/guides/security/countries/) are separate: they use nftables tables of their own, next
+to `ufw`, and work even with the firewall off.
+
+## Troubleshooting
+
+**A service stopped working after turning the firewall on.** Its port is not open. Add an
+**Open a port** rule for it.
+
+**The card shows an error.** The agent reports what `ufw` said. Check that the server is online,
+and look at **Recent tasks** on the server's page.
+
+**I locked myself out of SSH anyway.** ekPanel always keeps the SSH ports open, but block rules
+come first: a **Block an address** rule that covers the address you connect to SSH from blocks
+it too. Rules added by hand and your provider's firewall can also be the cause. Remove the rule
+in the panel if you can still reach it, or use your provider's web console to sign in and run
+`sudo ufw status numbered`.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Server security" href="/guides/security/overview/" description="The checklist that tells you whether the firewall is on." />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="Bans attackers automatically." />
+	<LinkCard title="Country blocking" href="/guides/security/countries/" description="Block or allow whole countries." />
+</CardGrid>

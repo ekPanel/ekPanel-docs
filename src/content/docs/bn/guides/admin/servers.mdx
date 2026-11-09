@@ -1,0 +1,190 @@
+---
+title: Server
+description: আপনার server-গুলোর live আর পুরোনো metric দেখুন, তাদের service দেখুন ও restart করুন, NAT-এর জন্য public address সেট করুন, আর একটা server সরান।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+আপনার সামলানো প্রতিটা server-এ একটা ছোট **agent** চলে, যা নিজে থেকে panel-এ connect করে আর সেই
+connection খোলা রাখে। এর মাধ্যমে panel প্রতি দুই সেকেন্ডে server-এর অবস্থা দেখে, আর server-কে বলে দেয়
+তার কোন কোন website, database আর app থাকার কথা। **সার্ভার** (Servers) পাতায় admin-রা এগুলো দেখেন আর
+সামলান।
+
+## শুরু করার আগে
+
+- আপনি admin। Customer-রা সার্ভার পাতা দেখতে পান না; কিছু তৈরি করার সময় তাঁরা শুধু তাঁদের package-এ
+  allow করা server-গুলো থেকে নাম দেখে একটা বেছে নেন।
+- Server যোগ করতে দেখুন [Server যোগ করুন](/start/add-server/)।
+
+## Server-এর তালিকা
+
+**সার্ভার** পাতায় প্রতিটা server-এর তালিকা থাকে, সাথে:
+
+| Column | যা দেখায় |
+| --- | --- |
+| **সার্ভার** (Server) | আপনার দেওয়া নাম, তার host name আর operating system-সহ |
+| **অবস্থা** (Status) | **অনলাইন** (Online), **অফলাইন** (Offline), বা **এজেন্টের অপেক্ষায়** (Waiting for agent: যোগ করা হয়েছে কিন্তু কখনো connect হয়নি) |
+| **CPU**, **মেমোরি**, **ডিস্ক** | Online থাকা অবস্থায় সর্বশেষ মান |
+| **শেষ দেখা** (Last seen) | Agent শেষবার কখন connected ছিল |
+
+কোনো server-এর পাতা খুলতে তাতে click করুন।
+
+## Server-এর পাতা
+
+ওপরে: server-এর নাম, তার অবস্থা, আর **টার্মিনাল** (Terminal, online থাকা অবস্থায়), **নতুন সংযোগ
+কমান্ড** (New connection command) ও **মুছুন** (Delete) button।
+
+### Live metric
+
+চারটা tile সর্বশেষ নমুনা দেখায়:
+
+- **CPU**: কত শতাংশ ব্যস্ত, আর core-এর সংখ্যা।
+- **মেমোরি** (Memory): মোটের মধ্যে কতটা ব্যবহার হচ্ছে। "ব্যবহার" মানে মোট থেকে Linux যতটা available
+  বলে সেটা বাদ দিয়ে, তাই ছেড়ে দেওয়া যায় এমন file cache ব্যবহার হিসেবে গোনা হয় না।
+- **ডিস্ক** (Disk): মোটের মধ্যে কতটা ব্যবহার হচ্ছে, root filesystem (`/`)-এর জন্য।
+- **চালু আছে** (Uptime), সাথে 1, 5 আর 15 মিনিটের load average।
+
+নিচে **CPU**, **মেমোরি** আর **নেটওয়ার্ক** (Network: download আর upload)-এর chart। Network গোনে
+server-এর আসল network interface; loopback আর Docker-এর virtual interface বাদ দেওয়া হয়।
+
+### ইতিহাস
+
+Chart-এর ওপরে একটা **সময়সীমা** (Time range) বাছুন:
+
+| সময়সীমা | Data |
+| --- | --- |
+| **লাইভ** (Live) | মোটামুটি শেষ 20 মিনিট, প্রতি 2 সেকেন্ডে একটা বিন্দু, আসার সাথে সাথে update হয় |
+| **১ ঘণ্টা** (1 hour) | এক মিনিটের গড় |
+| **২৪ ঘণ্টা** (24 hours) | পাঁচ মিনিটের গড় |
+| **৭ দিন** (7 days) | এক ঘণ্টার গড় |
+| **৩০ দিন** (30 days) | দুই ঘণ্টার গড় |
+
+Panel এক মিনিটের গড় 48 ঘণ্টা আর এক ঘণ্টার গড় 31 দিন রাখে। ইতিহাস record হয় শুধু agent connected থাকা
+অবস্থায়, তাই offline থাকার সময়টা ফাঁকা দেখায়: "এই সময়ের কোনো ইতিহাস এখনো নেই। এজেন্ট যুক্ত থাকলে
+ইতিহাস রেকর্ড হয়।"
+
+### System
+
+**সিস্টেম** (System) card-এ host name, operating system, kernel, architecture, agent version, আর server
+কখন connect হয়েছে ("যুক্ত হয়েছে", Connected since) দেখায়।
+
+### Website, database, task
+
+পাতায় server-এর website আর database-এর তালিকা থাকে, আর তার **সাম্প্রতিক task**: backup, restore,
+image update, deploy, service restart ইত্যাদি, তাদের অবস্থাসহ।
+
+এখানে server-এর [firewall](/guides/security/firewall/), তার PHP extension, আর তার **DNS-এর জন্য পাবলিক
+ঠিকানা**-ও (নিচে) আছে।
+
+## Service
+
+**সার্ভিস** (Services) card সেই server-এ ekPanel যেসব service-এর খেয়াল রাখে, সেগুলোর অবস্থা দেখায়:
+
+| Service | এটা কী | Panel থেকে restart |
+| --- | --- | --- |
+| `ekpanel` | Panel নিজে (শুধু panel-এর server-এ) | না |
+| `ekpanel-agent` | Agent | না |
+| `caddy` | Website আর app-এর web server | হ্যাঁ |
+| `postgresql` | PostgreSQL database (আর panel-এর server-এ panel-এর নিজের database) | হ্যাঁ |
+| `ssh` | SSH | না |
+| `cron` | System-এর cron | হ্যাঁ |
+| `ekpanel-mail` | Mail server, যখন [email](/guides/dns/email/) চালু | হ্যাঁ |
+| `crowdsec`, `crowdsec-firewall-bouncer` | [CrowdSec](/guides/security/crowdsec/), যখন এটা চালু | হ্যাঁ |
+
+প্রতিটা দেখায় **চলছে** (Running), **বন্ধ** (Stopped), **ব্যর্থ** (Failed), **চালু হচ্ছে** (Starting)
+ইত্যাদি, কখন থেকে, অথবা **ইনস্টল করা নেই** (Not installed)।
+
+কোনো service restart করতে **রিস্টার্ট** (Restart)-এ click করুন। Restart একটা task হিসেবে চলে
+("রিস্টার্টের অনুরোধ গেছে")। Panel আর agent তালিকায় নেই, কারণ এগুলো restart করলে যে connection দিয়ে
+request চলছে সেটাই কেটে যেত; SSH-ও নেই, কারণ SSH restart fail করলে আপনি বাইরে আটকে যেতে পারেন।
+
+<Aside type="note">
+তালিকাটা agent-এর ভেতরে স্থির করা, তাই panel-এ লেখা কোনো কিছু কখনো `systemctl`-এ পৌঁছায় না।
+Server-কে systemd ব্যবহার করতে হবে; না হলে card বলে যে service সামলানো যাবে না।
+</Aside>
+
+## যখন একটা server offline হয়ে যায়
+
+Agent panel-এর সাথে connected থাকা পর্যন্ত server **অনলাইন** থাকে। Connection কেটে গেলে server
+**অফলাইন** দেখায়, সাথে "শেষ দেখা গেছে …"। Server চালু আছে কিনা আর agent service চলছে কিনা check করুন:
+
+```bash
+sudo systemctl status ekpanel-agent
+sudo journalctl -u ekpanel-agent -n 50
+```
+
+Panel প্রতি মিনিটে check করে। Agent **3 মিনিট** অনুপস্থিত থাকলে প্রত্যেক admin একবার একটা
+[notification](/guides/admin/notifications/) পান: "সার্ভার … অফলাইন"। ছোট বিরতি, যেমন agent restart,
+চুপচাপ থাকে। Agent আবার connect হলে তাঁরা পান "সার্ভার … আবার অনলাইন"।
+
+Server offline থাকা অবস্থায় তার website আর app চলতে থাকে (web request-এর পথে agent নেই), কিন্তু panel
+সেখানে কিছু বদলাতে পারে না। এর মধ্যে করা পরিবর্তনগুলো agent ফিরে এলে apply হয়।
+
+কোনো server-এর disk **90% ভরে** গেলেও panel admin-দের সতর্ক করে। এই সতর্কবার্তা একবার পাঠানো হয়, আর
+আবার পাঠানো হয় শুধু disk 85%-এর নিচে নেমে আবার ভরে গেলে।
+
+## DNS-এর জন্য public address
+
+প্রতিটা server-এর website আর app-এর জন্য DNS record তৈরি করতে
+([Cloudflare](/guides/dns/cloudflare/) বা [built-in name server](/guides/dns/name-servers/)-এর মাধ্যমে),
+আর mail host name-এর record-এর জন্য, ekPanel-এর ওই server-এর public address জানা দরকার।
+
+Default-ভাবে এটা server-এর জানানো প্রথম **public** address ব্যবহার করে: private address (`10.x`,
+`192.168.x`, `172.16–31.x`), shared carrier-grade NAT address (`100.64.0.0/10`) আর এ ধরনের address বাদ
+দেওয়া হয়। Card-এ "সার্ভারে পাওয়া গেছে" address-গুলোর তালিকা থাকে।
+
+Server-এর নিজের network card-এ কোনো public address না থাকলে, যেমন NAT, router বা load balancer-এর
+পেছনে থাকলে, হাতে একটা address দিন:
+
+<Steps>
+
+1. Server-এর পাতায় **DNS-এর জন্য পাবলিক ঠিকানা** (Public addresses for DNS) খুঁজুন।
+
+2. Visitor-রা server-এ পৌঁছাতে যে **IPv4** এবং/অথবা **IPv6** address ব্যবহার করেন, সেটা দিন। নিজে থেকে
+   খুঁজে পাওয়া address ব্যবহার করতে field খালি রাখুন।
+
+3. Save করুন। DNS record সাথে সাথে update হয়।
+
+</Steps>
+
+হাতে দেওয়া public IPv4 address যদি server-এর নিজের address-গুলোর একটা না হয়, তাহলে passive mode-এর
+জন্য FTP client-দেরও সেটা দেওয়া হয়।
+
+## নতুন সংযোগ কমান্ড
+
+**নতুন সংযোগ কমান্ড** (New connection command) agent আবার connect করার জন্য নতুন একটা একবার-ব্যবহারের
+command বানায়, যেমন server নতুন করে install করার পর, বা প্রথম command-এর মেয়াদ শেষ হয়ে গেলে।
+Server-এর এখনকার agent certificate সাথে সাথে বাতিল হয় আর তার connection বন্ধ হয়, তাই agent-এর কোনো
+পুরোনো copy আর connect করতে পারে না।
+
+## একটা server সরান
+
+<Steps>
+
+1. Server-এর পাতায় **মুছুন** (Delete)-এ click করুন।
+
+2. নিশ্চিত করতে server-এর নাম টাইপ করুন, আর **সার্ভার মুছুন** (Delete server)-এ click করুন।
+
+</Steps>
+
+"প্যানেল এই সার্ভারের হিসাব মুছে ফেলবে আর এর এজেন্ট আর সংযোগ করতে পারবে না। সার্ভারের ভেতরের কিছুই
+মোছা হবে না।"
+
+<Aside type="caution">
+Panel ওই server সম্পর্কে যা জানত সবকিছুও ভুলে যায়: তার website, database, app, cron job, backup
+location, mail setting আর metric-এর ইতিহাস panel থেকে হারিয়ে যায়। File, database আর container server-এ
+থেকে যায়, কিন্তু server আবার connect করলেও সেগুলো panel-এ ফিরে আসে না। আগে দরকারি জিনিসের backup নিন।
+</Aside>
+
+## Limit আর যা এখনো নেই
+
+- Server-এর মধ্যে website, database বা app সরানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+- Panel থেকে agent-এর self-update: এখনো নেই।
+
+## সম্পর্কিত
+
+- [Server যোগ করুন](/start/add-server/): একটা command দিয়ে নতুন server connect করুন।
+- [Web terminal](/guides/apps/terminal/): Browser-এ একটা server-এর root shell।
+- [Notification](/guides/admin/notifications/): Offline server আর ভরা disk-এর খবর পান।

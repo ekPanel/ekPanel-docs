@@ -1,0 +1,294 @@
+---
+title: Files, SFTP and FTP
+description: Manage a website's files in the browser, or with an SFTP or FTP program, and how disk space limits apply.
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+There are three ways to put files on a website: the **file manager** in the panel, **SFTP** (the
+recommended way for programs such as FileZilla or WinSCP), and **FTP over TLS** for older tools
+that only speak FTP. All three are locked into the website's own folder.
+
+## The website's folders
+
+Every website has a home folder, `/home/<account>/`, where `<account>` is the site's Linux account
+(shown on the site page under **Details**):
+
+| Folder | What it holds |
+| --- | --- |
+| `public_html` | The website. Put your files here |
+| `logs` | `php-error.log`, the PHP error log of PHP sites |
+| `tmp` | Uploads in progress, PHP sessions and temporary files |
+| `.trash` | Files deleted in the file manager, until the trash is emptied |
+
+Some applications add folders here, such as `moodledata` for [Moodle](/guides/websites/php-apps/).
+
+The home folder itself belongs to root (SFTP's lock requires that), so you cannot create files
+directly in it. Work inside `public_html` or the other folders. `public_html`, `logs`, `tmp` and
+the trash cannot be deleted.
+
+## The file manager
+
+Open the website and click **Files**. The file manager starts in `public_html`. Use the house icon
+to go to the **Home folder**, and the path at the top to go back up.
+
+### Upload
+
+<Steps>
+
+1. Go to the folder where the files belong.
+
+2. Click **Upload** and choose files, or drag files from your computer onto the list.
+
+3. Watch the progress. If a file with the same name exists, you see "A file with this name
+   already exists." Click **Replace it** to overwrite it.
+
+</Steps>
+
+Files are sent in pieces of 512 KB, so large files work. A file appears under its name only when
+its last piece has arrived.
+
+### Edit files
+
+Click a file's name to open it in the code editor, with colours for
+PHP, HTML, CSS, JavaScript, TypeScript and JSON. Press **Ctrl S** (or **Cmd S** on a Mac) or
+click **Save**. If you close it with unsaved changes, the panel asks first.
+
+- The editor opens files up to **2 MB**. Download larger files instead.
+- Files that are not text show "This file is not text, so it cannot be edited here".
+
+**New file** and **New folder** create empty ones in the current folder.
+
+### Select, rename, download
+
+Tick files to select them. The bar that appears offers, depending on what you selected:
+**Download** (one file), **Rename** (one item), **Extract** (an archive), **Compress** and
+**Delete**.
+
+### Zip and unzip
+
+- **Compress** puts the selected files and folders into a new `.zip` file. The name must end in
+  `.zip`. Links are left out.
+- **Extract** unpacks a `.zip`, `.tar`, `.tar.gz` or `.tgz` file into the folder it is in.
+
+To protect the server, extraction:
+
+- stops at **10 GB** of unpacked data or **200,000** files and folders;
+- refuses entries that would land outside the target folder (the "zip slip" trick);
+- never creates links that are inside an archive.
+
+Extracted files get permissions `644`, or `755` if they were executable; folders get `755`.
+
+### Permissions
+
+Click a file's permissions (such as `644`) to change them. Use three digits: owner, group,
+others. `644` for files and `755` for folders suit most sites. Links have no permissions of their
+own and cannot be changed.
+
+### Trash
+
+**Delete** moves items into the trash, named with the time they were deleted. To work with it,
+open **Trash**:
+
+- **Restore** puts one item back into `public_html` under its old name.
+- **Delete forever** removes the selected items for good.
+- **Empty trash** removes everything in it.
+
+<Aside type="caution">
+Files in the trash still use disk space and count toward a package's limit, and the trash is not
+backed up. Empty it when you are sure.
+</Aside>
+
+### How the file manager keeps sites apart
+
+Every file action runs in a separate worker process that locks itself into the site's home folder
+and runs as the site's account. A link or a `..` in a path cannot reach another site's files or
+system files such as `/etc/shadow`. Changes such as uploads, deletes and renames are written to
+the audit log.
+
+## SFTP
+
+SFTP sends files over SSH, encrypted. It is the best choice for FileZilla, WinSCP, Cyberduck or
+your code editor's deploy feature.
+
+### Turn it on
+
+<Steps>
+
+1. Open the website and find **SFTP access**. Click **Turn on SFTP**.
+
+2. Copy the password shown. "It is shown only once and ekPanel does not keep it."
+
+3. Connect with the details on the card:
+   - **Server**: the server's host name (or its IP address);
+   - **Port**: `22`;
+   - **User name**: the site's Linux account, such as `myshop_3fa9`;
+   - **Password**: the one you copied.
+
+</Steps>
+
+Lost the password? Click **New password**. The old one stops working.
+
+<Tabs>
+<TabItem label="FileZilla">
+
+In **File → Site Manager**, add a site with:
+
+- **Protocol**: `SFTP - SSH File Transfer Protocol`
+- **Host**: your server, **Port**: `22`
+- **Logon Type**: `Normal`, with the user name and password from the panel
+
+The first time, FileZilla asks whether you trust the server's key. Accept it.
+
+</TabItem>
+<TabItem label="Command line">
+
+```bash
+sftp myshop_3fa9@server.example.com
+```
+
+Then use `put`, `get`, `ls` and `cd`. Your files are in `public_html`.
+
+</TabItem>
+</Tabs>
+
+### Sign in with SSH keys
+
+Keys are safer than passwords and save typing.
+
+<Steps>
+
+1. Open **SSH keys** on the **SFTP access** card.
+
+2. Paste your **public** key, such as the contents of `~/.ssh/id_ed25519.pub`. One key per line,
+   up to 20 keys.
+
+3. Click **Save keys**.
+
+</Steps>
+
+Accepted key types: Ed25519, ECDSA (also the security-key variants) and RSA of at least 2048 bits.
+ekPanel removes any options in front of a key (such as `command=` or `from=`), so a pasted line can
+only ever be a key.
+
+### What SFTP accounts can do
+
+- They are locked into the site's home folder (`chroot`): they see `public_html`, `logs` and `tmp`,
+  and nothing else on the server.
+- They can transfer files only. They cannot run commands, and port and agent forwarding are off.
+- New files and folders get the umask `022`, so they are normally `644` and `755`, unless your
+  SFTP program sets permissions itself.
+- Turning SFTP off forgets the password; turning it on again makes a new one.
+
+For customers, SFTP must be allowed in their [package](/guides/admin/customers/). Otherwise the
+panel answers "the package does not include SFTP".
+
+## FTP over TLS
+
+Use FTP only for tools and website builders that cannot use SFTP. ekPanel's FTP always encrypts:
+plain, unencrypted FTP is refused.
+
+### Turn it on
+
+<Steps>
+
+1. Open the website and find **FTP**. Click **Turn on FTP**.
+
+2. Copy the password shown. This FTP password is separate from the SFTP password and is shown only
+   now.
+
+3. Connect with the details on the card:
+   - **Server**: the server's host name or IP address;
+   - **Port**: `21`;
+   - **Encryption**: FTP over TLS (explicit), required;
+   - **User name**: the site's Linux account.
+
+</Steps>
+
+Click **New password** to replace it, and **Turn off FTP** when you no longer need it.
+
+<Tabs>
+<TabItem label="FileZilla">
+
+In **File → Site Manager**, add a site with:
+
+- **Protocol**: `FTP - File Transfer Protocol`
+- **Host**: your server, **Port**: `21`
+- **Encryption**: `Require explicit FTP over TLS`
+- **Logon Type**: `Normal`, with the user name and password from the panel
+
+Keep the transfer mode on **Passive** (FileZilla's default). On the first connection FileZilla
+shows the server's certificate as unknown. Tick **Always trust this certificate in future
+sessions** and click **OK**.
+
+</TabItem>
+<TabItem label="WinSCP">
+
+Choose **File protocol** `FTP` and **Encryption** `TLS/SSL Explicit encryption`, port `21`, then
+the user name and password. Accept the certificate when WinSCP asks.
+
+</TabItem>
+</Tabs>
+
+### How FTP is set up
+
+- The FTP server is Pure-FTPd. It is installed when the first website on a server turns FTP on,
+  and stopped when the last one turns it off.
+- Each site has a login of its own (the site's account name and a separate password), locked
+  into the site's home folder. No system account, root included, can sign in over FTP.
+- The server uses a **self-signed certificate** made for FTP, so FTP programs ask once whether to
+  trust it. This is expected.
+- Transfers use **passive ports 30000 to 30100**. While any site on the server has FTP, a
+  [firewall managed by ekPanel](/guides/security/firewall/) opens port 21 and that range, and
+  closes them again afterwards.
+- On a server behind NAT, where you set the public address by hand, FTP programs are told to use
+  that address for transfers.
+- At most 10 connections from one address and 100 in total.
+
+<Aside type="caution">
+If ekPanel does not manage the server's firewall, or your hosting provider has a firewall of its
+own, open TCP port 21 and TCP ports 30000 to 30100 there yourself. Otherwise signing in works
+but listing folders and transfers hang.
+</Aside>
+
+For customers, FTP must be allowed in their package. It is off by default.
+
+## Disk space limits
+
+A customer's [package](/guides/admin/customers/) can limit disk space. ekPanel measures each
+customer's use every 30 minutes: their website folders (the trash included), apps and databases.
+
+When the space is used up:
+
+- the file manager refuses uploads, new files and folders, saving in the editor, extracting and
+  compressing, with "the disk space of the package is used up; delete files to free some";
+- new websites, databases and apps are refused.
+
+Deleting, renaming and downloading still work, so the customer can free space. Remember that
+deleted files stay in the trash until it is emptied.
+
+<Aside type="note">
+The limit is measured, not a filesystem quota. Uploads over **SFTP and FTP are not stopped** by
+it yet, and use between two measurements can go over the limit for a while.
+</Aside>
+
+## Troubleshooting
+
+**SFTP says "permission denied" when uploading to the top folder.** The home folder belongs to
+root. Open `public_html` first.
+
+**FTP signs in but hangs on "Retrieving directory listing".** The passive ports 30000-30100 are
+closed somewhere between you and the server. Open them, or use SFTP.
+
+**FTP says the server requires TLS.** Your program tried plain FTP. Choose explicit FTP over TLS.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="Backups" href="/guides/data/backups/" description="Restore a whole website folder." />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" />
+	<LinkCard title="Customers and packages" href="/guides/admin/customers/" />
+</CardGrid>

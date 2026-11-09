@@ -1,0 +1,207 @@
+---
+title: Development setup
+description: ekPanel-এ কাজ করার জন্য একটা computer set up করুন - tool, make target, embedded database-সহ panel, Vite dev server আর test।
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+এই page আপনার computer-কে ekPanel-এর code-এ কাজ করার জন্য তৈরি করে: build করা, একটা ফেলে দেওয়ার মতো
+database দিয়ে panel local-এ চালানো, live reload-সহ UI-তে কাজ করা, আর test চালানো। আপনার computer-এ
+PostgreSQL বা Docker লাগবে না।
+
+## শুরু করার আগে
+
+| যা লাগবে | Version | কেন |
+| --- | --- | --- |
+| Linux | যেকোনো সাম্প্রতিক | Panel আর এর test Linux-এ চলে। Server-এর change একটা Ubuntu VM-এ test করা হয়। |
+| Go | 1.27 বা নতুন | `go.mod` Go 1.27.0 চায়। পুরনো `go` command নিজে থেকেই 1.27 download করে নেয়। |
+| Node.js | 22 বা নতুন | Web UI build করে। CI Node.js 22 ব্যবহার করে। |
+| `make`, `git` | | Build-এর কাজ আর code। |
+
+প্রথমবার panel বা Go test চালালে একটা embedded PostgreSQL (version 17) download হয়। এরপর এটা offline-এ
+কাজ করে।
+
+<Aside type="note">
+প্রথম release পর্যন্ত main repository private। আপনার access থাকলে
+`git clone https://github.com/ekPanel/ekpanel.git` দিয়ে clone করুন।
+</Aside>
+
+## Panel local-এ চালান
+
+<Steps>
+
+1. Web UI build করে panel-এ ঢোকান। এটা `npm ci` দিয়ে UI-এর dependency install করে, UI build করে, আর
+   `internal/webui/dist`-এ copy করে, যেখান থেকে Go build এটা embed করে:
+
+   ```bash
+   make ui
+   ```
+
+   এই step ছাড়াও panel চলে, কিন্তু একটা page দেখায় যে web UI build করা হয়নি।
+
+2. Panel চালু করুন:
+
+   ```bash
+   make dev
+   ```
+
+   এটা চালায়:
+
+   ```bash
+   go run ./cmd/ekpanel --dev-db --data-dir .data --secure-cookies=false --agent-listen 127.0.0.1:7443
+   ```
+
+   - `--dev-db` `.data/devdb/`-এর ভেতরে একটা private PostgreSQL চালু করে (এর log যায়
+     `.data/devdb.log`-এ)।
+   - `--secure-cookies=false` session cookie-কে plain HTTP-তে কাজ করতে দেয়।
+   - Agent listener শুধু `127.0.0.1:7443`-এ থাকে।
+
+3. Log-এ **সেটআপ টোকেন** (setup token) খুঁজুন (`setup_token=…`), অথবা `.data/setup-token`-এ। খুলুন
+   http://127.0.0.1:8080, token-টা paste করুন, আর আপনার administrator বানান।
+
+4. ঐচ্ছিক: নিজের computer-কে একটা server হিসেবে connect করুন। **সার্ভার যোগ করুন** (Add server)-এ click
+   করুন, তারপর dialog-এর command থেকে token আর CA pin copy করুন:
+
+   ```bash
+   make dev-agent TOKEN=<token> PIN=<ca pin>
+   ```
+
+   প্রথমবার চালালে এটা enrol করে (`.data/agent.json` save করে), তারপর agent চালু করে। পরে argument ছাড়া
+   `make dev-agent` চালান।
+
+</Steps>
+
+<Aside type="caution" title="Local agent শুধু statistics-এর জন্য">
+`make dev-agent` agent-কে আপনার নিজের user হিসেবে, আপনার নিজের computer-এ চালায়। এটা live statistics
+দেখায়, কিন্তু server বদলায় এমন যেকোনো কিছুর (website, database, firewall…) জন্য Ubuntu বা Debian-এ root
+লাগে। সেগুলো [test VM](/development/test-vm/)-এ test করুন, কখনো নিজের machine-এ নয়।
+</Aside>
+
+একটা খালি panel দিয়ে আবার শুরু করতে panel বন্ধ করে `.data/` মুছে দিন। অন্য folder ব্যবহার করতে `DATA_DIR`
+set করুন, যেমন `make dev DATA_DIR=/tmp/ekpanel-dev`।
+
+## Live reload-সহ UI-তে কাজ করুন
+
+<Steps>
+
+1. একটা terminal-এ `make dev` চালু রাখুন।
+
+2. দ্বিতীয় একটা terminal-এ Vite dev server চালু করুন:
+
+   ```bash
+   make dev-ui
+   ```
+
+3. http://localhost:5173 খুলুন। `web/src`-এর file-এ change সাথে সাথে দেখা যায়।
+
+</Steps>
+
+Vite server (`web/vite.config.ts`) `/api`-এর নিচের প্রতিটা request, WebSocket-সহ, panel-এ পাঠিয়ে দেয়।
+Panel শুধু নিজের origin থেকে আসা request নেয়, তাই proxy `Origin` হিসেবে panel-এর নিজের address পাঠায়।
+
+এটা যে panel-এর সাথে কথা বলে সেটা `http://127.0.0.1:8080`, যদি না আপনি `EKPANEL_DEV_TARGET` set করেন।
+Proxy self-signed certificate মেনে নেয়, তাই আপনি এটাকে একটা test panel-এর দিকে point করতে পারেন, যেমন test
+VM-এর panel:
+
+```bash
+cd web
+EKPANEL_DEV_TARGET=https://127.0.0.1:8443 npm run dev
+```
+
+## Make target
+
+`make help` সবগুলোর list দেখায়।
+
+| Target | কী করে |
+| --- | --- |
+| `make help` | এই list দেখায়। |
+| `make build` | `ui`, `panel` আর `agent` একসাথে। |
+| `make ui` | Web dependency install করে, UI build করে আর panel-এ embed করে। |
+| `make panel` | `bin/ekpanel` build করে। |
+| `make agent` | `bin/ekpanel-agent` build করে। |
+| `make release` | `install.sh` আর `LICENSE`-সহ Linux amd64 আর arm64 archive, আর `SHA256SUMS`, `dist/`-এ build করে। |
+| `make test` | `test-go` আর `test-web`: CI যা check করে, শুধু `gofmt` আর UI build বাদে। |
+| `make test-go` | `go vet ./...` আর `go test -race ./...`। |
+| `make test-web` | UI type-check করে আর অনুবাদ check করে। |
+| `make dev` | Embedded database-সহ panel, http://127.0.0.1:8080 address-এ। |
+| `make dev-ui` | Vite dev server, http://localhost:5173 address-এ। |
+| `make dev-agent` | এই computer-এ একটা agent (প্রথমবার `TOKEN=… PIN=…`)। |
+| `make clean` | `bin/`, `dist/` আর build করা UI সরিয়ে দেয়। Dev database রেখে দেয়। |
+
+Binary-গুলো `CGO_ENABLED=0` দিয়ে build হয়, তাই সেগুলো static। `ekpanel version` যে version দেখায় তা আসে
+`git describe` থেকে; `VERSION=…` দিয়ে সেটা বদলানো যায়।
+
+## Test চালান
+
+```bash
+make test        # everything
+make test-go     # only Go
+go test ./internal/agent/ -run TestApplyFTP   # one package, one test
+```
+
+- `internal/api/`-এর API test পুরো package-এর জন্য একবার একটা আসল, embedded PostgreSQL চালু করে
+  (`~/.cache/ekpanel/embedded-postgres`-এ cache করা থাকে) আর তার বিপরীতে panel চালায়। এগুলো একটা আসল
+  mutual-TLS connection-এর ওপর একটা fake agent-ও চালায়, তাই panel একটা server-এ ঠিক কী পাঠাত, test সেটাই
+  দেখে।
+- `internal/agent/`-এর agent test একটা fake file system root-এর বিপরীতে চলে আর agent যে command চালাত
+  সেগুলো record করে, তাই এগুলো কখনো আপনার computer-এ হাত দেয় না।
+- `make test-web` `web/`-এ `npm run typecheck` আর `npm run i18n:check` চালায়।
+
+Pull request খোলার আগে CI-এর মতো formatting-ও check করুন:
+
+```bash
+gofmt -l .       # must print nothing; fix with gofmt -w <file>
+```
+
+## বাইরের service লাগে এমন feature চেষ্টা করা
+
+<Tabs>
+<TabItem label="Cloudflare">
+
+ekPanel Cloudflare-এর API-এর যে অংশ ব্যবহার করে, তার জন্য repository-তে একটা fake Cloudflare server আছে:
+
+```bash
+go run ./internal/cloudflare/cloudflaretest/fakecf -zones example.com
+```
+
+এটা `127.0.0.1:18080`-এ listen করে। Panel-কে এর বিপরীতে চালু করুন, আর panel-এ `test-token` token দিয়ে
+connect করুন:
+
+```bash
+EKPANEL_CLOUDFLARE_API=http://127.0.0.1:18080/client/v4 make dev
+```
+
+</TabItem>
+<TabItem label="Email">
+
+Test VM-এর server-এ `mail.php.test`-এর মতো একটা host name আর self-signed certificate দিয়ে email চালু করুন।
+VM-এর ভেতরে deliver হওয়া mail (`127.0.0.1` port 25-এ) mailbox-এ পৌঁছায়। Webmail এভাবে উত্তর দেয়:
+
+```bash
+curl -k --resolve mail.php.test:443:127.0.0.1 https://mail.php.test/
+```
+
+বাইরে পাঠানো mail VM থেকে বের হতে পারে না, queue-তে থেকে যায়। Stalwart-এর API-এর (`127.0.0.1:18900`)
+জন্য agent-এর login server-এ `/etc/ekpanel/mail/admin.env`-এ আছে।
+
+</TabItem>
+</Tabs>
+
+## সমস্যা সমাধান
+
+- **Embedded PostgreSQL চালু হয় না।** এর log `.data/devdb.log` পড়ুন। `.data/` মুছে দিলে নতুন করে শুরু হয়
+  (local panel-এর data হারিয়ে যায়)।
+- **"no database configured"।** Panel `make dev` দিয়ে চালান, যা `--dev-db` দেয়, অথবা একে `--database-url`
+  দিন।
+- **Plain HTTP-তে sign-in টেকে না।** Session cookie default-ভাবে `Secure` (আর `__Host-` prefix দিয়ে নাম
+  দেওয়া), যা browser plain HTTP-তে নিতে না-ও পারে; `make dev` এটা বন্ধ করে দেয়। আপনি নিজে
+  `go run ./cmd/ekpanel` চালালে `--secure-cookies=false` যোগ করুন।
+
+## সম্পর্কিত
+
+- [Repository-র গঠন](/development/repository/)
+- [Test VM](/development/test-vm/)
+- [Feature যোগ করা](/development/adding-a-feature/)
+- [Configuration](/reference/configuration/)

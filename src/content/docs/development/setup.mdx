@@ -1,0 +1,210 @@
+---
+title: Development setup
+description: Set up a computer to work on ekPanel - tools, make targets, the panel with its embedded database, the Vite dev server and the tests.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+This page sets up your computer to work on ekPanel's code: build it, run the panel locally with
+a throwaway database, work on the UI with live reload, and run the tests. You do not need
+PostgreSQL or Docker on your computer.
+
+## Before you start
+
+| You need | Version | Why |
+| --- | --- | --- |
+| Linux | any recent | The panel and its tests run on Linux. Changes to servers are tested in an Ubuntu VM. |
+| Go | 1.27 or newer | `go.mod` asks for Go 1.27.0. An older `go` command downloads 1.27 by itself. |
+| Node.js | 22 or newer | Builds the web UI. CI uses Node.js 22. |
+| `make`, `git` | | Build tasks and the code. |
+
+The first time you run the panel or the Go tests, an embedded PostgreSQL (version 17) is
+downloaded. After that it works offline.
+
+<Aside type="note">
+The main repository is private until the first release. If you have access, clone it with
+`git clone https://github.com/ekPanel/ekpanel.git`.
+</Aside>
+
+## Run the panel locally
+
+<Steps>
+
+1. Build the web UI into the panel. This installs the UI's dependencies with `npm ci`, builds
+   it, and copies it into `internal/webui/dist`, from where the Go build embeds it:
+
+   ```bash
+   make ui
+   ```
+
+   Without this step the panel still runs, but shows a page saying the web UI was not built.
+
+2. Start the panel:
+
+   ```bash
+   make dev
+   ```
+
+   This runs:
+
+   ```bash
+   go run ./cmd/ekpanel --dev-db --data-dir .data --secure-cookies=false --agent-listen 127.0.0.1:7443
+   ```
+
+   - `--dev-db` starts a private PostgreSQL inside `.data/devdb/` (its log goes to
+     `.data/devdb.log`).
+   - `--secure-cookies=false` lets the session cookie work over plain HTTP.
+   - The agent listener is only on `127.0.0.1:7443`.
+
+3. Find the **setup token** in the log (`setup_token=…`), or in `.data/setup-token`. Open
+   http://127.0.0.1:8080, paste it, and create your administrator.
+
+4. Optional: connect your own computer as a server. Click **Add server**, then copy the token
+   and the CA pin from the command in the dialog:
+
+   ```bash
+   make dev-agent TOKEN=<token> PIN=<ca pin>
+   ```
+
+   The first run enrols (saving `.data/agent.json`), then starts the agent. Later, run
+   `make dev-agent` without arguments.
+
+</Steps>
+
+<Aside type="caution" title="The local agent is for statistics only">
+`make dev-agent` runs the agent as your own user, on your own computer. It shows live
+statistics, but anything that changes a server (websites, databases, firewall…) needs root on
+Ubuntu or Debian. Test those in the [test VM](/development/test-vm/), never on your own machine.
+</Aside>
+
+To start over with an empty panel, stop it and delete `.data/`. To use another folder, set
+`DATA_DIR`, for example `make dev DATA_DIR=/tmp/ekpanel-dev`.
+
+## Work on the UI with live reload
+
+<Steps>
+
+1. Keep `make dev` running in one terminal.
+
+2. In a second terminal, start the Vite dev server:
+
+   ```bash
+   make dev-ui
+   ```
+
+3. Open http://localhost:5173. Changes to files in `web/src` show up at once.
+
+</Steps>
+
+The Vite server (`web/vite.config.ts`) passes every request under `/api`, WebSockets included,
+on to the panel. The panel only accepts requests from its own origin, so the proxy sends the
+panel's own address as `Origin`.
+
+The panel it talks to is `http://127.0.0.1:8080` unless you set `EKPANEL_DEV_TARGET`. The proxy
+accepts self-signed certificates, so you can point it at a test panel, such as the one in the
+test VM:
+
+```bash
+cd web
+EKPANEL_DEV_TARGET=https://127.0.0.1:8443 npm run dev
+```
+
+## Make targets
+
+`make help` lists them all.
+
+| Target | What it does |
+| --- | --- |
+| `make help` | Shows this list. |
+| `make build` | `ui`, `panel` and `agent` together. |
+| `make ui` | Installs the web dependencies, builds the UI and embeds it into the panel. |
+| `make panel` | Builds `bin/ekpanel`. |
+| `make agent` | Builds `bin/ekpanel-agent`. |
+| `make release` | Builds Linux amd64 and arm64 archives with `install.sh` and `LICENSE`, and `SHA256SUMS`, into `dist/`. |
+| `make test` | `test-go` and `test-web`: what CI checks, except `gofmt` and the UI build. |
+| `make test-go` | `go vet ./...` and `go test -race ./...`. |
+| `make test-web` | Type-checks the UI and checks the translations. |
+| `make dev` | The panel on http://127.0.0.1:8080 with the embedded database. |
+| `make dev-ui` | The Vite dev server on http://localhost:5173. |
+| `make dev-agent` | An agent on this computer (`TOKEN=… PIN=…` the first time). |
+| `make clean` | Removes `bin/`, `dist/` and the built UI. Keeps the dev database. |
+
+Binaries are built with `CGO_ENABLED=0`, so they are static. The version printed by
+`ekpanel version` comes from `git describe`; `VERSION=…` overrides it.
+
+## Run the tests
+
+```bash
+make test        # everything
+make test-go     # only Go
+go test ./internal/agent/ -run TestApplyFTP   # one package, one test
+```
+
+- The API tests in `internal/api/` start a real, embedded PostgreSQL once for the whole package
+  (cached in `~/.cache/ekpanel/embedded-postgres`) and run the panel against it. They also run a
+  fake agent over a real mutual-TLS connection, so a test sees exactly what the panel would send
+  to a server.
+- The agent tests in `internal/agent/` run against a fake file system root and record the
+  commands the agent would run, so they never touch your computer.
+- `make test-web` runs `npm run typecheck` and `npm run i18n:check` in `web/`.
+
+Before you open a pull request, also check formatting, as CI does:
+
+```bash
+gofmt -l .       # must print nothing; fix with gofmt -w <file>
+```
+
+## Trying features that need outside services
+
+<Tabs>
+<TabItem label="Cloudflare">
+
+The repository has a fake Cloudflare server for the parts of the API ekPanel uses:
+
+```bash
+go run ./internal/cloudflare/cloudflaretest/fakecf -zones example.com
+```
+
+It listens on `127.0.0.1:18080`. Start the panel against it, and connect in the panel with the
+token `test-token`:
+
+```bash
+EKPANEL_CLOUDFLARE_API=http://127.0.0.1:18080/client/v4 make dev
+```
+
+</TabItem>
+<TabItem label="Email">
+
+Turn email on for the test VM's server with a host name such as `mail.php.test` and the
+self-signed certificate. Mail delivered inside the VM (to `127.0.0.1` port 25) reaches mailboxes.
+Webmail answers with:
+
+```bash
+curl -k --resolve mail.php.test:443:127.0.0.1 https://mail.php.test/
+```
+
+Mail to the outside cannot leave the VM and stays queued. The agent's login for Stalwart's API
+(`127.0.0.1:18900`) is in `/etc/ekpanel/mail/admin.env` on the server.
+
+</TabItem>
+</Tabs>
+
+## Troubleshooting
+
+- **The embedded PostgreSQL does not start.** Read its log, `.data/devdb.log`. Deleting `.data/`
+  starts fresh (you lose the local panel's data).
+- **"no database configured".** Run the panel with `make dev`, which passes `--dev-db`, or give
+  it `--database-url`.
+- **Sign-in does not stick over plain HTTP.** Session cookies are `Secure` (and named with the
+  `__Host-` prefix) by default, which browsers may refuse on plain HTTP; `make dev` turns that
+  off. If you run
+  `go run ./cmd/ekpanel` yourself, add `--secure-cookies=false`.
+
+## Related
+
+- [Repository layout](/development/repository/)
+- [Test VM](/development/test-vm/)
+- [Adding a feature](/development/adding-a-feature/)
+- [Configuration](/reference/configuration/)

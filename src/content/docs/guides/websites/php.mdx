@@ -1,0 +1,212 @@
+---
+title: PHP
+description: PHP versions side by side, switching versions, per-site PHP settings, PHP extensions per server, and how each site's PHP-FPM pool works.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Each PHP website runs its PHP code with its own PHP-FPM pool, as its own Linux account, with the
+PHP version you choose. Different sites on one server can use different PHP versions at the same
+time.
+
+## PHP versions
+
+ekPanel offers these versions, side by side:
+
+| Version | Note |
+| --- | --- |
+| PHP 8.5 | |
+| PHP 8.4 | Recommended; preselected for new sites |
+| PHP 8.3 | |
+| PHP 8.2 | |
+| PHP 8.1 | |
+| PHP 7.4 | For old applications only. It no longer gets security fixes from the PHP project |
+
+The packages come from Ondřej Surý's PHP repository (the Launchpad PPA on Ubuntu,
+`packages.sury.org` on Debian), which has every version for each release. ekPanel adds the
+repository and installs a version **the first time a site needs it**, so only the versions you
+use are on the server. The first install of a version can take a few minutes.
+
+If a site belongs to a customer whose [package](/guides/admin/customers/) lists PHP versions,
+only those versions are offered and accepted.
+
+## Switch a site's PHP version
+
+<Steps>
+
+1. Open the website. In **Settings**, choose the new **PHP version**.
+
+2. Click **Save changes**. The site shows **Applying…**, then **Live**.
+
+</Steps>
+
+The switch has no downtime. The agent starts the new version's pool first, waits for its socket,
+then points the web server at it, and only then removes the old pool. In a test (on a test VM)
+under constant load, every one of 457 requests was answered during a switch.
+
+<Aside type="caution">
+Check that your application supports the new version before you switch a live site. The
+[PHP error log](/guides/websites/logs-traffic/#php-error-log) shows what breaks. Switching back
+works the same way.
+</Aside>
+
+To make a PHP site static (files only), choose **Static** under **Type of site**. Its PHP pool
+is removed and `.php` files are no longer run.
+
+<Aside type="danger">
+A static site serves every file in `public_html` as it is, `.php` files included. If PHP files
+are still there, visitors can download their source code, with any passwords in configuration
+files such as `wp-config.php`. Remove PHP applications before you switch a site to static.
+</Aside>
+
+## PHP settings per site
+
+Each PHP site has a **PHP settings** card with these `php.ini` values. Leave a field empty to
+use the default shown in it.
+
+| Setting | Default | Allowed values | What it does |
+| --- | --- | --- | --- |
+| `memory_limit` | `256M` | `1M` to `8192M` (or `8G`) | Memory one request may use |
+| `upload_max_filesize` | `64M` | `1M` to `10240M` (or `10G`) | Largest uploaded file |
+| `post_max_size` | `64M` | `1M` to `10240M` (or `10G`) | Largest form or upload request |
+| `max_execution_time` | `120` | `0` to `86400` seconds | Seconds a request may run; `0` means no limit |
+| `max_input_time` | `120` | `-1` to `86400` seconds | Seconds to receive a request's data; `-1` uses the execution time |
+| `max_input_vars` | `1000` | `100` to `100000` | Form fields in one request |
+| `max_file_uploads` | `20` | `1` to `1000` | Files in one upload |
+| `session.gc_maxlifetime` | `1440` | `60` to `2592000` seconds | Seconds before an idle session is cleaned up |
+| `display_errors` | `Off` | `On` or `Off` | Show errors on pages. Keep it off on live sites |
+| `short_open_tag` | `Off` | `On` or `Off` | Allow `<?` as well as `<?php` |
+| `allow_url_fopen` | `On` | `On` or `Off` | Let PHP open web addresses as files |
+| `date.timezone` | `UTC` | A time zone name, such as `Asia/Dhaka` | The time zone date functions use |
+
+Sizes are a number followed by `M` or `G`, such as `512M` or `2G`.
+
+To change them:
+
+<Steps>
+
+1. Open the website and find **PHP settings**.
+
+2. Type the new values. A changed setting's name is shown in bold.
+
+3. Click **Save changes**. The site's PHP pool is reloaded with the new values.
+
+</Steps>
+
+Applications can still raise these values themselves (WordPress does, for example), except
+`allow_url_fopen`, which only the panel can change.
+
+<Aside type="tip">
+For uploads, `post_max_size` must be at least as large as `upload_max_filesize`, because the
+upload is part of the request.
+</Aside>
+
+Only the settings in the table can be changed. The panel and the agent check every value with the
+same rules, so a value can never add other lines to PHP's configuration. Some
+[PHP apps](/guides/websites/php-apps/) set a value when they are installed: Moodle sets
+`max_input_vars` to `5000`.
+
+## PHP extensions
+
+Extensions are installed **per server and per PHP version**, so they apply to every site that uses
+that version on that server. Only administrators can change them.
+
+<Steps>
+
+1. Open **Servers**, then the server.
+
+2. In the **PHP extensions** card, choose the **PHP version**.
+
+3. Tick an extension to install it, or untick it to remove it. It shows **Changing…** while the
+   task runs.
+
+</Steps>
+
+After each change, every PHP-FPM master of that version on the server reloads (the system's and
+those of customers), so sites pick up the change without you doing anything else.
+
+### Locked extensions
+
+These are installed with every PHP version and cannot be removed. They show **Always installed**:
+
+`cli`, `common`, `fpm`, `mysql`, `pgsql`, `curl`, `gd`, `mbstring`, `xml`, `zip`, `intl`,
+`bcmath`, `opcache`
+
+### Optional extensions
+
+These 17 can be added and removed. Each is the `php<version>-<name>` package:
+
+| Extension | Typical use |
+| --- | --- |
+| `apcu` | In-memory cache for PHP applications |
+| `bz2` | bzip2 compression |
+| `gmp` | Arithmetic with very large numbers |
+| `igbinary` | Compact serializer, used by some caches |
+| `imagick` | Image processing with ImageMagick |
+| `imap` | Reading mail over IMAP |
+| `ldap` | Directory sign-in (LDAP) |
+| `mailparse` | Parsing email messages |
+| `memcached` | Memcached client |
+| `mongodb` | MongoDB driver |
+| `msgpack` | MessagePack serializer |
+| `redis` | Redis client, for caches and sessions |
+| `soap` | SOAP web services |
+| `sqlite3` | SQLite databases |
+| `tidy` | Cleaning up HTML |
+| `xdebug` | Debugging and profiling. Slows PHP down; do not leave it on a live server |
+| `yaml` | YAML files |
+
+`imagick` is also tried once when a PHP version is first installed, so it may already be there.
+
+<Aside type="note">
+If the card says no PHP version is installed yet, add a PHP website first: a version is installed
+with the first site that uses it. The card needs the server to be online.
+</Aside>
+
+## How PHP-FPM pools work
+
+PHP-FPM is the program that runs PHP code for the web server. A *pool* is a group of PHP
+processes with their own settings. ekPanel gives **every PHP site a pool of its own**.
+
+Each site's pool:
+
+- runs as the **site's Linux account**, so PHP can only change that site's files;
+- is limited to the site's home folder by `open_basedir` (`/home/<account>/` and
+  `/usr/share/php/`), so a script cannot open other sites' files;
+- keeps uploads, sessions and temporary files in `/home/<account>/tmp`;
+- writes PHP errors to `/home/<account>/logs/php-error.log`;
+- listens on a socket that only the web server can use, such as
+  `/run/php/ekpanel-<site id>-php8.4.sock`;
+- starts processes **on demand**: at most 5 at a time, each stopped after 30 seconds without
+  work and replaced after 500 requests. A site with no visitors uses no PHP memory.
+
+Where pools live:
+
+- **Administrators' websites** use the system's PHP-FPM for their version
+  (`php8.4-fpm.service`), with pool files in `/etc/php/<version>/fpm/pool.d/`.
+- **Customers' websites** run under a PHP-FPM master of the customer's own, inside the
+  customer's systemd slice, which carries the package's memory and CPU limits. A script that
+  uses more memory than the package allows stops only that one PHP process; the customer's other
+  requests keep working.
+
+<Aside type="caution">
+ekPanel writes these pool files and the web server files. Changes made by hand are overwritten on
+the next apply.
+</Aside>
+
+## Limits and what is not there yet
+
+- The number of PHP processes per site (5) cannot be changed from the panel.
+- Settings outside the table above cannot be set per site.
+- Extensions are per server and version, not per site.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="Logs and traffic" href="/guides/websites/logs-traffic/" description="Find PHP errors after a change." />
+	<LinkCard title="PHP apps" href="/guides/websites/php-apps/" description="Joomla, Drupal, Moodle and Laravel." />
+	<LinkCard title="Customers and packages" href="/guides/admin/customers/" />
+</CardGrid>

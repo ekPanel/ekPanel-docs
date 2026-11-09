@@ -1,0 +1,287 @@
+---
+title: Git deploys
+description: Build your own code from a Git repository on your server and release it without downtime, with webhooks, rollbacks and pull request previews.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **Git app** is built from a branch of a Git repository, on your own server, and released
+without downtime. Push to the branch and ekPanel builds and releases the new version; if it does
+not start, the old one keeps serving. It is the same idea as Heroku, Vercel or Coolify, running on
+a server you own.
+
+## Before you start
+
+- A connected server with enough disk and memory to **build** your app, not only to run it.
+  Builds of Node or Java apps can need a gigabyte of memory or more.
+- The repository's address:
+  - a **public** repository: its `https://` address, such as
+    `https://github.com/owner/app.git`;
+  - a **private** repository: its **SSH** address, such as `git@github.com:owner/app.git`, and
+    permission to add a deploy key to it.
+- The **port your app listens on** inside its container, for example `3000`. ekPanel needs it to
+  check that a new release answers before switching to it.
+- Optional: a domain pointing at the server, for HTTPS.
+
+<Aside type="note">
+Customers can use Git apps only when their package has **Git apps** turned on. Their builds run
+inside the package's memory and CPU limits.
+</Aside>
+
+## Create a Git app
+
+<Steps>
+
+1. Open **Apps**, click **Add app**, and choose **Git repository** under **App type**.
+
+2. Enter a **Name** (lowercase letters, digits and dashes) and choose the server.
+
+3. Enter the **Git repository** address and the **Branch**, for example `main`.
+
+4. Choose **Build with**:
+   - **Automatic**: "The Dockerfile if the repository has one, otherwise Railpack."
+   - **Dockerfile**: "The repository's own Dockerfile."
+   - **Railpack**: "Detects the language and framework; no Dockerfile needed."
+
+5. If you build with a Dockerfile, check **Dockerfile** (its path in the repository, default
+   `Dockerfile`) and **Build folder** (the folder Docker builds from; `.` is the whole
+   repository). Use these for a monorepo, for example `apps/web/Dockerfile` and `apps/web`.
+
+6. Enter the **Port inside the container**. This is required for Git apps.
+
+7. Optionally enter a **Domain**, environment variables and folders to keep, as for any
+   [Docker app](/guides/apps/docker-apps/).
+
+8. Leave **Deploy on every push** on if you want pushes to deploy automatically (you still need to
+   add the webhook, below).
+
+9. Click **Create app**. Nothing is built yet: "Nothing deployed yet."
+
+10. For a private repository, copy the **Deploy key** from the app page and add it to the
+    repository (see below).
+
+11. Click **Deploy**. The deployment's log opens and fills as the build runs.
+
+</Steps>
+
+## Private repositories: the deploy key
+
+When you create a Git app, ekPanel makes an SSH key pair for it (Ed25519). The private key is
+encrypted in the panel's database and sent to the server only for the time of a build. The app
+page shows the **public** key under **Deploy key**.
+
+<Tabs>
+  <TabItem label="GitHub">
+    In the repository, open **Settings → Deploy keys → Add deploy key**, paste the public key, and
+    leave **Allow write access** off.
+  </TabItem>
+  <TabItem label="GitLab">
+    In the project, open **Settings → Repository → Deploy keys**, add the public key, and leave
+    **Grant write permissions** off.
+  </TabItem>
+  <TabItem label="Gitea / Forgejo">
+    In the repository, open **Settings → Deploy keys → Add deploy key**, paste the public key, and
+    leave write access off.
+  </TabItem>
+</Tabs>
+
+Then make sure the app uses the **SSH** address (`git@host:owner/repo.git`), not the `https://`
+one. The first time the server connects to a Git host over SSH, it remembers that host's key
+(in `/srv/ekpanel/known_hosts`) and checks it on every later build.
+
+<Aside type="caution">
+Addresses with a user name and password in them (`https://user:token@…`) are refused, so a token
+never ends up in logs. Use a deploy key for private repositories.
+</Aside>
+
+## How a build works
+
+Each deployment runs as a task in the panel and builds **on the app's server**:
+
+1. The server installs Git, Docker and BuildKit (`docker-buildx`) if they are missing.
+2. It clones the branch (only the latest commit, with submodules) into a fresh folder under
+   `/srv/ekpanel/builds/`, which is deleted after the build.
+3. It builds an image with the Dockerfile or with Railpack, tagged for this deployment.
+4. It releases the image (see [Zero-downtime releases](#zero-downtime-releases)).
+
+Git runs in a locked-down way: it reads no Git configuration of the server, never asks for a
+password, speaks only `https` and `ssh` (no local `file://` paths or helper programs), and runs no
+hooks from the repository. The Dockerfile and build folder must be inside the repository, also
+when followed through symbolic links.
+
+### Variables during the build
+
+Your app's environment variables are also available **while building**:
+
+- With a **Dockerfile**, each variable is passed as a build argument. Read it with `ARG`:
+
+  ```dockerfile
+  FROM node:22-alpine
+  ARG NEXT_PUBLIC_API_URL
+  WORKDIR /app
+  COPY . .
+  RUN npm ci && npm run build
+  CMD ["npm", "start"]
+  ```
+
+- With **Railpack**, the variables reach Railpack's build plan and the build as secrets.
+
+Values are passed through the environment, never on a command line. If your app does not set
+`PORT` itself, ekPanel sets `PORT` to the app's container port when it runs, because apps built
+by Railpack (and many others) listen on `$PORT`.
+
+### Railpack
+
+[Railpack](https://github.com/railwayapp/railpack) looks at your repository, detects the language
+and framework, and plans a build without a Dockerfile. ekPanel uses one pinned
+version, **Railpack 0.43.0**, downloaded on the first Railpack build to
+`/usr/local/lib/ekpanel/` and checked against the SHA-256 checksum published with that release.
+The build itself runs in BuildKit through Railpack's frontend image
+(`ghcr.io/railwayapp/railpack-frontend:v0.43.0`).
+
+The first Railpack build on a server takes longer, because it downloads Railpack and the build
+images; in the project's test VM a small Node app took about 5 minutes the first time.
+
+### Build logs
+
+The **Deployments** list shows each deployment with its number, status, commit and message, who
+or what started it ("By a push", "Rollback by …"), and how long it took. Click one to read its full
+log. While a build runs, the log follows it live.
+
+Statuses: **Queued**, **Building**, **Releasing**, **Live**, **Failed**, **Earlier** (a release
+that was live before the current one) and **Cancelled**.
+
+Build cache from the last week is kept on the server, so rebuilds are faster. Older cache is
+removed after each build.
+
+## Zero-downtime releases
+
+A Git app has **two** private ports on `127.0.0.1`. During a release:
+
+1. A container of the new build starts on the free port, next to the running one.
+2. ekPanel waits until it is ready: if the image has a Docker `HEALTHCHECK`, until it reports
+   healthy; otherwise until it answers an HTTP request on its port (any answer counts), or, for
+   apps that do not speak HTTP, keeps a connection open.
+3. Only then is the old container stopped (with 30 seconds to finish its requests) and removed.
+
+The web server lists both ports, the running one first, so every request reaches a container that
+is up. In the project's test VM, 889 requests sent during two releases were all answered.
+
+If the new container stops, keeps restarting, fails its health check or is not ready within 3
+minutes, it is removed and **the previous release keeps serving**. The deployment is marked
+**Failed** with the last lines of the container's log, and a
+[notification](/guides/admin/notifications/) "Deploy of … failed" goes out.
+
+If nothing changed (same build, same variables and limits), the running container is left alone.
+
+## Rollbacks
+
+The server keeps the builds of the app's **last five live deployments**, including the one that
+runs now. Next to each earlier one that is still kept, the Deployments list shows **Roll back**.
+A rollback is a new deployment that releases that build again, without building, with the same
+zero-downtime steps. Older builds are removed from the server after each release.
+
+To go back further, deploy an older commit by pushing it (or reverting) to the branch.
+
+## Webhooks: deploy on every push
+
+<Steps>
+
+1. On the app page, find **Webhook**. It shows an **Address** like
+   `https://panel.example.com/api/v1/hooks/git/<app id>` and a **Secret**.
+
+2. In the repository's settings, add a webhook:
+
+   - **GitHub**: **Settings → Webhooks → Add webhook**. Payload URL: the address. Content type:
+     `application/json`. Secret: the secret. Events: the push event (and **Pull requests** if you
+     use [previews](#pull-request-previews)).
+   - **GitLab**: **Settings → Webhooks**. URL: the address. Secret token: the secret. Trigger:
+     **Push events** (and **Merge request events** for previews).
+   - **Gitea, Forgejo, Gogs**: **Settings → Webhooks → Add webhook → Gitea** (or Gogs). Target
+     URL: the address. Content type: `application/json`. Secret: the secret. Trigger on push
+     events (and pull request events for previews).
+
+3. Push a commit to the branch. A new deployment appears with the trigger "By a push".
+
+</Steps>
+
+How webhooks are checked:
+
+- GitHub, Gitea, Forgejo and Gogs sign the request body with the secret (HMAC-SHA256); GitLab
+  sends the secret itself. A request with a wrong signature is refused, and repeated failures from
+  the same app are blocked for a while.
+- Only pushes to the app's own branch deploy. Pushes to other branches, deleted branches, or any
+  push while **Deploy on every push** is off are answered "ignored".
+- The **pushed commit** is built, even if the branch has moved on since.
+- The panel must be reachable from the Git host over HTTPS on the address shown.
+
+## Pull request previews
+
+With previews on, every pull request to the app's branch gets an app of its own, so you can try
+the change before merging.
+
+<Steps>
+
+1. Choose a domain for previews, such as `preview.example.com`, and point a **wildcard** DNS
+   record `*.preview.example.com` at the server.
+
+2. In the app's settings, turn on **Preview each pull request** and enter it under
+   **Domain for previews**.
+
+3. Make sure the webhook also sends pull request (GitHub, Gitea, Forgejo, Gogs) or merge request
+   (GitLab) events.
+
+4. Open a pull request. Its preview appears under **Previews** on the app page, at
+   `<app>-pr<number>.preview.example.com`, for example `shop-pr12.preview.example.com`.
+
+</Steps>
+
+- The preview is built from the forge's pull request ref and rebuilt on every push to the pull
+  request.
+- It is removed, **with its data**, when the pull request is closed or merged.
+- A preview copies the app's variables, kept folders and limits, but is a separate app with its
+  own containers and volumes.
+- At most **5** previews per app at a time. Deleting the app deletes its previews.
+
+<Aside type="caution">
+Pull requests **from forks** are never previewed: their code would run on your server. A preview
+uses the same variables as the app, so do not give the main app production secrets you would not
+want a pull request's code to read.
+</Aside>
+
+## Limits and what is not there yet
+
+- At most **2 builds** run at the same time on one server. A third deployment fails with "two
+  builds are already running on this server"; deploy it again when one has ended.
+- A build may take up to **one hour**; then it is stopped.
+- A deployment's stored log keeps the first 2 MB; output after that is dropped.
+- The Deployments list shows the latest 30 deployments.
+- **Update image** does not apply to Git apps: "a Git app is updated by deploying it".
+- Not there yet: cancelling a running build, notifications for successful deploys, comments on the
+  pull request with the preview's address, and previews of forks after approval. See the
+  [roadmap](/project/roadmap/).
+- App volumes, including those of Git apps, are not part of [backups](/guides/data/backups/) yet.
+
+## Troubleshooting
+
+**"could not clone the repository".** For a private repository, use the SSH address and check
+that the deploy key is added. For a public one, check the address and branch name.
+
+**"Railpack could not plan a build for this repository".** Railpack did not recognise the
+project. Add a Dockerfile and choose **Dockerfile**, or check that the build folder points at the
+folder with your `package.json`, `requirements.txt`, `go.mod` and so on.
+
+**"the new release did not start, so the previous one keeps running".** The new build crashed or
+did not answer on its port within 3 minutes. Check the log lines in the message, that the
+**Port inside the container** is the one your app listens on, and that it listens on `0.0.0.0`,
+not `127.0.0.1`, inside the container.
+
+**"two builds are already running on this server".** Wait for one to finish, then deploy again.
+
+## Related
+
+- [Docker apps](/guides/apps/docker-apps/): Domains, variables, kept folders and limits work the same way.
+- [Web terminal](/guides/apps/terminal/): A shell inside your running app.
+- [Notifications](/guides/admin/notifications/): Get told when a deploy fails.

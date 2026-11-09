@@ -1,0 +1,200 @@
+---
+title: Test VM
+description: scripts/test-vm.sh দিয়ে আপনার computer-এ একটা ফেলে দেওয়ার মতো Ubuntu 24.04 server চালান, তাতে ekPanel install করুন, আর একটা আসল system-এ change test করুন।
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+যা কিছু একটা server বদলায়, যেমন installer বা কোনো hosting feature, সেটা একটা আসল Ubuntu machine-এ test
+করতেই হবে। `scripts/test-vm.sh` QEMU আর KVM দিয়ে আপনার computer-এ একটা ফেলে দেওয়ার মতো Ubuntu 24.04
+virtual machine বানায়, root ছাড়াই। এই page-এ দেখানো আছে কীভাবে এটা ব্যবহার করবেন।
+
+## শুরু করার আগে
+
+একটা x86_64 (amd64) processor-ওয়ালা Linux computer-এ আপনার লাগবে:
+
+- **KVM**: `/dev/kvm` থাকতে হবে আর আপনার সেখানে লেখার অনুমতি থাকতে হবে। এটা না থাকলে computer-এর BIOS
+  বা UEFI settings-এ virtualization চালু করুন। অনেক system-এ আপনার user-কে `kvm` group-এ থাকতে হয়।
+- **QEMU**: `qemu-system-x86_64` আর `qemu-img` (Ubuntu বা Debian-এ `qemu-system-x86` আর `qemu-utils`
+  package)।
+- `curl`, `ssh`, `scp`, `ssh-keygen` আর `python3` (একটা ছোট্ট web server VM-কে তার first-boot settings
+  দেয়)।
+- Ubuntu image-এর জন্য প্রায় 600 MB, আর VM-এর disk।
+
+## Command
+
+| Command | কী করে |
+| --- | --- |
+| `scripts/test-vm.sh create` | Ubuntu 24.04 cloud image download করে (একবারই, Ubuntu-র SHA256SUMS দিয়ে check করে), VM-এর disk আর SSH key বানায়, আর boot করে। |
+| `scripts/test-vm.sh start` | আগে থেকে থাকা একটা VM boot করে। |
+| `scripts/test-vm.sh ssh [command]` | VM-এ `ubuntu` user হিসেবে একটা shell খোলে (যিনি `sudo` ব্যবহার করতে পারেন), অথবা একটা command চালায়। |
+| `scripts/test-vm.sh copy FILE…` | VM-এ `ubuntu` user-এর home folder-এ file copy করে। |
+| `scripts/test-vm.sh status` | VM চলছে কি না বলে। |
+| `scripts/test-vm.sh stop` | VM বন্ধ করে। এর disk থেকে যায়। |
+| `scripts/test-vm.sh destroy` | VM বন্ধ করে আর এর disk মুছে দেয়। Download করা image থেকে যায়, তাই পরের `create` দ্রুত হয়। |
+
+VM-এর disk download করা image-এর ওপর একটা copy-on-write layer, তাই `destroy`-এর পরে `create` করলে আবার
+Ubuntu download না করেই একটা পরিষ্কার server পাবেন।
+
+## আপনার computer-এর port
+
+VM-এর port শুধু আপনার computer-এর `127.0.0.1`-এ forward করা হয়:
+
+| আপনার computer-এ | VM-এ | কীসের জন্য |
+| --- | --- | --- |
+| `127.0.0.1:2222` | 22 | SSH (script এটা `ssh` আর `copy`-এর জন্য ব্যবহার করে) |
+| `127.0.0.1:8443` | 443 | HTTPS: panel, website, webmail |
+| `127.0.0.1:17443` | 7443 | Panel-এর agent port, আপনার computer থেকে agent test করার জন্য |
+
+## Settings
+
+এগুলো command-এর সামনে environment variable হিসেবে set করুন।
+
+| Variable | Default | কী set করে |
+| --- | --- | --- |
+| `VM_DIR` | `~/vms/panel-test` | Image, disk, key আর console log-এর folder |
+| `VM_NAME` | `panel-test` | VM-এর নাম আর host name |
+| `VM_RAM_MB` | `2048` | MB-তে memory |
+| `VM_CPUS` | `2` | CPU-র সংখ্যা |
+| `VM_DISK` | `12G` | Disk-এর size |
+| `VM_PORT_OFFSET` | `0` | Forward করা port-এর (2222, 8443, 17443) সাথে যোগ হয়, দ্বিতীয় একটা VM-এর জন্য |
+| `VM_LINK` | (নেই) | `listen` বা `connect`: দুটো VM-এর মধ্যে একটা private network (নিচে দেখুন) |
+
+যেমন, malware scan-এর জন্য বেশি memory-ওয়ালা একটা VM:
+
+```bash
+VM_RAM_MB=4096 scripts/test-vm.sh create
+```
+
+## VM-এ panel install করুন
+
+<Steps>
+
+1. VM বানান (প্রথমবার) অথবা চালু করুন:
+
+   ```bash
+   scripts/test-vm.sh create
+   ```
+
+2. আপনার computer-এ UI আর দুটো program build করুন:
+
+   ```bash
+   make build
+   ```
+
+3. Program দুটো আর installer VM-এ copy করুন:
+
+   ```bash
+   scripts/test-vm.sh copy bin/ekpanel bin/ekpanel-agent deploy/install.sh
+   ```
+
+4. Copy করা program দিয়ে VM-এ installer চালান:
+
+   ```bash
+   scripts/test-vm.sh ssh 'sudo ./install.sh --local-dir .'
+   ```
+
+   শেষে এটা একটা setup token দেখায়।
+
+5. আপনার computer-এ https://127.0.0.1:8443 খুলুন। Certificate self-signed, তাই browser-এর warning মেনে নিন।
+   Setup token paste করুন আর আপনার administrator বানান।
+
+</Steps>
+
+## Test loop
+
+Code বদলানোর পর আবার build, copy আর install করুন। Installer program upgrade করে, সব data রেখে দেয় আর panel
+আর agent restart করে:
+
+```bash
+make panel agent        # add `make ui` first if you changed the UI
+scripts/test-vm.sh copy bin/ekpanel bin/ekpanel-agent deploy/install.sh
+scripts/test-vm.sh ssh 'sudo ./install.sh --local-dir .'
+```
+
+তারপর panel-এ change-টা চেষ্টা করুন, আর server-এ দেখুন:
+
+```bash
+scripts/test-vm.sh ssh 'sudo journalctl -u ekpanel-agent -n 50 --no-pager'
+scripts/test-vm.sh ssh 'sudo ls /etc/ekpanel/caddy/sites'
+```
+
+VM-এর website-এর একটা domain লাগে। VM internet-এ নেই বলে বানানো নাম আর self-signed certificate option
+ব্যবহার করুন, তারপর VM-এর ভেতর থেকে `curl`-এর `--resolve` দিয়ে সেগুলোতে পৌঁছান:
+
+```bash
+scripts/test-vm.sh ssh 'curl -k --resolve php.test:443:127.0.0.1 https://php.test/'
+```
+
+<Aside type="tip">
+শুধু সব ঠিকঠাক চলার পথ নয়, কী ভুল হতে পারে সেটাও test করুন: একটা ব্যর্থ apply, কোনো task-এর মাঝখানে agent
+restart, VM-এর reboot (`scripts/test-vm.sh ssh 'sudo reboot'`)। Project-এর commit message-এ লেখা থাকে VM-এ
+কী test করা হয়েছে।
+</Aside>
+
+## Server-এর মধ্যকার test-এর জন্য দ্বিতীয় VM
+
+কিছু feature-এর দুটো server লাগে, যেমন একটা primary আর একটা secondary name server। Script নিজস্ব folder,
+নাম আর port-সহ একটা দ্বিতীয় VM চালাতে পারে, যা একটা private network দিয়ে প্রথমটার সাথে যুক্ত।
+
+<Steps>
+
+1. প্রথম VM-টা link listen করা অবস্থায় চালু করুন। এটা আগে থেকেই চললে প্রথমে বন্ধ করুন:
+
+   ```bash
+   scripts/test-vm.sh stop
+   VM_LINK=listen scripts/test-vm.sh start
+   ```
+
+2. নিজস্ব folder, নাম আর port offset দিয়ে দ্বিতীয় VM বানান, link-এ connect করে:
+
+   ```bash
+   VM_DIR=~/vms/panel-test2 VM_NAME=panel-test2 VM_PORT_OFFSET=10 VM_LINK=connect scripts/test-vm.sh create
+   ```
+
+   এর port হলো 2232 (SSH), 8453 (HTTPS) আর 17453 (agent)। এই VM-এ পরের প্রতিটা command-এর জন্য, যেমন
+   `ssh` আর `copy`, একই variable ব্যবহার করুন।
+
+3. প্রতিটা VM-এ link-কে একটা address দিন। Link হলো একটা দ্বিতীয় network card; `ip link` দিয়ে এর নাম খুঁজে
+   নিন, তারপর, যেমন:
+
+   ```bash
+   # in the first VM
+   sudo ip link set <link card> up && sudo ip addr add 192.168.77.1/24 dev <link card>
+   # in the second VM
+   sudo ip link set <link card> up && sudo ip addr add 192.168.77.2/24 dev <link card>
+   ```
+
+4. দ্বিতীয় VM-এ agent বসান আর link-এর ওপর দিয়ে প্রথম VM-এর panel-এর সাথে connect করুন: `bin/ekpanel-agent`
+   এতে copy করুন, `/usr/local/bin`-এ install করুন, panel-এ **সার্ভার যোগ করুন** (Add server)-এ click করুন,
+   আর dialog যে address দেখায় তার বদলে `--panel 192.168.77.1:7443` দিয়ে `enroll` command চালান। তারপর
+   `sudo ekpanel-agent run` দিয়ে agent চালু করুন। এটা foreground-এ চলে, তাই ওই SSH session খোলা রাখুন (অথবা
+   `tmux`-এ চালান)।
+
+</Steps>
+
+`ip addr` দিয়ে set করা address VM restart হলে হারিয়ে যায়; প্রতিবার চালু করার পর আবার set করুন।
+
+<Aside type="note">
+Agent নিজে থেকে Caddy install করে না; installer সেটা panel-এর server-এ করে। তাই শুধু agent-ওয়ালা একটা
+দ্বিতীয় VM এমন test-এর জন্য মানানসই যেখানে ওখানে কোনো web server লাগে না, যেমন একটা secondary name
+server। শুধু agent-এর জন্য একটা installer [phase 4a](/project/roadmap/)-এর জন্য plan করা আছে।
+</Aside>
+
+## সমস্যা সমাধান
+
+- **"/dev/kvm is not available"**: BIOS বা UEFI-তে virtualization চালু করুন, আর check করুন যে `/dev/kvm`-এ
+  আপনার লেখার অনুমতি আছে।
+- **"the VM did not become reachable"**: VM-এর console log পড়ুন, `~/vms/panel-test/console.log`
+  (অথবা আপনার `VM_DIR`-এর মধ্যেরটা)।
+- **"a VM already exists"**: `start` ব্যবহার করুন, অথবা নতুন একটার জন্য আগে `destroy` করুন।
+- **Port আগে থেকেই ব্যবহৃত**: অন্য কোনো VM (বা program) 2222, 8443 বা 17443 ব্যবহার করছে। একটা আলাদা
+  `VM_PORT_OFFSET` ব্যবহার করুন।
+
+## সম্পর্কিত
+
+- [Development setup](/development/setup/)
+- [Feature যোগ করা](/development/adding-a-feature/)
+- [Install](/start/install/)

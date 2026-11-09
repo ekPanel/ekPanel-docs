@@ -1,0 +1,121 @@
+---
+title: সার্ভার নিরাপত্তা
+description: সার্ভার নিরাপত্তা পাতা, এর checklist আর প্রতিটা item নিয়ে কী করবেন, আর firewall, CrowdSec, malware scan, দেশ অনুযায়ী আটকানো আর two-factor sign-in কীভাবে একসাথে কাজ করে।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+**সার্ভার নিরাপত্তা** (Server security) পাতায় একটা server-কে যা যা সুরক্ষা দেয় সব এক জায়গায় থাকে: কী কী শক্ত
+করা দরকার তার একটা checklist, CrowdSec (যেটা আক্রমণকারীদের ban করে), malware scan, দেশ অনুযায়ী আটকানো আর
+allowlist। Server যোগ করার পর এটা ব্যবহার করুন, আর মাঝে মাঝে দেখে নিন।
+
+## শুরু করার আগে
+
+- পাতাটা administrator-দের জন্য। Customer-রা এটা দেখেন না।
+- Menu থেকে **সার্ভার নিরাপত্তা** খুলুন। একাধিক server থাকলে উপরে ডানদিকের তালিকা থেকে একটা বেছে নিন। পাতার সবকিছু
+  ওই একটা server-এর।
+- Firewall এই পাতায় নেই: এটা থাকে server-এর নিজের পাতায় (**সার্ভার** (Servers), তারপর server-টা)। দেখুন
+  [Firewall](/guides/security/firewall/)।
+
+## Checklist
+
+**চেকলিস্ট** (Checklist) card প্রতিবার পাতা খুললে server-কে এর এখনকার অবস্থা জিজ্ঞেস করে। সবুজ টিক মানে সব ঠিক;
+কমলা বা লাল চিহ্ন মানে কিছু একটা দেখতে হবে।
+
+| Item | কী যাচাই করে | কী করবেন |
+| --- | --- | --- |
+| **ফায়ারওয়াল চালু আছে।** | Server-এ `ufw` চালু আছে কিনা। | যদি লেখা থাকে "ফায়ারওয়াল বন্ধ", তাহলে **সার্ভারের পাতায় চালু করুন** (Turn it on on the server's page) বেছে নিয়ে [firewall](/guides/security/firewall/) চালু করুন। |
+| **CrowdSec চলছে** | CrowdSec চলছে কিনা, আর এখন কয়টা address ban করা আছে। | CrowdSec card-এ **CrowdSec চালু করুন** (Turn on CrowdSec) বেছে নিন। দেখুন [CrowdSec](/guides/security/crowdsec/)। |
+| **root পাসওয়ার্ড দিয়ে SSH-এ সাইন ইন করতে পারে না।** | sshd-এর `PermitRootLogin` setting। এটা `no` বা `prohibit-password` (বা এর পুরোনো নাম `without-password`) হলে ঠিক আছে। | root-এর জন্য SSH key ব্যবহার করুন আর `PermitRootLogin prohibit-password` দিন। নিচে দেখুন। |
+| **SSH শুধু কী গ্রহণ করে।** | sshd-এর `PasswordAuthentication` setting। | Password-এর চেয়ে key বেশি নিরাপদ। আপনার key কাজ করলে `PasswordAuthentication no` দিন। ততক্ষণ CrowdSec password অনুমানকারীদের ban করে। |
+| **সব প্যাকেজ হালনাগাদ।** | বাকি থাকা package update, আর তার কয়টা security update। Package list ৪৮ ঘণ্টার বেশি পুরোনো হলেও সতর্ক করে। | Update install করুন, যেমন `sudo apt update && sudo apt upgrade` দিয়ে। |
+| **নিরাপত্তা আপডেট নিজে থেকেই বসানো হয়।** | `unattended-upgrades` install আর চালু করা আছে কিনা। | **স্বয়ংক্রিয় নিরাপত্তা আপডেট চালু করুন** (Turn on automatic security updates) বেছে নিন। |
+| **আপডেট সার্ভার রিস্টার্টের অপেক্ষায়।** | শুধু তখনই দেখায়, যখন `/run/reboot-required` আছে। | ফাঁকা কোনো সময়ে server restart করুন। |
+| **প্রত্যেক অ্যাডমিনিস্ট্রেটর টু-ফ্যাক্টর অথেন্টিকেশন দিয়ে সাইন ইন করেন।** | Panel-এর যেসব administrator two-factor sign-in ছাড়া আছেন, email দিয়ে দেখানো। | তাঁদের প্রত্যেকে **আপনার অ্যাকাউন্ট → নিরাপত্তা** (Your account → Security)-এ গিয়ে এটা চালু করবেন। দেখুন [Account-এর নিরাপত্তা](/guides/security/accounts/)। |
+
+### স্বয়ংক্রিয় নিরাপত্তা আপডেট চালু করুন
+
+**স্বয়ংক্রিয় নিরাপত্তা আপডেট চালু করুন** distribution-এর `unattended-upgrades` package install করে আর
+`/etc/apt/apt.conf.d/20auto-upgrades` লেখে, যাতে server প্রতিদিন নিজে থেকে package list হালনাগাদ করে আর
+security update install করে। ekPanel নিজে থেকে restart-এর ব্যবস্থা করে না; কোনো update restart-এর অপেক্ষায় থাকলে
+checklist আপনাকে জানায়।
+
+### SSH শক্ত করুন
+
+ekPanel `sshd -T` দিয়ে SSH settings পড়ে, কিন্তু আপনার হয়ে বদলায় না: সেখানে একটা ভুলে আপনি নিজের server থেকেই
+আটকে যেতে পারেন।
+
+<Steps>
+
+1. কিছু বদলানোর আগে নিশ্চিত হয়ে নিন যে আপনি একটা দ্বিতীয় terminal-এ **SSH key দিয়ে** sign in করতে পারছেন। কাজ
+   চলার সময় ওই session খোলা রাখুন।
+
+2. `/etc/ssh/sshd_config` edit করুন (আর `/etc/ssh/sshd_config.d/`-এর file-গুলোও দেখুন, যেগুলো একে override করতে
+   পারে), তারপর দিন:
+
+   ```text
+   PermitRootLogin prohibit-password
+   PasswordAuthentication no
+   ```
+
+3. Settings যাচাই করে SSH reload করুন:
+
+   ```bash
+   sudo sshd -t
+   sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication'
+   sudo systemctl reload ssh
+   ```
+
+4. একটা **নতুন** terminal খুলে আবার key দিয়ে sign in করুন। শুধু তারপরই পুরোনো session বন্ধ করুন।
+
+5. **সার্ভার নিরাপত্তা** পাতা reload করুন; দুটো item-ই সবুজ হওয়া উচিত।
+
+</Steps>
+
+<Aside type="caution">
+কিছু cloud image `/etc/ssh/sshd_config.d/`-এর ভেতরের কোনো file-এ `PasswordAuthentication` বসিয়ে রাখে, যেটা
+`/etc/ssh/sshd_config`-এর ওপর জেতে। sshd আসলে কী ব্যবহার করছে, সেটা উপরের `sshd -T` লাইন দেখায়।
+</Aside>
+
+## অংশগুলো কীভাবে একসাথে কাজ করে
+
+প্রতিটা tool আলাদা ধরনের বিপদ সামলায়। এরা পাশাপাশি কাজ করে, একটা আরেকটার বদলি নয়।
+
+| অংশ | কোথায় | কী আটকায় |
+| --- | --- | --- |
+| [Firewall](/guides/security/firewall/) (ufw) | Server-এর পাতা | যেসব port আপনি খুলতে চাননি সেখানে সংযোগ, যেমন একটা database। আপনার বলা address আটকায়। |
+| [CrowdSec](/guides/security/crowdsec/) | সার্ভার নিরাপত্তা | যেসব address password অনুমান করে, দুর্বলতা খোঁজে বা পরিচিত exploit চেষ্টা করে, SSH-এ আর আপনার website-এ, সাথে এর community-র জানানো address। কিছু সময়ের জন্য এদের ban করে। |
+| [দেশ অনুযায়ী আটকানো](/guides/security/countries/) | সার্ভার নিরাপত্তা | আপনার বেছে নেওয়া দেশগুলো (বা বাকি সব দেশ) থেকে আসা প্রতিটা নতুন সংযোগ। |
+| [Malware scan](/guides/security/malware/) (ClamAV) | সার্ভার নিরাপত্তা | আপনার website-এ web shell, virus আর অন্য খারাপ file খুঁজে বের করে, যাতে আপনি সেগুলো সরাতে পারেন। |
+| **অনুমোদিত তালিকা** (Allowlist) | সার্ভার নিরাপত্তা | যেসব address আর network-কে CrowdSec কখনো ban করে না আর দেশ অনুযায়ী আটকানো কখনো আটকায় না, যেমন আপনার অফিস। |
+| [Two-factor sign-in](/guides/security/accounts/) | আপনার অ্যাকাউন্ট → নিরাপত্তা | এমন কেউ, যার কাছে আপনার panel-এর password আছে কিন্তু আপনার ফোন নেই। |
+
+কয়েকটা নিয়ম এদের একসাথে বাঁধে:
+
+- **অনুমোদিত তালিকা** CrowdSec আর দেশ অনুযায়ী আটকানো দুটোতেই খাটে। এতে সর্বোচ্চ ২০০টা address বা network রাখা
+  যায়, প্রতি লাইনে একটা, যেমন `203.0.113.10` বা `198.51.100.0/24`। Edit করার পর **সংরক্ষণ** (Save) বেছে নিন।
+- **এগুলোও সবসময় অনুমোদিত**: server-এর নিজের address আর
+  [Cloudflare-এর প্রকাশিত address](https://www.cloudflare.com/ips/)। Allowlist card-এ এগুলো "এগুলোও সবসময়
+  অনুমোদিত"-এর নিচে দেখায়। এরা কখনো ban হয় না, দেশের কারণে আটকায়ও না, তাই Cloudflare-এর proxy দিয়ে আসা
+  ভিজিটরদের Cloudflare-এই আটকাতে হবে।
+- **Firewall** আলাদা: এর "ঠিকানা আটকান" (Block an address) নিয়মগুলো সবকিছুর ওপর খাটে, allowlist-এ থাকুক বা না
+  থাকুক, আর এটা সবসময় SSH, HTTP, HTTPS আর agent-এর port খোলা রাখে।
+
+<Aside type="tip" title="শুরু করার একটা ভালো উপায়">
+প্রতিটা server-এ firewall, CrowdSec আর স্বয়ংক্রিয় security update চালু করুন, প্রত্যেক administrator-এর জন্য
+two-factor sign-in চালু করুন, আর সাপ্তাহিক malware scan চালু করুন। আপনার ভিজিটররা কোথা থেকে আসেন জানা থাকলে তবেই
+দেশ অনুযায়ী আটকানো যোগ করুন।
+</Aside>
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="ufw চালু করুন, port খুলুন বা আটকান।" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="আক্রমণকারী ধরুন আর ban করুন।" />
+	<LinkCard title="Malware scan" href="/guides/security/malware/" description="ClamAV দিয়ে website scan করুন।" />
+	<LinkCard title="দেশ অনুযায়ী আটকানো" href="/guides/security/countries/" description="পুরো দেশ আটকান বা অনুমতি দিন।" />
+	<LinkCard title="Account-এর নিরাপত্তা" href="/guides/security/accounts/" description="Two-factor sign-in, session আর password।" />
+	<LinkCard title="Security model" href="/concepts/security-model/" description="ekPanel নিজে কীভাবে নিরাপদ করে বানানো।" />
+</CardGrid>

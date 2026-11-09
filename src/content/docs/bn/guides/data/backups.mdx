@@ -1,0 +1,234 @@
+---
+title: Backup
+description: একটা server-এর প্রতিটা website আর database-এর encrypted, deduplicated backup, server-এর নিজের disk-এ বা S3-compatible storage-এ, schedule, retention আর restore-সহ।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel একটা server-এর প্রতিটা website আর প্রতিটা database-এর backup নেয়
+[restic](https://restic.net) দিয়ে, যা একটা পরিচিত backup program। Backup **encrypted** (আপনার
+recovery key ছাড়া কেউ পড়তে পারে না) আর **deduplicated** (যে file বদলায়নি সেটা একবারই রাখা হয়, তাই
+অনেকগুলো backup রাখলেও বাড়তি জায়গা সামান্যই লাগে)।
+
+Backup admin-দের জন্য: customer-রা **ব্যাকআপ** (Backups) পাতা দেখতে পান না।
+
+## কীসের backup হয়
+
+একটা **backup location** একটা server-এর, আর ওই server-এ এই ধরনের সবকিছুর backup নেয়:
+
+| জিনিস | Backup-এ কী যায় | প্রতিটা snapshot যার জন্য |
+| --- | --- | --- |
+| **Website** | Site-এর পুরো home folder (`/home/<account>`: `public_html`, log, অন্যান্য file), তার `tmp` folder আর trash বাদে | প্রতি website, প্রতিবার |
+| **MariaDB database** | `mariadb-dump --single-transaction` দিয়ে বানানো একটা dump (routine, trigger আর event-সহ), `<name>.sql` হিসেবে রাখা | প্রতি database, প্রতিবার |
+| **PostgreSQL database** | `pg_dump -Fc` দিয়ে বানানো একটা dump, `<name>.pgdump` হিসেবে রাখা | প্রতি database, প্রতিবার |
+
+Database dump সরাসরি restic-এ stream হয়; আগে server-এর disk-এ কিছু লেখা হয় না।
+`--single-transaction` আর `pg_dump` dump হলো consistent copy, যা database চালু থাকা অবস্থাতেই নেওয়া
+হয়।
+
+<Aside type="caution">
+**এখনো backup হয় না:** Docker app (তাদের volume আর folder, Nextcloud বা Vaultwarden-এর মতো catalogue
+service-সহ), mailbox, আর panel-এর নিজের settings database। আপাতত এগুলোর backup অন্যভাবে নিন।
+</Aside>
+
+## Backup কোথায় রাখবেন
+
+| ধরন (panel-এ) | কোথায় | কীসের জন্য ভালো |
+| --- | --- | --- |
+| **এই সার্ভারে** (This server) | একই server-এ `/var/backups/ekpanel/<location id>` | "সহজে চালু হয়, কিন্তু সার্ভারের ডিস্ক নষ্ট হলে ব্যাকআপও যাবে।" ভুল শুধরানোর জন্য। |
+| **S3-এর মতো স্টোরেজে** (S3-compatible storage) | কোনো storage provider-এর একটা bucket | "বেশি নিরাপদ: সার্ভারের বাইরে থাকে।" Server হারিয়ে গেলে ফিরে পাওয়ার জন্য। |
+
+যা হারানো চলবে না, তার জন্য S3-compatible storage ব্যবহার করুন। একই server-এ দুই ধরনই যোগ করতে
+পারেন।
+
+### S3-compatible provider
+
+S3 API বোঝে এমন যেকোনো storage-এ কাজ করার কথা, যেমন Amazon S3, Backblaze B2, Cloudflare R2, Wasabi বা
+MinIO। আপনার লাগবে:
+
+| Field | উদাহরণ | টীকা |
+| --- | --- | --- |
+| **এন্ডপয়েন্ট** (Endpoint) | `s3.us-west-002.backblazeb2.com` | "শুধু হোস্টের নাম"। `https://` নিজে থেকে যোগ হয়; শুধু local test server-এর জন্য `http://…` লিখুন |
+| **বাকেট** (Bucket) | `my-backups` | আগে provider-এর কাছে এটা তৈরি করুন |
+| **বাকেটের ভেতরের ফোল্ডার (ঐচ্ছিক)** | `server1` | একাধিক server একটা bucket share করতে পারে |
+| **রিজিয়ন (ঐচ্ছিক)** | `us-west-002` | কিছু provider-এর এটা লাগে |
+| **অ্যাক্সেস কী আইডি** আর **সিক্রেট অ্যাক্সেস কী** | | Provider-এর কাছে এমন একটা key তৈরি করুন, যা এই bucket পড়তে আর লিখতে পারে |
+
+"কী-গুলো শুধু সার্ভারে থাকে, কেবল root পড়তে পারে। প্যানেল এগুলো রাখে না।" এগুলো থাকে
+`/etc/ekpanel/backup/<location id>.json`-এ (mode 600)।
+
+<Aside type="note">
+Project S3 backup পরীক্ষা করেছে একটা local S3 test server-এর সাথে, ওপরের প্রতিটা provider-এর সাথে
+এখনো নয়। কোনোটায় কাজ না করলে [GitHub](https://github.com/ekPanel)-এ আমাদের জানান।
+</Aside>
+
+## একটা backup location যোগ করুন
+
+<Steps>
+
+1. **ব্যাকআপ** খুলে **ব্যাকআপের জায়গা যোগ করুন** (Add backup location)-এ click করুন।
+
+2. Server বেছে নিন, আর **ব্যাকআপ কোথায় থাকবে** (Where to keep the backups)-এ **এই সার্ভারে** বা
+   **S3-এর মতো স্টোরেজে** বেছে নিন। S3-এর জন্য ওপরের field-গুলো পূরণ করুন।
+
+3. একটা **নাম** (Name) দিন, যেমন "বাইরে (S3)"।
+
+4. **কত ঘন ঘন** (How often) আর **সময়** (At) বেছে নিন (দেখুন
+   [Schedule](#schedules-and-retention)), আর **কতগুলো রাখা হবে** (How many to keep)।
+
+5. **তৈরি করুন** (Create)-এ click করুন। দরকার হলে server restic install করে (distribution-এর package
+   থেকে) আর encrypted repository তৈরি করে।
+
+6. যে **recovery key** দেখা যায় **সেটা রেখে দিন**। তারপর **আমি রিকভারি কী রেখে দিয়েছি** (I have
+   saved the recovery key)-এ click করুন।
+
+</Steps>
+
+## Recovery key
+
+<Aside type="danger" title="Recovery key রেখে দিন, নইলে আপনার backup কোনো কাজে আসবে না">
+Recovery key হলো সেই password, যা দিয়ে backup encrypt হয়। "শুধু এই একবারই দেখানো হচ্ছে। এটা ছাড়া
+কেউই (আপনিও না) এই ব্যাকআপ পড়তে পারবে না।"
+
+এটা কোনো নিরাপদ জায়গায় রাখুন, **এই server-এর বাইরে**, যেমন একটা password manager-এ। Server হারিয়ে
+গেলে তার ভেতরের key-ও হারিয়ে যায়, আর আপনার রেখে দেওয়া copy ছাড়া S3-এর backup খোলা যায় না।
+</Aside>
+
+- Key-টা 30টা অক্ষর আর সংখ্যা (প্রায় 175 bit), দেখতে একই রকম character ছাড়া।
+- এটা শুধু server-এ রাখা হয়, `/etc/ekpanel/backup/<location id>.pass`-এ, যা root পড়তে পারে। Panel
+  কখনো এটা রাখে না।
+- এটা আবার দেখানোর বা ফিরে পাওয়ার কোনো উপায় নেই। Key হারিয়ে ফেললেও server চালু থাকলে backup কাজ
+  করতে থাকে, কারণ server-এর কাছে তার copy আছে। রেখে দেওয়ার মতো নতুন key পেতে একটা নতুন location যোগ
+  করুন, আর পরে পুরোনোটা সরিয়ে দিন।
+
+### আগে বানানো backup connect করুন
+
+Server নতুন করে বানানোর পর (বা নতুন server-এ সরে যাওয়ার পর), আগের একটা S3 backup location আবার connect
+করতে পারেন:
+
+<Steps>
+
+1. **ব্যাকআপের জায়গা যোগ করুন**-এ click করে একই endpoint, bucket আর folder দিয়ে **S3-এর মতো
+   স্টোরেজে** বেছে নিন।
+
+2. **আগে বানানো ব্যাকআপ রিকভারি কী দিয়ে যুক্ত করুন** (Connect backups made earlier, using their
+   recovery key)-এ tick দিয়ে **রিকভারি কী** (Recovery key) দিন।
+
+3. **যুক্ত করুন** (Connect)-এ click করুন। Server check করে যে key-টা repository খুলতে পারে কিনা। ভুল
+   key নেওয়া হয় না: "এই রিকভারি কী দিয়ে এই জায়গার ব্যাকআপ খোলা যাচ্ছে না।"
+
+</Steps>
+
+**এই সার্ভারে** রাখা backup panel থেকে আবার connect করা যায় না।
+
+## Schedule আর retention
+
+**কত ঘন ঘন**:
+
+| পছন্দ | কখন চলে |
+| --- | --- |
+| **প্রতি ঘণ্টায়** (Every hour) | প্রতি ঘণ্টার শুরুতে |
+| **প্রতিদিন** (Every day) | প্রতিদিন আপনার বেছে নেওয়া ঘণ্টায় |
+| **প্রতি সপ্তাহে (রবিবার)** (Every week (Sunday)) | রবিবার আপনার বেছে নেওয়া ঘণ্টায় |
+| **শুধু আমি চালালে** (Only when I start it) | নিজে থেকে কখনো না; **এখনই ব্যাকআপ নিন** ব্যবহার করুন |
+
+ঘণ্টা বেছে নেন আপনার নিজের time zone-এ; panel পরের run দেখায় ("পরের ব্যাকআপ: …")।
+
+**কতগুলো রাখা হবে**: **দৈনিক** (Daily), **সাপ্তাহিক** (Weekly) আর **মাসিক** (Monthly) backup-এর একটা
+সংখ্যা (মোট কমপক্ষে একটা; সর্বোচ্চ 365টা দৈনিক, 520টা সাপ্তাহিক আর 240টা মাসিক)। প্রতিবার চলার পর
+পুরোনো backup মুছে ফেলা হয় (`restic forget --prune`), প্রতিটা website আর database-এর জন্য আলাদা করে
+গুনে। যেমন, 7টা দৈনিক, 4টা সাপ্তাহিক আর 6টা মাসিক দিলে এক সপ্তাহের দৈনিক backup, এক মাসের সাপ্তাহিক
+আর ছয় মাসের মাসিক backup থাকে।
+
+পরে এগুলো বদলাতে location-এর পাতায় **সময়সূচি আর কতগুলো রাখা হবে** (Schedule and retention)-এ click
+করুন।
+
+## এখনই backup নিন
+
+Location-এর পাতায় **এখনই ব্যাকআপ নিন** (Back up now)-এ click করুন। শেষ না হওয়া পর্যন্ত button-এ
+"ব্যাকআপ হচ্ছে…" দেখায়। Schedule অনুযায়ী চলা backup আর আপনার চালু করা backup একই location-এর জন্য
+একসাথে দুবার চলতে পারে না। একটা backup সর্বোচ্চ 11 ঘণ্টা চলতে পারে।
+
+তারপর পাতায় শেষ ফলাফল দেখায়:
+
+| ফলাফল | মানে |
+| --- | --- |
+| **সফল** (Succeeded) | প্রতিটা website আর database-এর backup হয়েছে |
+| **আংশিক ব্যর্থ** (Partly failed) | কিছু জিনিস fail করেছে (বা পুরোনো backup মোছা fail করেছে); প্রতিটা failure-এর নাম দেওয়া থাকে, যেমন `shop: database dump failed: …`। বাকিগুলোর backup হয়েছে |
+| **ব্যর্থ** (Failed) | কিছুরই backup হয়নি, বা server-এ পৌঁছানো যায়নি |
+
+মাঝপথে থেমে যাওয়া database dump কখনো backup হিসেবে রাখা হয় না।
+
+## Alert
+
+Backup fail বা আংশিক fail করলে admin-রা একটা [notification](/guides/admin/notifications/) পান:
+**ব্যাকআপ ব্যর্থ** (Backup failed) বা **ব্যাকআপ আংশিক ব্যর্থ** (Backup partly failed), কারণসহ। খবর
+পেতে email, Telegram বা অন্য কোনো channel সেট করে রাখুন।
+
+## Restore
+
+Location-এর পাতায় **ব্যাকআপগুলো** (Backups)-এর নিচে প্রতিটা website আর database তার backup-সহ তালিকায়
+থাকে (নতুনটা আগে)। যেটা চান তার পাশে **ফেরত আনুন** (Restore)-এ click করুন।
+
+<Tabs>
+  <TabItem label="একটা website">
+    কীভাবে, তা বেছে নিন:
+
+    - **নতুন ফোল্ডারে** (Into a new folder): "সাইটের হোমে public_html-এর পাশে একটা “restored-…”
+      ফোল্ডারে ফাইলগুলো রাখে। এখনকার কিছুই বদলায় না।" [File manager](/guides/websites/files/) দিয়ে
+      কয়েকটা file বেছে নিতে এটা ব্যবহার করুন।
+    - **এখনকার ফাইল বদলে দিন** (Replace the current files): "public_html-কে ব্যাকআপ দিয়ে বদলে দেয়।
+      এখনকার ফাইলগুলো সাইটের ট্র্যাশে যায়, তাই পরেও ফেরত পাবেন।"
+
+    শুধু `public_html` restore হয়। Restore করা file-গুলোর owner হয় site-এর account।
+  </TabItem>
+  <TabItem label="একটা database">
+    "এটা ডেটাবেসের সবকিছু ব্যাকআপ দিয়ে বদলে দেবে। তারপরের পরিবর্তনগুলো হারিয়ে যাবে।" নিশ্চিত করতে
+    database-এর নাম টাইপ করুন।
+
+    Database একই জায়গায়, একই নাম আর user-সহ restore হয়, তাই website বা app তার এখনকার password
+    দিয়েই কাজ করতে থাকে।
+  </TabItem>
+</Tabs>
+
+শুধু panel-এ এখনো আছে এমন জিনিসই restore করতে পারেন। মুছে ফেলা website বা database-এর backup-এ
+**প্যানেল থেকে মুছে ফেলা হয়েছে** (Deleted from the panel) লেখা থাকে; সেগুলো হাতে restore করুন (নিচে)।
+
+### হাতে restore করা
+
+Backup-গুলো সাধারণ restic repository। Server-এ, root হিসেবে, server-এর নিজের ওপর থাকা location-এর
+জন্য:
+
+```bash
+sudo restic -r /var/backups/ekpanel/<location id> \
+  --password-file /etc/ekpanel/backup/<location id>.pass snapshots
+```
+
+S3-এর জন্য repository-র address আর key থাকে `/etc/ekpanel/backup/<location id>.json`-এ। অন্য যেকোনো
+machine-এ আপনার লাগবে restic, S3 key আর আপনার recovery key। `restore` আর `dump`-এর জন্য দেখুন
+[restic-এর documentation](https://restic.readthedocs.io)।
+
+## একটা backup location সরান
+
+**জায়গাটি সরান** (Remove location)-এ click করুন। ekPanel সেখানে backup নেওয়া বন্ধ করে আর location-টা
+ভুলে যায়, কিন্তু **backup-গুলো মোছা হয় না**:
+
+- S3-তে এগুলো bucket-এই থাকে, আর recovery key দিয়ে আবার connect করা যায়।
+- **এই সার্ভারে** থাকলে এগুলো `/var/backups/ekpanel/<location id>`-এ থেকে যায়। আর দরকার না হলে ওই
+  folder নিজে মুছে দিন।
+
+## Limit আর যা এখনো নেই
+
+- Docker app, mailbox আর panel-এর নিজের database-এর backup হয় না।
+- একটা মাত্র file restore করা, বা panel থেকে backup download করা: এখনো নেই।
+- অন্য server-এ restore করা: এখনো নেই।
+- একটা location একটা server-এর; প্রতিটা server-এর জন্য একটা করে যোগ করুন।
+
+দেখুন [roadmap](/project/roadmap/)।
+
+## সম্পর্কিত
+
+- [Database](/guides/data/databases/): Database তৈরি করুন আর password reset করুন।
+- [Notification](/guides/admin/notifications/): Fail করা backup-এর খবর পান।

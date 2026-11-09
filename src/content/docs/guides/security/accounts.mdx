@@ -1,0 +1,131 @@
+---
+title: Account security
+description: Protect your panel account with two-factor sign-in, sign-in alerts, a good password and signing out other devices.
+sidebar:
+  order: 6
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Your ekPanel account controls servers with root access, so it is worth protecting well. This
+page covers two-factor sign-in, alerts about new sign-ins, passwords and sessions. Everything
+here is under **Your account → Security** in the menu, for administrators and customers alike.
+
+## Two-factor sign-in
+
+With two-factor authentication (2FA), signing in needs a 6-digit code from an app on your phone
+as well as your password. Someone who steals or guesses your password still cannot get in.
+
+ekPanel uses standard time-based codes (TOTP), so any authenticator app works, such as Google
+Authenticator, Aegis or 1Password.
+
+### Turn it on
+
+<Steps>
+
+1. Open **Your account → Security**. The **Two-factor authentication** card shows
+   <Badge text="Off" variant="caution" />.
+
+2. Choose **Turn on two-factor authentication**.
+
+3. Scan the QR code with your authenticator app. If you cannot scan, type the key shown under
+   "Can't scan? Type this key into the app instead:".
+
+4. Enter the **6-digit code** the app shows and choose **Confirm and turn on**.
+
+</Steps>
+
+The card now shows <Badge text="On" variant="success" />. Nothing changes until you confirm with a
+correct code, so a half-finished setup never locks you out.
+
+From now on, after your email and password, the sign-in page asks: "Open your authenticator app
+and enter the 6-digit code for ekPanel." Codes change every 30 seconds; the code just before or
+after the current one is accepted too, to allow for a clock that is slightly off.
+
+<Aside type="danger" title="Keep a way back in">
+ekPanel has **no recovery codes yet**, and there is no button for another administrator to turn
+off someone's two-factor sign-in. If you lose your phone, you lose access.
+
+- When you set it up, save the key (the text under "Can't scan?") in a password manager, or use
+  an authenticator app that backs up its codes.
+- Give a second administrator their own account with two-factor sign-in, so the panel is never
+  in one phone's hands.
+</Aside>
+
+### Turn it off
+
+Choose **Turn off two-factor authentication**, enter your password, and confirm. Repeated wrong
+passwords are limited, as at sign-in.
+
+### Every administrator should use it
+
+The checklist on the [Server security](/guides/security/overview/) page lists administrators
+who sign in with a password only ("1 administrator signs in with a password only:" and their
+email). Ask each of them to turn on two-factor sign-in.
+
+<Aside type="note">
+An administrator who signs in **as a customer** (to help them) cannot see or change the
+customer's password or two-factor settings. The page says: "These settings belong to the
+customer. Go back to your own account to change yours."
+</Aside>
+
+## Sign-in alerts
+
+When you sign in from an address you have not signed in from in the last 90 days, ekPanel sends
+you a **Sign-in from a new address** alert with that address. The very first sign-in of an
+account does not count.
+
+The alert appears under the bell in the panel, and in the channels you choose under **Your
+account → Notifications** (email, Telegram, Discord, Slack or a webhook). See
+[Notifications](/guides/admin/notifications/).
+
+If you did not sign in yourself, change your password right away (which also signs out every
+other device) and turn on two-factor sign-in.
+
+## Passwords
+
+- A password has **at least 10 characters**. Longer is better; a password manager can make one.
+- Passwords are stored only as argon2id hashes, never in readable form.
+- To change it, open the **Password** card, enter your **Current password** and a **New
+  password**, and choose **Change password**. This signs you out on every other device; this
+  one stays signed in.
+- An administrator can give a customer a new random password with **New password** under
+  **Customers**. It is shown only once, and the customer is signed out everywhere. It does not
+  change the customer's two-factor setting. See [Customers](/guides/admin/customers/).
+
+### Too many attempts
+
+After 10 failed sign-ins within 15 minutes, from one address or for one email address, sign-in
+is paused: "Too many attempts. Wait 15 minutes and try again." Every failed sign-in is written
+to the audit log.
+
+## Sessions
+
+- Signing in keeps you signed in on that device for **7 days**, and each time you use the panel
+  the 7 days start again.
+- If you signed in on a computer you no longer use, choose **Sign out all other devices** in the
+  **Signed-in devices** card. The device you use stays signed in.
+- An administrator signed in as a customer is limited to one hour.
+- Opening a [web terminal](/guides/apps/terminal/) asks for your password (and two-factor code)
+  again if you have not given it in the last 15 minutes.
+
+Session cookies are `HttpOnly`, `SameSite=Lax` and (with HTTPS) `Secure` with the `__Host-`
+prefix, so scripts on a page and other sites cannot read or send them.
+
+## What is not there yet
+
+- **Passkeys** (signing in with your device's fingerprint or face, WebAuthn) are planned.
+- A **list of signed-in devices**, each to end on its own, is planned; today you can sign out
+  all other devices at once.
+- **API tokens** for scripts and other programs are planned, with scopes and expiry.
+- **Recovery codes** for two-factor sign-in are not there yet.
+
+See the [roadmap](/project/roadmap/).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Server security" href="/guides/security/overview/" description="The checklist, including administrators without two-factor sign-in." />
+	<LinkCard title="Notifications" href="/guides/admin/notifications/" description="Where sign-in alerts are sent." />
+	<LinkCard title="Security model" href="/concepts/security-model/" description="How ekPanel protects accounts and servers." />
+</CardGrid>

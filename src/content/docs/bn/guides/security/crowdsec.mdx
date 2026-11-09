@@ -1,0 +1,149 @@
+---
+title: CrowdSec
+description: SSH আর আপনার website-এ password অনুমানকারী, scanner আর exploit-এর চেষ্টা ধরে ban করতে CrowdSec চালু করুন, হাতে address ban করুন, আর একটা allowlist রাখুন।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+[CrowdSec](https://www.crowdsec.net/) আপনার server-এর log পড়ে, আক্রমণ চিনে ফেলে (password অনুমান, দুর্বল জায়গা
+খোঁজার scan, পরিচিত exploit), আর আক্রমণকারী address-কে কিছু সময়ের জন্য firewall-এ ban করে। এর community যেসব
+address জানায়, সেগুলোও এটা পায় আর আটকায়।
+
+## শুরু করার আগে
+
+- CrowdSec শুধু administrator-রাই চালান, **সার্ভার নিরাপত্তা** (Server security) পাতা থেকে।
+- Server-এ **Ubuntu বা Debian** চলতে হবে: ekPanel CrowdSec install করে CrowdSec-এর নিজের package repository থেকে,
+  যেখানে শুধু এই দুটোর package আছে।
+- CrowdSec নিজে নিজেই কাজ করে; এর জন্য [firewall](/guides/security/firewall/) চালু থাকতে হয় না। এর ban থাকে
+  `ufw`-এর পাশে নিজস্ব একটা nftables table-এ।
+
+## CrowdSec চালু করুন
+
+<Steps>
+
+1. **সার্ভার নিরাপত্তা** খুলে server বেছে নিন।
+
+2. **CrowdSec** card-এ **CrowdSec চালু করুন** (Turn on CrowdSec) বেছে নিন।
+
+3. Card-এ <Badge text="চালু হচ্ছে" variant="caution" /> দেখায়, তারপর install হয়ে চালু হলে CrowdSec-এর
+   version-সহ **চলছে** (Running)।
+
+</Steps>
+
+এরপর agent:
+
+- CrowdSec-এর package repository যোগ করে (এর signing key যাচাই করে), আর `crowdsec` আর nftables firewall bouncer
+  (`crowdsec-firewall-bouncer-nftables`) install করে, যেটা ban-গুলো আসলে কার্যকর করে;
+- CrowdSec-এর local API সরিয়ে নেয় `127.0.0.1:18910`-এ, কারণ এর সাধারণ port 8080 panel-এর;
+- একে দিয়ে SSH-এর log আর প্রতিটা website ও app-এর access log (`/var/log/caddy/*.log`) পড়ায়;
+- নিচের তালিকার detection-গুলো install করে, আর bouncer-কে register করে এমন একটা key দিয়ে, যেটা শুধু root পড়তে
+  পারে।
+
+**বন্ধ করুন** (Turn off) CrowdSec আর bouncer বন্ধ করে, আর সাথে সব ban-ও। CrowdSec তার data-সহ install করা থাকে,
+আবার চালু করার জন্য তৈরি।
+
+<Aside type="caution">
+Card-এ যদি লেখা থাকে "CrowdSec-এর ফায়ারওয়াল অংশ চলছে না, তাই ব্যান কাজ করছে না", তাহলে CrowdSec তখনো আক্রমণ
+ধরছে, কিন্তু কিছুই আটকানো হচ্ছে না। Server-এর পাতায় **সার্ভিস** (Services)-এর নিচে `crowdsec-firewall-bouncer`
+restart করুন।
+</Aside>
+
+## কী কী ধরে
+
+ekPanel এই CrowdSec collection-গুলো চালু করে (log parser আর detection scenario-র সেট):
+
+| Collection | কী ধরে |
+| --- | --- |
+| `crowdsecurity/linux` | একটা Linux server-এর মৌলিক জিনিস |
+| `crowdsecurity/sshd` | SSH password অনুমান (দ্রুত আর ধীরে) আর user name অনুমান |
+| `crowdsecurity/caddy` | Web server-এর (Caddy-র) access log পড়ে |
+| `crowdsecurity/base-http-scenarios` | File খোঁজাখুঁজি, আক্রমণাত্মক crawl, পরিচিত আক্রমণের tool, গোপন file, admin পাতা আর backdoor খোঁজা, path traversal, SQL আর script injection, open proxy পরীক্ষা |
+| `crowdsecurity/http-cve` | পরিচিত security hole (CVE) কাজে লাগানোর চেষ্টা |
+| `crowdsecurity/wordpress` | WordPress password অনুমান, user name অনুমান, scan, `wp-config.php` পড়ার চেষ্টা |
+| `crowdsecurity/whitelist-good-actors` | পরিচিত ভালো service-গুলোকে (যেমন search engine-এর crawler) ban হওয়া থেকে বাঁচায় |
+
+## Ban
+
+**ব্যান করা ঠিকানা** (Banned addresses) card (CrowdSec চলার সময় দেখা যায়) এই server-এ করা ban-গুলোর তালিকা দেখায়:
+address আর তার দেশ, কারণ, এটা **ধরা পড়েছে** (Detected) নাকি **হাতে ব্যান করা** (Banned by hand), আর কখন
+**পর্যন্ত** (Until)। Community-র blocklist এখানে দেখানো হয় না; তাতে হাজার হাজার address থাকতে পারে।
+
+Ban তুলে নিতে **ব্যান তুলুন** (Lift ban) বেছে নিন।
+
+### হাতে address ban করুন
+
+<Steps>
+
+1. **ব্যান করা ঠিকানা**-তে **IP ঠিকানা** (IP address) লিখুন।
+
+2. **কতক্ষণ** (For)-এর নিচে সময় বেছে নিন: ১ ঘণ্টা, ৪ ঘণ্টা, ১ দিন, ১ সপ্তাহ, ৩০ দিন বা ১ বছর।
+
+3. চাইলে একটা **কারণ** (Reason) লিখুন (এক লাইন, সর্বোচ্চ 100 অক্ষর)। না লিখলে সেখানে লেখা থাকে "হাতে ব্যান করা"।
+
+4. **ব্যান করুন** (Ban) বেছে নিন।
+
+</Steps>
+
+হাতে ban একবারে **একটা public address** নেয়, যেমন `203.0.113.7` বা `2001:db8::7`। Network (`203.0.113.0/24`) আর
+private, loopback বা এ ধরনের address ফিরিয়ে দেওয়া হয়, কারণ firewall bouncer একটা একটা করে address রাখে। পুরো একটা
+network আটকাতে এর বদলে [firewall](/guides/security/firewall/)-এ একটা **ঠিকানা আটকান** (Block an address) নিয়ম
+যোগ করুন।
+
+Allowlist-এ থাকা address ban করা যায় না: "… অনুমোদিত তালিকায় আছে। আগে সেখান থেকে সরান।"
+
+## সাম্প্রতিক আক্রমণ
+
+**সাম্প্রতিক আক্রমণ** (Recent attacks) card-এ CrowdSec যা ধরেছে তার তালিকা থাকে: সহজ ভাষায় আক্রমণের ধরন (যেমন
+"SSH পাসওয়ার্ড অনুমান" বা "WordPress পাসওয়ার্ড অনুমান"), address, তার দেশ আর network-এর মালিক, কখন, আর ban
+পর্যন্ত গড়ালে একটা **ব্যান করা** (Banned) badge। হাতে করা ban এখানে নয়, ban-এর তালিকায় থাকে।
+
+## Allowlist
+
+**অনুমোদিত তালিকা** (Allowlist) card-এ এমন address আর network থাকে, যেগুলো **কখনো ban হয় না**, যেমন আপনার অফিস বা
+আপনার monitoring service। প্রতি লাইনে একটা, সর্বোচ্চ ২০০টা:
+
+```text
+203.0.113.10
+198.51.100.0/24
+2001:db8:1234::/48
+```
+
+**সংরক্ষণ** (Save) বেছে নিন। Allowlist CrowdSec-এর community blocklist-কেও এই address-গুলো আটকাতে দেয় না, আর
+এটা [দেশ অনুযায়ী আটকানো](/guides/security/countries/)-তেও খাটে।
+
+আপনার দেওয়া address ছাড়াও ekPanel সবসময় এগুলোকে allow করে (card-এ "এগুলোও সবসময় অনুমোদিত" দেখুন):
+
+- server-এর নিজের address, যাতে এটা কখনো নিজেকে ban না করে;
+- [Cloudflare-এর প্রকাশিত address](https://www.cloudflare.com/ips/)।
+
+## Cloudflare-এর পেছনের site
+
+কোনো site-এর DNS record Cloudflare-এর মাধ্যমে proxy করা থাকলে প্রতিটা ভিজিটর আপনার server-এ পৌঁছান Cloudflare-এর
+কোনো একটা address থেকে। ekPanel-এর web server ভিজিটরের আসল address পড়ে Cloudflare-এর header থেকে (শুধু
+Cloudflare-এর address থেকে এলে তবেই বিশ্বাস করে), তাই CrowdSec **ভিজিটরের** address ধরে আর log করে, কখনো
+Cloudflare-এরটা নয়।
+
+কিন্তু ban হয় আপনার server-এর firewall-এ, আর ban হওয়া ভিজিটর তখনো Cloudflare দিয়েই ঢোকেন, যার address কখনো আটকানো
+হয় না। তাই:
+
+<Aside type="caution" title="Ban শুধু সরাসরি access আটকায়">
+Cloudflare-এর proxy দিয়ে আসা ভিজিটরদের ক্ষেত্রে ban শুধু তাঁদের সরাসরি আপনার server-এ পৌঁছানো আটকায়। Cloudflare
+দিয়ে আসা তাঁদের request তখনো পৌঁছায়। এমন আক্রমণকারীদের Cloudflare-এও আটকান, যেমন Cloudflare-এর firewall rule
+দিয়ে।
+</Aside>
+
+## সীমা আর যা এখনো নেই
+
+- শুধু Ubuntu আর Debian।
+- CrowdSec পড়ে SSH আর web server-এর log। Mail আর FTP-এর log এখনো পড়া হয় না।
+- একটা web application firewall (WAF) পরে আসার পরিকল্পনা আছে; দেখুন [roadmap](/project/roadmap/)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="সার্ভার নিরাপত্তা" href="/guides/security/overview/" description="Checklist, আর সবকিছু কীভাবে একসাথে কাজ করে।" />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="পুরো network আটকান আর port খুলুন।" />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="ভিজিটরদের আসল address কীভাবে আপনার server-এ পৌঁছায়।" />
+</CardGrid>

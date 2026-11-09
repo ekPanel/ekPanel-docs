@@ -1,0 +1,193 @@
+---
+title: Servers
+description: Watch your servers' live and historical metrics, see and restart their services, set public addresses for NAT, and remove a server.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Every server you manage runs a small **agent** that connects out to the panel and keeps that
+connection open. Through it the panel sees the server's health every two seconds, and tells the
+server what websites, databases and apps it should have. The **Servers** page is where
+administrators watch and manage them.
+
+## Before you start
+
+- You are an administrator. Customers do not see the Servers page; when they create something, they
+  only pick a server by name from those their package allows.
+- To add a server, see [Add a server](/start/add-server/).
+
+## The servers list
+
+**Servers** lists every server with:
+
+| Column | Shows |
+| --- | --- |
+| **Server** | The name you gave it, with its host name and operating system |
+| **Status** | **Online**, **Offline**, or **Waiting for agent** (added but never connected) |
+| **CPU**, **Memory**, **Disk** | The latest values while it is online |
+| **Last seen** | When the agent was last connected |
+
+Click a server to open its page.
+
+## The server page
+
+At the top: the server's name, its state, and the buttons **Terminal** (while online),
+**New connection command** and **Delete**.
+
+### Live metrics
+
+Four tiles show the latest sample:
+
+- **CPU**: percent busy, and the number of cores.
+- **Memory**: used of total. "Used" means total minus what Linux reports as available, so file
+  cache that can be freed does not count as used.
+- **Disk**: used of total, for the root filesystem (`/`).
+- **Uptime**, with the load average over 1, 5 and 15 minutes.
+
+Below are charts of **CPU**, **Memory** and **Network** (download and upload). Network counts the
+server's real network interfaces; loopback and Docker's virtual interfaces are left out.
+
+### History
+
+Pick a **Time range** above the charts:
+
+| Range | Data |
+| --- | --- |
+| **Live** | The last 20 minutes or so, one point every 2 seconds, updating as it comes in |
+| **1 hour** | One-minute averages |
+| **24 hours** | Five-minute averages |
+| **7 days** | Hourly averages |
+| **30 days** | Two-hour averages |
+
+The panel stores one-minute averages for 48 hours and hourly averages for 31 days. History is
+recorded only while the agent is connected, so an offline period shows as a gap: "No history for
+this period yet. It is recorded while the agent is connected."
+
+### System
+
+The **System** card shows the host name, operating system, kernel, architecture, agent version, and
+when the server was connected ("Connected since").
+
+### Websites, databases, tasks
+
+The page lists the server's websites and databases, and its **recent tasks**: backups, restores,
+image updates, deploys, service restarts and so on, with their state.
+
+It also has the server's [firewall](/guides/security/firewall/), its PHP extensions, and its
+**Public addresses for DNS** (below).
+
+## Services
+
+The **Services** card shows the state of the services ekPanel cares about on that server:
+
+| Service | What it is | Restart from the panel |
+| --- | --- | --- |
+| `ekpanel` | The panel itself (only on the panel's server) | No |
+| `ekpanel-agent` | The agent | No |
+| `caddy` | The web server for websites and apps | Yes |
+| `postgresql` | PostgreSQL databases (and the panel's own database on the panel's server) | Yes |
+| `ssh` | SSH | No |
+| `cron` | The system's cron | Yes |
+| `ekpanel-mail` | The mail server, when [email](/guides/dns/email/) is on | Yes |
+| `crowdsec`, `crowdsec-firewall-bouncer` | [CrowdSec](/guides/security/crowdsec/), when it is on | Yes |
+
+Each shows **Running**, **Stopped**, **Failed**, **Starting** and so on, since when, or
+**Not installed**.
+
+Click **Restart** to restart a service. The restart runs as a task ("Restart requested"). The panel
+and agent are not on the list, because restarting them would cut the connection running the
+request; neither is SSH, because a failed SSH restart could lock you out.
+
+<Aside type="note">
+The list is fixed in the agent, so nothing typed in the panel ever reaches `systemctl`. The server
+must use systemd; otherwise the card says services cannot be managed.
+</Aside>
+
+## When a server goes offline
+
+A server is **Online** while its agent is connected to the panel. When the connection drops, the
+server shows **Offline** with "It was last seen …". Check that the server is running and that the
+agent service is started:
+
+```bash
+sudo systemctl status ekpanel-agent
+sudo journalctl -u ekpanel-agent -n 50
+```
+
+The panel checks every minute. If the agent stays away for **3 minutes**, every administrator gets
+a [notification](/guides/admin/notifications/) "Server … is offline", once. Shorter breaks, such as
+an agent restart, stay quiet. When the agent connects again, they get "Server … is back online".
+
+While a server is offline, websites and apps on it keep running (the agent is not in the path of
+web requests), but the panel cannot change anything on it. Changes made meanwhile are applied when
+the agent comes back.
+
+The panel also warns administrators when a server's disk is **90% full**. That warning is sent once,
+and again only after the disk has dropped below 85% and filled up again.
+
+## Public addresses for DNS
+
+ekPanel needs to know the public address of each server to create DNS records for its websites and
+apps (through [Cloudflare](/guides/dns/cloudflare/) or the
+[built-in name servers](/guides/dns/name-servers/)), and for the mail host name's records.
+
+By default it uses the first **public** address the server reports: private addresses
+(`10.x`, `192.168.x`, `172.16–31.x`), shared carrier-grade NAT addresses (`100.64.0.0/10`) and
+similar are skipped. The card lists the addresses "Found on the server".
+
+Set an address by hand when the server's own network card has no public address, for example
+behind NAT, a router or a load balancer:
+
+<Steps>
+
+1. On the server page, find **Public addresses for DNS**.
+
+2. Enter the **IPv4** and/or **IPv6** address that visitors use to reach the server. Leave a field
+   empty to use the address found automatically.
+
+3. Save. DNS records are updated right away.
+
+</Steps>
+
+A public IPv4 address set by hand is also given to FTP clients for passive mode, when it is not one
+of the server's own addresses.
+
+## New connection command
+
+**New connection command** makes a new one-time command to connect the agent again, for example after
+reinstalling the server or if the first command expired. The server's current agent certificate is
+revoked at once and its connection closed, so an old copy of the agent can no longer connect.
+
+## Remove a server
+
+<Steps>
+
+1. On the server page, click **Delete**.
+
+2. Type the server's name to confirm, and click **Delete server**.
+
+</Steps>
+
+"The panel forgets this server and its agent can no longer connect. Nothing on the server itself is
+deleted."
+
+<Aside type="caution">
+The panel also forgets everything it knew about that server: its websites, databases, apps, cron
+jobs, backup locations, mail settings and metric history disappear from the panel. The files,
+databases and containers stay on the server, but connecting the server again does not bring them
+back into the panel. Back up what you need first.
+</Aside>
+
+## Limits and what is not there yet
+
+- Moving websites, databases or apps between servers: not yet (see the
+  [roadmap](/project/roadmap/)).
+- Self-update of the agent from the panel: not yet.
+
+## Related
+
+- [Add a server](/start/add-server/): Connect a new server with one command.
+- [Web terminal](/guides/apps/terminal/): A root shell on a server, in the browser.
+- [Notifications](/guides/admin/notifications/): Hear about offline servers and full disks.

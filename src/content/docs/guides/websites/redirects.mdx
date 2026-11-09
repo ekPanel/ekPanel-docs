@@ -1,0 +1,189 @@
+---
+title: Redirects and hotlink protection
+description: Send visitors from one address to another with 301, 302, 307 or 308 redirects, send extra domains to the main one, and stop other sites from embedding your files.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+A redirect tells the browser "this page is now somewhere else". Use redirects when you move pages,
+change your site's structure or move to a new domain, so old links and search results keep
+working. Hotlink protection stops other websites from showing your images and media on their
+pages with your bandwidth.
+
+Both work for static and PHP websites, and the web server (Caddy) handles them before your
+application sees the request.
+
+## Add a redirect
+
+<Steps>
+
+1. Open the website and find the **Redirects** card.
+
+2. Click **Add redirect**.
+
+3. Fill in **From**: the path on this site, such as `/old-page`, or a prefix such as `/blog/*`
+   for everything under it.
+
+4. Fill in **To**: a path on this site, such as `/new-page`, or a full address, such as
+   `https://example.com/new-page`.
+
+5. Choose the **Type** (see the table below).
+
+6. For a prefix, tick **Keep the rest of the path** if `/blog/post` should go to `…/post`.
+
+7. Click **Save changes**. The site shows **Applying…** for a moment.
+
+</Steps>
+
+To remove a redirect, click the bin next to it and save.
+
+### Which type to choose
+
+| Type | Meaning | Use it when |
+| --- | --- | --- |
+| **301 permanent** | The page has moved for good. Browsers and search engines remember it. | Most moves. This is the usual choice. |
+| **302 temporary** | The page is elsewhere for now. | A short campaign or maintenance page. |
+| **307 temporary, same method** | Like 302, but the browser must repeat the same request (a form `POST` stays a `POST`). | Temporary moves of forms or APIs. |
+| **308 permanent, same method** | Like 301, but the method stays the same. | Permanent moves of forms or APIs. |
+
+<Aside type="tip">
+Browsers keep permanent (301 and 308) redirects in their cache. While you are testing, use a
+temporary type, and switch to a permanent one when it works.
+</Aside>
+
+## How redirects match
+
+**From** takes two forms:
+
+- **An exact path**, such as `/old-page`. Only that path matches.
+- **A prefix ending in `/*`**, such as `/blog/*`. Every path under `/blog/` matches. `/*` alone
+  matches everything on the site.
+
+With a prefix, **Keep the rest of the path** decides where visitors land:
+
+| From | To | Keep the rest of the path | `/blog/2024/hello` goes to |
+| --- | --- | --- | --- |
+| `/blog/*` | `https://news.example.com` | ticked | `https://news.example.com/2024/hello` |
+| `/blog/*` | `https://news.example.com` | not ticked | `https://news.example.com` |
+| `/blog/*` | `/articles` | ticked | `/articles/2024/hello` |
+
+When the rest of the path is kept, the query string (`?page=2`) goes along too.
+
+<Aside type="caution">
+`/blog/*` matches `/blog/` and everything below it, but not `/blog` without the slash. To catch
+that address too, add a second, exact redirect from `/blog`.
+</Aside>
+
+### Order
+
+Redirects are checked **in the order listed**, and the first one that matches wins. New redirects
+are added at the bottom. Put exact paths above prefixes that would also match them. To change the
+order, remove a redirect and add it again.
+
+Redirects are checked before your files and before PHP, so a redirect wins even if a file exists
+at that path.
+
+### What you can type
+
+- **From** must start with `/` and may use letters, digits and URL characters such as
+  `. _ ~ - % +`. No spaces or quotes.
+- **To** is a path starting with `/`, or an address starting with `http://` or `https://`.
+- Each **From** may appear only once. A site can have up to 100 redirects.
+
+## Examples
+
+**A page was renamed.** From `/about-us.html`, to `/about/`, **301 permanent**.
+
+**A whole section moved to a subdomain.** From `/shop/*`, to `https://shop.example.com`, **301
+permanent**, with **Keep the rest of the path** ticked. `/shop/shoes?size=42` goes to
+`https://shop.example.com/shoes?size=42`.
+
+**The whole site moved to a new domain.** On the old site: from `/*`, to
+`https://new-example.com`, **301 permanent**, with **Keep the rest of the path** ticked.
+Every page goes to the same page on the new domain.
+
+**A temporary sale page.** From `/offer`, to `/eid-sale-2026`, **302 temporary**.
+
+## Send extra domains to the main domain
+
+If a site has [extra domains](/guides/websites/websites/#domains-and-extra-domains), the
+**Redirects** card shows **Send the other domains to …** with your main domain.
+
+When it is on, visitors of every extra domain go to the same page on the main domain with a
+**301** redirect, before any other rule. For example, with main domain `example.com` and extra
+domain `www.example.com`, `https://www.example.com/contact?x=1` goes to
+`https://example.com/contact?x=1`.
+
+This gives search engines one address for each page. HTTPS certificates still cover the extra
+domains, so the redirect works over HTTPS too.
+
+<Aside type="note">
+To use `www.example.com` as the address everyone ends up on, create the website with
+`www.example.com` as its domain and `example.com` as an extra domain. The main domain cannot be
+changed later.
+</Aside>
+
+## Hotlink protection
+
+*Hotlinking* is when another website puts your image or video on its own page, so its visitors
+download it from your server. Hotlink protection refuses such requests.
+
+<Steps>
+
+1. Open the website and find **Hotlink protection**.
+
+2. Tick **Protect files from hotlinking**.
+
+3. Check **File types**. The default list is
+   `jpg, jpeg, png, gif, webp, avif, svg, mp4, webm, mp3`. Separate types with commas.
+
+4. Under **Sites that may embed them**, add partner sites, one per line. `*.example.com` allows
+   all subdomains of `example.com`.
+
+5. Click **Save changes**.
+
+</Steps>
+
+### How it decides
+
+A request for a protected file type is refused with **403 Forbidden** when the browser says it
+comes from a page of another site (the `Referer` header). These requests are always allowed:
+
+- requests from pages on this website's own domains (the main domain and every extra domain);
+- requests from the sites you listed;
+- requests with no `Referer` at all, such as someone opening the image address directly, many
+  apps and some privacy settings.
+
+The check ignores `http`/`https` and port numbers. File types are compared without regard to
+upper and lower case, so `jpg` also protects `PHOTO.JPG`.
+
+<Aside type="caution">
+`*.example.com` matches subdomains only, such as `cdn.example.com` and `www.example.com`, but not
+`example.com` itself. To allow both, list `example.com` and `*.example.com`.
+</Aside>
+
+Limits: 1 to 40 file types (letters and digits only, such as `jpg`), and up to 50 allowed sites.
+
+**Example.** Your site is `example.com` and a partner, `partner.com`, may show your product
+photos. Protect `jpg, png, webp` and allow `partner.com`. An image on `partner.com` loads; the
+same image on `copycat.net` gets 403; opening `https://example.com/photo.jpg` in a new tab still
+works.
+
+## Troubleshooting
+
+**A redirect does nothing.** Check that the site shows **Live** after saving, then test in a
+private browser window: your browser may remember an older permanent redirect. Check that a
+redirect higher in the list does not match first.
+
+**Images break on my own site.** Make sure every domain the site is opened on is the main domain
+or an extra domain of this website. Pages served from another site (a CDN, a separate shop) must
+be in **Sites that may embed them**.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Websites" href="/guides/websites/websites/" description="Main and extra domains." />
+	<LinkCard title="Logs and traffic" href="/guides/websites/logs-traffic/" description="See redirects (3xx) and refused requests (403) in the request log." />
+</CardGrid>

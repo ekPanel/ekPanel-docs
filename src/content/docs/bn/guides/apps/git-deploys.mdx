@@ -1,0 +1,288 @@
+---
+title: Git deploy
+description: Git repository থেকে নিজের code আপনার server-এ build করুন আর downtime ছাড়া release করুন, webhook, rollback আর pull request preview-সহ।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**Git app** একটা Git repository-র একটা branch থেকে, আপনার নিজের server-এ build হয়, আর downtime
+ছাড়া release হয়। Branch-এ push করলে ekPanel নতুন version build করে release করে; নতুনটা চালু না হলে
+পুরোনোটাই চলতে থাকে। Heroku, Vercel বা Coolify-র মতো একই ধারণা, শুধু চলছে আপনার নিজের server-এ।
+
+## শুরু করার আগে
+
+- আপনার app শুধু চালানোর জন্য নয়, **build** করার জন্যও যথেষ্ট disk আর memory-সহ একটা connected
+  server। Node বা Java app build করতে এক gigabyte বা তার বেশি memory লাগতে পারে।
+- Repository-র address:
+  - **public** repository: তার `https://` address, যেমন `https://github.com/owner/app.git`;
+  - **private** repository: তার **SSH** address, যেমন `git@github.com:owner/app.git`, আর তাতে একটা
+    deploy key যোগ করার অনুমতি।
+- Container-এর ভেতরে **আপনার app যে port-এ শোনে**, যেমন `3000`। নতুন release-এ যাওয়ার আগে সেটা সাড়া
+  দিচ্ছে কিনা check করতে ekPanel-এর এটা লাগে।
+- ঐচ্ছিক: HTTPS-এর জন্য server-এর দিকে দেওয়া একটা domain।
+
+<Aside type="note">
+Customer-রা Git app ব্যবহার করতে পারেন শুধু তখন, যখন তাঁদের package-এ **Git অ্যাপ** (Git apps) চালু
+থাকে। তাঁদের build package-এর memory আর CPU limit-এর ভেতরে চলে।
+</Aside>
+
+## একটা Git app তৈরি করুন
+
+<Steps>
+
+1. **অ্যাপ** (Apps) খুলুন, **অ্যাপ যোগ করুন** (Add app)-এ click করুন, আর **অ্যাপের ধরন** (App
+   type)-এ **Git রিপোজিটরি** (Git repository) বেছে নিন।
+
+2. একটা **নাম** (Name) দিন (ছোট হাতের অক্ষর, সংখ্যা আর ড্যাশ) আর server বেছে নিন।
+
+3. **Git রিপোজিটরি**-র address আর **ব্রাঞ্চ** (Branch) দিন, যেমন `main`।
+
+4. **বিল্ড পদ্ধতি** (Build with) বেছে নিন:
+   - **স্বয়ংক্রিয়** (Automatic): "রিপোজিটরিতে Dockerfile থাকলে সেটি, না থাকলে Railpack।"
+   - **Dockerfile**: "রিপোজিটরির নিজের Dockerfile।"
+   - **Railpack**: "ভাষা আর ফ্রেমওয়ার্ক নিজে চিনে নেয়; Dockerfile লাগে না।"
+
+5. Dockerfile দিয়ে build করলে **Dockerfile** (repository-তে এর path, default `Dockerfile`) আর **বিল্ড
+   ফোল্ডার** (Build folder) (যে folder থেকে Docker build করে; `.` মানে পুরো repository) check করুন।
+   Monorepo-র জন্য এগুলো ব্যবহার করুন, যেমন `apps/web/Dockerfile` আর `apps/web`।
+
+6. **কন্টেইনারের ভেতরের পোর্ট** (Port inside the container) দিন। Git app-এর জন্য এটা দিতেই হবে।
+
+7. চাইলে একটা **ডোমেইন** (Domain), environment variable আর রেখে দেওয়া folder দিন, যেকোনো
+   [Docker app](/guides/apps/docker-apps/)-এর মতো।
+
+8. Push করলেই নিজে থেকে deploy চাইলে **প্রতিটি push-এ ডিপ্লয়** (Deploy on every push) চালু রাখুন
+   (তবু নিচের webhook যোগ করতে হবে)।
+
+9. **অ্যাপ তৈরি করুন** (Create app)-এ click করুন। এখনো কিছু build হয়নি: "এখনো কিছু ডিপ্লয় হয়নি।"
+
+10. Private repository-র জন্য app-এর পাতা থেকে **ডিপ্লয় কী** (Deploy key) copy করে repository-তে যোগ
+    করুন (নিচে দেখুন)।
+
+11. **ডিপ্লয় করুন** (Deploy)-এ click করুন। Deployment-এর log খুলে যায় আর build চলার সাথে সাথে ভরতে
+    থাকে।
+
+</Steps>
+
+## Private repository: deploy key
+
+Git app তৈরি করলে ekPanel তার জন্য একটা SSH key pair (Ed25519) বানায়। Private key panel-এর database-এ
+encrypt করা থাকে আর শুধু build চলার সময়টুকুর জন্য server-এ পাঠানো হয়। App-এর পাতায় **ডিপ্লয় কী**-র
+নিচে **public** key দেখায়।
+
+<Tabs>
+  <TabItem label="GitHub">
+    Repository-তে **Settings → Deploy keys → Add deploy key** খুলুন, public key paste করুন, আর
+    **Allow write access** বন্ধ রাখুন।
+  </TabItem>
+  <TabItem label="GitLab">
+    Project-এ **Settings → Repository → Deploy keys** খুলুন, public key যোগ করুন, আর
+    **Grant write permissions** বন্ধ রাখুন।
+  </TabItem>
+  <TabItem label="Gitea / Forgejo">
+    Repository-তে **Settings → Deploy keys → Add deploy key** খুলুন, public key paste করুন, আর write
+    access বন্ধ রাখুন।
+  </TabItem>
+</Tabs>
+
+তারপর নিশ্চিত হোন যে app **SSH** address (`git@host:owner/repo.git`) ব্যবহার করছে, `https://`-টা নয়।
+Server প্রথমবার SSH দিয়ে কোনো Git host-এ connect করলে সেই host-এর key মনে রাখে
+(`/srv/ekpanel/known_hosts`-এ) আর পরের প্রতিটা build-এ সেটা check করে।
+
+<Aside type="caution">
+User name আর password-সহ address (`https://user:token@…`) নেওয়া হয় না, যাতে কোনো token কখনো log-এ না
+যায়। Private repository-র জন্য deploy key ব্যবহার করুন।
+</Aside>
+
+## Build কীভাবে কাজ করে
+
+প্রতিটা deployment panel-এ একটা task হিসেবে চলে আর build হয় **app-এর server-এ**:
+
+1. Git, Docker আর BuildKit (`docker-buildx`) না থাকলে server সেগুলো install করে।
+2. Branch-টা clone করে (শুধু সর্বশেষ commit, submodule-সহ) `/srv/ekpanel/builds/`-এর নিচে একটা নতুন
+   folder-এ, যা build শেষে মুছে ফেলা হয়।
+3. Dockerfile বা Railpack দিয়ে একটা image build করে, এই deployment-এর tag দিয়ে।
+4. Image-টা release করে (দেখুন [Zero-downtime release](#zero-downtime-releases))।
+
+Git চলে কড়াকড়িভাবে আটকানো অবস্থায়: server-এর কোনো Git configuration পড়ে না, কখনো password চায়
+না, শুধু `https` আর `ssh` বোঝে (কোনো local `file://` path বা helper program নয়), আর repository-র
+কোনো hook চালায় না। Dockerfile আর build folder repository-র ভেতরেই থাকতে হবে, symbolic link ধরে
+গেলেও।
+
+### Build-এর সময় variable
+
+আপনার app-এর environment variable **build চলার সময়ও** পাওয়া যায়:
+
+- **Dockerfile** দিয়ে build করলে প্রতিটা variable build argument হিসেবে দেওয়া হয়। `ARG` দিয়ে পড়ুন:
+
+  ```dockerfile
+  FROM node:22-alpine
+  ARG NEXT_PUBLIC_API_URL
+  WORKDIR /app
+  COPY . .
+  RUN npm ci && npm run build
+  CMD ["npm", "start"]
+  ```
+
+- **Railpack** দিয়ে build করলে variable-গুলো Railpack-এর build plan-এ আর build-এ secret হিসেবে
+  পৌঁছায়।
+
+Value দেওয়া হয় environment দিয়ে, কখনো command line-এ নয়। আপনার app নিজে `PORT` সেট না করলে, চালানোর
+সময় ekPanel `PORT`-কে app-এর container port-এ সেট করে, কারণ Railpack দিয়ে build করা app (আর আরও
+অনেক app) `$PORT`-এ শোনে।
+
+### Railpack
+
+[Railpack](https://github.com/railwayapp/railpack) আপনার repository দেখে language আর framework চিনে
+নেয়, আর Dockerfile ছাড়াই একটা build-এর পরিকল্পনা করে। ekPanel একটা নির্দিষ্ট version ব্যবহার করে,
+**Railpack 0.43.0**, যা প্রথম Railpack build-এর সময় `/usr/local/lib/ekpanel/`-এ download হয় আর ওই
+release-এর সাথে প্রকাশিত SHA-256 checksum-এর সাথে মিলিয়ে দেখা হয়। Build নিজে চলে BuildKit-এ,
+Railpack-এর frontend image (`ghcr.io/railwayapp/railpack-frontend:v0.43.0`) দিয়ে।
+
+একটা server-এ প্রথম Railpack build-এ বেশি সময় লাগে, কারণ তখন Railpack আর build image download হয়;
+project-এর test VM-এ একটা ছোট Node app-এর প্রথমবার প্রায় 5 মিনিট লেগেছিল।
+
+### Build log
+
+**ডিপ্লয়মেন্ট** (Deployments) তালিকায় প্রতিটা deployment দেখায়: তার নম্বর, অবস্থা, commit আর message,
+কে বা কী শুরু করেছে ("push থেকে", "… আগেরটায় ফিরিয়েছেন"), আর কতক্ষণ লেগেছে। পুরো log পড়তে একটায়
+click করুন। Build চলার সময় log সাথে সাথে live দেখা যায়।
+
+অবস্থাগুলো: **অপেক্ষায়** (Queued), **বিল্ড হচ্ছে** (Building), **রিলিজ হচ্ছে** (Releasing), **চালু**
+(Live), **ব্যর্থ** (Failed), **আগের** (Earlier: এমন একটা release, যা এখনকারটার আগে live ছিল) আর
+**বাতিল** (Cancelled)।
+
+গত এক সপ্তাহের build cache server-এ রাখা হয়, তাই আবার build দ্রুত হয়। প্রতিটা build-এর পর এর চেয়ে
+পুরোনো cache মুছে ফেলা হয়।
+
+## Zero-downtime release
+
+একটা Git app-এর `127.0.0.1`-এ **দুটো** private port থাকে। Release-এর সময়:
+
+1. নতুন build-এর একটা container খালি port-এ চালু হয়, চলমানটার পাশে।
+2. ekPanel সেটা তৈরি হওয়া পর্যন্ত অপেক্ষা করে: image-এ Docker `HEALTHCHECK` থাকলে, সেটা healthy
+   জানানো পর্যন্ত; না থাকলে, সেটা তার port-এ একটা HTTP request-এর উত্তর দেওয়া পর্যন্ত (যেকোনো উত্তরই
+   চলে), অথবা যেসব app HTTP বোঝে না, সেগুলো একটা connection খোলা রাখা পর্যন্ত।
+3. শুধু তখনই পুরোনো container থামানো হয় (request শেষ করার জন্য 30 সেকেন্ড সময় দিয়ে) আর সরিয়ে দেওয়া
+   হয়।
+
+Web server দুটো port-ই তালিকায় রাখে, চলমানটা প্রথমে, তাই প্রতিটা request চালু থাকা কোনো container-এ
+পৌঁছায়। Project-এর test VM-এ দুটো release চলার সময় পাঠানো 889টা request-এর সবকটার উত্তর এসেছিল।
+
+নতুন container থেমে গেলে, বারবার restart হতে থাকলে, health check-এ fail করলে, বা 3 মিনিটের মধ্যে
+তৈরি না হলে, সেটা সরিয়ে দেওয়া হয় আর **আগের release-ই চলতে থাকে**। Deployment-টা container-এর log-এর
+শেষ লাইনগুলোসহ **ব্যর্থ** হিসেবে চিহ্নিত হয়, আর একটা [notification](/guides/admin/notifications/)
+"…-এর ডিপ্লয় ব্যর্থ হয়েছে" পাঠানো হয়।
+
+কিছুই না বদলালে (একই build, একই variable আর limit), চলমান container যেমন আছে তেমনই থাকে।
+
+## Rollback
+
+Server app-এর **শেষ পাঁচটা live deployment**-এর build রেখে দেয়, এখন যেটা চলছে সেটাসহ। আগের যেগুলো এখনো
+রাখা আছে, ডিপ্লয়মেন্ট তালিকায় সেগুলোর পাশে **আগেরটায় ফিরুন** (Roll back) দেখায়। Rollback হলো একটা
+নতুন deployment, যা ওই build আবার release করে, build না করেই, একই zero-downtime ধাপে। প্রতিটা release-এর
+পর এর চেয়ে পুরোনো build server থেকে মুছে ফেলা হয়।
+
+আরও পেছনে যেতে, একটা পুরোনো commit branch-এ push করে (বা revert করে) deploy করুন।
+
+## Webhook: প্রতিটা push-এ deploy
+
+<Steps>
+
+1. App-এর পাতায় **Webhook** খুঁজুন। সেখানে
+   `https://panel.example.com/api/v1/hooks/git/<app id>`-এর মতো একটা **ঠিকানা** (Address) আর একটা
+   **সিক্রেট** (Secret) দেখায়।
+
+2. Repository-র settings-এ একটা webhook যোগ করুন:
+
+   - **GitHub**: **Settings → Webhooks → Add webhook**। Payload URL: ঠিকানাটা। Content type:
+     `application/json`। Secret: সিক্রেটটা। Events: push event (আর [preview](#pull-request-previews)
+     ব্যবহার করলে **Pull requests**)।
+   - **GitLab**: **Settings → Webhooks**। URL: ঠিকানাটা। Secret token: সিক্রেটটা। Trigger:
+     **Push events** (আর preview-এর জন্য **Merge request events**)।
+   - **Gitea, Forgejo, Gogs**: **Settings → Webhooks → Add webhook → Gitea** (বা Gogs)। Target URL:
+     ঠিকানাটা। Content type: `application/json`। Secret: সিক্রেটটা। Push event-এ trigger করুন (আর
+     preview-এর জন্য pull request event-এ)।
+
+3. Branch-এ একটা commit push করুন। "push থেকে" trigger-সহ একটা নতুন deployment দেখা যাবে।
+
+</Steps>
+
+Webhook কীভাবে check করা হয়:
+
+- GitHub, Gitea, Forgejo আর Gogs request body-তে secret দিয়ে sign করে (HMAC-SHA256); GitLab secret-টাই
+  পাঠায়। ভুল signature-এর request নেওয়া হয় না, আর একই app থেকে বারবার fail হলে কিছুক্ষণের জন্য block
+  করা হয়।
+- শুধু app-এর নিজের branch-এ push করলেই deploy হয়। অন্য branch-এ push, মুছে ফেলা branch, বা
+  **প্রতিটি push-এ ডিপ্লয়** বন্ধ থাকা অবস্থায় যেকোনো push-এর উত্তর হয় "ignored"।
+- **Push করা commit**-টাই build হয়, এর মধ্যে branch এগিয়ে গেলেও।
+- Git host থেকে দেখানো address-এ HTTPS দিয়ে panel-এ পৌঁছানো যেতে হবে।
+
+## Pull request preview
+
+Preview চালু থাকলে app-এর branch-এ আসা প্রতিটা pull request নিজের একটা app পায়, যাতে merge করার আগে
+পরিবর্তনটা চালিয়ে দেখতে পারেন।
+
+<Steps>
+
+1. Preview-এর জন্য একটা domain বেছে নিন, যেমন `preview.example.com`, আর একটা **wildcard** DNS record
+   `*.preview.example.com` server-এর দিকে দিন।
+
+2. App-এর settings-এ **প্রতিটি pull request-এর প্রিভিউ** (Preview each pull request) চালু করুন আর
+   **প্রিভিউয়ের ডোমেইন** (Domain for previews)-এ domain-টা দিন।
+
+3. নিশ্চিত হোন যে webhook pull request (GitHub, Gitea, Forgejo, Gogs) বা merge request (GitLab)
+   event-ও পাঠায়।
+
+4. একটা pull request খুলুন। এর preview app-এর পাতায় **প্রিভিউ** (Previews)-এর নিচে দেখা যাবে,
+   `<app>-pr<number>.preview.example.com`-এ, যেমন `shop-pr12.preview.example.com`।
+
+</Steps>
+
+- Preview build হয় forge-এর pull request ref থেকে, আর pull request-এ প্রতিটা push-এ আবার build হয়।
+- Pull request বন্ধ বা merge হলে এটা **data-সহ** মুছে যায়।
+- Preview app-এর variable, রেখে দেওয়া folder আর limit copy করে, কিন্তু এটা নিজস্ব container আর
+  volume-সহ একটা আলাদা app।
+- প্রতি app-এ একসাথে সর্বোচ্চ **5**টা preview। App মুছলে তার preview-ও মুছে যায়।
+
+<Aside type="caution">
+**Fork থেকে আসা** pull request-এর কখনো preview হয় না: তাদের code আপনার server-এ চলত। Preview app-এর
+একই variable ব্যবহার করে, তাই main app-কে এমন production secret দেবেন না, যা কোনো pull request-এর code
+পড়ুক বলে আপনি চান না।
+</Aside>
+
+## Limit আর যা এখনো নেই
+
+- একটা server-এ একসাথে সর্বোচ্চ **2টা build** চলে। তৃতীয় deployment "two builds are already running
+  on this server" দিয়ে fail করে; একটা শেষ হলে আবার deploy করুন।
+- একটা build সর্বোচ্চ **এক ঘণ্টা** চলতে পারে; তারপর থামিয়ে দেওয়া হয়।
+- একটা deployment-এর রাখা log প্রথম 2 MB রাখে; এর পরের output বাদ যায়।
+- ডিপ্লয়মেন্ট তালিকায় সর্বশেষ 30টা deployment দেখায়।
+- **ইমেজ আপডেট** (Update image) Git app-এ খাটে না: "Git অ্যাপ আপডেট হয় ডিপ্লয় করে।"
+- এখনো নেই: চলমান build বাতিল করা, সফল deploy-এর notification, pull request-এ preview-এর address দিয়ে
+  comment, আর অনুমোদনের পর fork-এর preview। দেখুন [roadmap](/project/roadmap/)।
+- Git app-সহ কোনো app-এর volume এখনো [backup](/guides/data/backups/)-এর অংশ নয়।
+
+## সমস্যা সমাধান
+
+**"could not clone the repository"।** Private repository-র জন্য SSH address ব্যবহার করুন আর deploy key
+যোগ করা আছে কিনা check করুন। Public repository-র জন্য address আর branch-এর নাম check করুন।
+
+**"Railpack could not plan a build for this repository"।** Railpack project-টা চিনতে পারেনি। একটা
+Dockerfile যোগ করে **Dockerfile** বেছে নিন, অথবা check করুন যে build folder আপনার `package.json`,
+`requirements.txt`, `go.mod` ইত্যাদি থাকা folder-কেই দেখাচ্ছে।
+
+**"the new release did not start, so the previous one keeps running"।** নতুন build crash করেছে, বা 3
+মিনিটের মধ্যে তার port-এ সাড়া দেয়নি। Message-এর log লাইনগুলো দেখুন, check করুন যে **কন্টেইনারের ভেতরের
+পোর্ট** আপনার app যেটায় শোনে সেটাই, আর container-এর ভেতরে app `127.0.0.1`-এ নয়, `0.0.0.0`-এ শোনে।
+
+**"two builds are already running on this server"।** একটা শেষ হওয়া পর্যন্ত অপেক্ষা করুন, তারপর আবার
+deploy করুন।
+
+## সম্পর্কিত
+
+- [Docker app](/guides/apps/docker-apps/): Domain, variable, রেখে দেওয়া folder আর limit একইভাবে কাজ করে।
+- [Web terminal](/guides/apps/terminal/): আপনার চলমান app-এর ভেতরে একটা shell।
+- [Notification](/guides/admin/notifications/): Deploy fail করলে খবর পান।

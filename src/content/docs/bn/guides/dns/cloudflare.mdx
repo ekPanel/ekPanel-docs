@@ -1,0 +1,311 @@
+---
+title: Cloudflare DNS
+description: একটা Cloudflare account যুক্ত করুন, যাতে ekPanel আপনার website, app আর email-এর DNS record বানায় ও ঠিক রাখে, আর panel থেকেই zone চালান।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+ekPanel আপনার domain-এর DNS [Cloudflare](https://www.cloudflare.com/)-এ রাখতে পারে। একবার Cloudflare
+account যুক্ত করবেন, একটা domain বেছে নেবেন, তারপর থেকে সেই domain-এর প্রতিটা website, app আর mail domain
+নিজে থেকেই DNS record পাবে। আপনি কিছু যোগ করলে, সরালে বা মুছলে record-গুলোও সাথে সাথে হালনাগাদ হয়।
+
+<Aside type="caution" title="আসল Cloudflare API-তে এখনো পরীক্ষা হয়নি">
+Cloudflare integration পরীক্ষা করা হয়েছে Cloudflare API-এর একটা in-memory কপির সাথে, Go test-এ আর একটা test
+VM-এ। আসল Cloudflare account আর domain দিয়ে এখনো চেষ্টা করা হয়নি। আপনার এখানে কিছু অন্যরকম আচরণ করলে
+আমাদের জানান (দেখুন [support](/project/support/))।
+</Aside>
+
+## শুরু করার আগে
+
+- একটা Cloudflare account (free plan-ই যথেষ্ট)।
+- একটা domain, যেটা আগে থেকেই ওই Cloudflare account-এ আছে, অথবা যেটা আপনি সেখানে যোগ করতে পারবেন।
+- ekPanel-এ ওই domain-এ অন্তত একটা website বা app, যাতে record বানানোর মতো কিছু থাকে। চাইলে আগে domain যোগ
+  করতে পারেন; site যোগ করলেই record চলে আসবে।
+- আপনার server-এর একটা public address লাগবে। ekPanel নিজেই সেটা খুঁজে নেয়; server NAT বা load balancer-এর
+  পেছনে থাকলে server-এর পাতায় **DNS-এর জন্য পাবলিক ঠিকানা** (Public addresses for DNS)-এ সেটা দিন।
+
+<Aside type="note">
+একটা domain **হয়** Cloudflare-এ থাকে, **নয়তো** [ekPanel-এর নিজের name server](/guides/dns/name-servers/)-এ,
+দুই জায়গায় একসাথে নয়। Domain যদি আগে থেকেই একটায় থাকে, অন্যটা সেটা নিতে চায় না, বলে "এই ডোমেইন আগে
+থেকেই ekPanel-এ চালু আছে।"
+</Aside>
+
+## একটা Cloudflare API token বানান
+
+ekPanel Cloudflare-এর সাথে কথা বলে একটা API token দিয়ে: এমন একটা key, যেটা শুধু আপনি যা টিক দেন সেটুকুরই
+অনুমতি দেয়।
+
+<Steps>
+
+1. Cloudflare-এ **My Profile → API Tokens** খুলুন
+   ([dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens))।
+   ekPanel-এর **DNS** পাতাতেও সেখানে যাওয়ার link আছে (**API tokens খুলুন**)।
+
+2. **Create Custom Token** বেছে নিন আর একটা নাম দিন, যেমন `ekPanel`।
+
+3. ঠিক এই permission-গুলো যোগ করুন:
+
+   | Scope   | Item             | Access |
+   | ------- | ---------------- | ------ |
+   | Zone    | DNS              | Edit   |
+   | Zone    | Zone Settings    | Edit   |
+   | Zone    | Cache Purge      | Purge  |
+   | Zone    | Zone             | Edit   |
+   | Account | Account Settings | Read   |
+
+   **Zone Resources**-এ সব zone বেছে নিন, অথবা শুধু সেগুলো যেগুলো ekPanel চালাবে।
+
+4. Token তৈরি করে কপি করে নিন। Cloudflare এটা মাত্র একবারই দেখায়।
+
+</Steps>
+
+কোন permission কী কাজে লাগে:
+
+| Permission                  | কী কাজে লাগে                                                        |
+| --------------------------- | ------------------------------------------------------------------ |
+| Zone · DNS · Edit           | Record বানানো, বদলানো আর মোছা                                        |
+| Zone · Zone Settings · Edit | SSL/TLS mode পড়া আর সেটা Full (strict)-এ বদলানো                       |
+| Zone · Cache Purge · Purge  | **ক্যাশ খালি করুন** (Purge cache) বাটন                                 |
+| Zone · Zone · Edit          | ekPanel থেকে Cloudflare-এ নতুন domain যোগ করা                         |
+| Account · Account Settings · Read | আপনার account খুঁজে পাওয়া, যেটা নতুন domain যোগ করতে লাগে          |
+
+<Aside type="tip">
+শুধু আগে থেকেই Cloudflare-এ থাকা domain চালালে **Account Settings: Read** বাদ দিতে পারেন। তখন ekPanel বলে
+"এই টোকেন নিজের অ্যাকাউন্ট দেখতে পায় না, তাই নতুন ডোমেইন Cloudflare-এই যোগ করতে হবে", আর নতুন domain আগে
+Cloudflare-এর dashboard-এ যোগ করে নিতে হয়। **Zone Settings: Edit** না দিলে SSL/TLS card-এ লেখা আসে "টোকেন
+হয়তো এই সেটিং পড়তে পারে না।"
+</Aside>
+
+## Account যুক্ত করুন
+
+<Steps>
+
+1. Panel-এর menu থেকে **DNS** খুলুন। নিচে **Cloudflare** অংশে যান।
+
+2. **Cloudflare যুক্ত করুন** (Connect Cloudflare)-এর নিচে চাইলে account-টার একটা **নাম** (Name) দিন (এটা
+   ঐচ্ছিক, শুধু account আলাদা করে চেনার জন্য; না দিলে ekPanel Cloudflare account-এর নামটাই ব্যবহার করে)।
+
+3. **API টোকেন** (API token)-এ token পেস্ট করে **Cloudflare যুক্ত করুন** বেছে নিন।
+
+</Steps>
+
+ekPanel আগে Cloudflare-এর সাথে token যাচাই করে নেয়। Cloudflare token না নিলে দেখবেন "Cloudflare টোকেনটি গ্রহণ
+করেনি। দেখুন এটি চালু আছে আর তালিকার অনুমতিগুলো আছে কি না।" ঠিকঠাক token encrypt করে রাখা হয়, আর কখনো আবার
+দেখানো হয় না।
+
+**আরেকটি অ্যাকাউন্ট যুক্ত করুন** (Connect another account) দিয়ে একাধিক account যুক্ত করতে পারেন।
+**Cloudflare অ্যাকাউন্ট** (Cloudflare accounts)-এর তালিকায় প্রতিটা account আর ekPanel তার কয়টা domain চালাচ্ছে
+তা দেখা যায়।
+
+<Aside type="note" title="Customer">
+Customer-রা নিজেদের Cloudflare account যুক্ত করতে পারেন। তাঁদের domain-এ শুধু তাঁদের নিজেদের website আর app-এর
+record-ই বসে। Administrator-এর domain-এ ওই domain-এর যে কারও site-এর record থাকতে পারে।
+</Aside>
+
+## Domain যোগ করুন
+
+**Cloudflare** অংশে **ডোমেইন যোগ করুন** (Add a domain) বেছে নিন। Dialog-এর দুটো অংশ আছে।
+
+<Tabs>
+<TabItem label="আগে থেকেই Cloudflare-এ থাকা domain">
+
+<Steps>
+
+1. একাধিক account যুক্ত করে থাকলে **Cloudflare অ্যাকাউন্ট** (Cloudflare account) বেছে নিন।
+
+2. **নতুন রেকর্ড Cloudflare-এর মাধ্যমে প্রক্সি করুন** (Proxy new records through Cloudflare) টিক দেওয়া রাখুন,
+   অথবা টিক তুলে দিন (নিচে [Proxied নাকি শুধু DNS](#proxied-or-dns-only) দেখুন)।
+
+3. **Cloudflare-এ আপনার ডোমেইন** (Your domains in Cloudflare)-এর নিচে domain-এর পাশে **চালু করুন** (Manage)
+   বেছে নিন। যেসব domain ekPanel আগে থেকেই চালাচ্ছে, সেগুলোর পাশে এর বদলে **চালু আছে** (Managed) দেখায়।
+
+</Steps>
+
+</TabItem>
+<TabItem label="নতুন domain">
+
+<Steps>
+
+1. **Cloudflare-এ নতুন ডোমেইন যোগ করুন** (Add a new domain to Cloudflare)-এর নিচে domain লিখুন, যেমন
+   `example.com`।
+
+2. **Cloudflare-এ যোগ করুন** (Add to Cloudflare) বেছে নিন। ekPanel domain-টা আপনার Cloudflare account-এ যোগ
+   করে খুলে দেয়।
+
+3. Domain-টা দুটো Cloudflare name server-সহ <Badge text="নেমসার্ভারের অপেক্ষায়" variant="caution" /> দেখায়।
+   যে registrar থেকে domain কিনেছেন, সেখানে এর name server বদলে এই দুটো দিন। Cloudflare এগুলো দেখলেই domain
+   চালু করে, সাধারণত এক ঘণ্টার মধ্যে।
+
+</Steps>
+
+এর জন্য **Account Settings: Read** permission লাগে।
+
+</TabItem>
+</Tabs>
+
+ekPanel সাথে সাথেই একটা sync শুরু করে আর domain-এর পাতা খুলে দেয়।
+
+## ekPanel যেসব record বানায়
+
+Domain-এর নিচের প্রতিটা host name-এর জন্য ekPanel দরকারি record বানায়, আর সেগুলোতে `Managed by ekPanel`
+comment দিয়ে রাখে (Cloudflare-এর dashboard-এও এটা দেখবেন)। Panel-এ এগুলোর গায়ে একটা
+<Badge text="ekPanel" variant="success" /> badge থাকে।
+
+| কী                                       | Record                                          | Proxied?         |
+| ---------------------------------------- | ----------------------------------------------- | ---------------- |
+| প্রতিটা website, তার extra domain, app আর preview | `A` (IPv4) আর `AAAA` (IPv6), তার server-এর দিকে | Zone-এর default, প্রতিটা record-এ আলাদা করে বদলানো যায় |
+| Mail host name (যেমন `mail.example.com`) | `A` আর `AAAA`, mail server-এর দিকে              | কখনো না          |
+| প্রতিটা mail domain                       | `MX`, SPF, DKIM, DMARC আর TLS reporting record   | কখনো না (proxy করা যায় না) |
+
+Server-এর public IPv4 address থাকলে তবেই `A` record বানানো হয়, আর public IPv6 address থাকলে তবেই `AAAA` record।
+ekPanel ব্যবহার করে **DNS-এর জন্য পাবলিক ঠিকানা**-তে আপনার হাতে দেওয়া address, না থাকলে server যে প্রথম public
+address জানায় সেটা (কখনো private, shared-NAT বা site-local address নয়)।
+
+একটা host name যায় **সবচেয়ে নির্দিষ্ট** zone-এ, যেটা তাকে ধারণ করে। আপনি যদি `example.com` আর
+`shop.example.com` দুটোই চালান, তাহলে `www.shop.example.com`-এর record যাবে `shop.example.com`-এ।
+
+### Record কখন বদলায়
+
+Website, app বা mail domain-এ প্রতিটা পরিবর্তনের পর ekPanel zone sync করে, আর প্রতি ১০ মিনিটে সব zone একবার
+দেখে নেয়। Domain-এর পাতায় **এখনই মেলান** (Sync now) বেছে নিয়েও sync করতে পারেন। একটা sync:
+
+- নতুন host name-এর জন্য record বানায়,
+- server-এর address বদলালে record হালনাগাদ করে,
+- যে record আর কারও দরকার নেই সেগুলো মোছে, তবে শুধু তখনই যদি এর মধ্যে কেউ সেগুলো না বদলে থাকে,
+- কোনো site-এর এখনো দরকার থাকা অবস্থায় কেউ হাতে record মুছে ফেললে সেটা আবার বানায়।
+
+ekPanel শুধু সেই record-ই বদলায় বা মোছে, যেগুলো **ও নিজে বানিয়েছে** আর **তারপর কেউ বদলায়নি**। আপনার নিজের
+record-এ হাত দেয় না। একই নামে অন্য কাজের TXT record (যেমন site verification)-ও যেমন আছে তেমন থাকে।
+
+DNS পাতার **রেকর্ড** (Records) কলামে দেখায় প্রতিটা zone-এ ekPanel কয়টা record বানিয়েছে, আর **মিলানো**
+(Synced) দেখায় শেষ sync কখন হয়েছে।
+
+## Proxied নাকি শুধু DNS
+
+Cloudflare-এর proxy (কমলা মেঘ) মানে ভিজিটররা Cloudflare-এ যুক্ত হন, আর Cloudflare request-টা আপনার server-এ
+পাঠিয়ে দেয়। এতে server-এর address লুকানো থাকে আর file cache হয়। **শুধু DNS** (DNS only) মানে ভিজিটররা সরাসরি
+আপনার server-এ যুক্ত হন।
+
+- **নতুন রেকর্ড Cloudflare-এর মাধ্যমে প্রক্সি করুন** ঠিক করে ekPanel-এর বানানো record-এর default কী হবে।
+  শুরুতে এটা টিক দেওয়া থাকে। পরে domain-এর পাতায় **সেটিংস** (Settings)-এ গিয়ে বদলাতে পারবেন।
+- প্রতিটা `A`, `AAAA` বা `CNAME` record-এর **প্রক্সি** (Proxy) কলামে নিজস্ব switch আছে: বদলাতে **প্রক্সি
+  চালু** (Proxied) বা **শুধু DNS** বেছে নিন। পরের sync-গুলোতেও ekPanel আপনার পছন্দ ধরে রাখে।
+- Mail record সবসময় শুধু DNS: Cloudflare-এর proxy শুধু web traffic বহন করে।
+
+## যা দেখে নিতে হবে
+
+Sync যদি এমন কিছু পায় যেটা নিজে থেকে বদলানো উচিত নয়, তখন domain-এ
+<Badge text="বিষয় দেখতে হবে" variant="caution" /> দেখায়, আর এর পাতায় **আপনার নজর দরকার** (Needs your
+attention)-এর নিচে সেগুলোর তালিকা থাকে।
+
+| কী লেখা থাকে | কী হয়েছে | কী করবেন |
+| --- | --- | --- |
+| "`A www.example.com` Cloudflare-এ বদলে X করা হয়েছে; ekPanel দিত Y।" | ekPanel-এর বানানো একটা record কেউ বদলেছে। | বদলটা ভুল হলে **ekPanel-এর মান দিন** (Use ekPanel's value) বেছে নিন। রেখে দিতে চাইলে কিছু করবেন না; ekPanel এটা overwrite করবে না। |
+| "`A www.example.com` আগে থেকেই ব্যবহৃত (X); ekPanel দিত Y।" | ekPanel বানায়নি এমন একটা record পথ আটকে আছে: ওই নামে একই type-এর একটা record, অথবা একটা `CNAME`। | সেটা বদলে দিতে **ekPanel-এর মান দিন** বেছে নিন (পথ আটকানো `CNAME` হলে মুছে ফেলা হয়), অথবা zone editor-এ আপনার record মুছুন বা নাম বদলান। |
+| "সার্ভার *name*-এর এখনো কোনো পাবলিক ঠিকানা নেই; সার্ভারের পেজে দিন।" | Server-এর এমন কোনো public IPv4 বা IPv6 address নেই যেটা ekPanel ব্যবহার করতে পারে। | Server-এর পাতা খুলে **DNS-এর জন্য পাবলিক ঠিকানা**-তে এর address দিন। |
+
+**ekPanel-এর মান দিন** পরের sync-এর অপেক্ষা না করে সাথে সাথেই ekPanel-এর record লিখে দেয়।
+
+যে domain <Badge text="মিলানো ব্যর্থ" variant="danger" /> দেখায়, সেটা একেবারেই sync করা যায়নি, সাধারণত কারণ
+Cloudflare কোনো request ফিরিয়ে দিয়েছে। Error-টা zone-এর সাথে রাখা থাকে; দেখে নিন token এখনো চালু আছে কিনা আর
+উপরের permission-গুলো আছে কিনা।
+
+## Zone editor
+
+Domain-এর পাতায় Cloudflare zone-এর **সব** record নাম অনুযায়ী সাজানো থাকে, ekPanel-এর record আলাদা করে চিহ্নিত।
+
+Record যোগ করতে **রেকর্ড যোগ করুন** (Add record) বেছে নিন, **ধরন** (Type) বাছুন, তারপর **নাম** (Name) আর
+**মান** (Content) লিখুন:
+
+| ধরন     | মান                                         | উদাহরণ                        |
+| ------- | ------------------------------------------ | ----------------------------- |
+| `A`     | একটা IPv4 address                           | `203.0.113.10`                |
+| `AAAA`  | একটা IPv6 address                           | `2001:db8::10`                |
+| `CNAME` | একটা host name                              | `example.netlify.app`         |
+| `MX`    | Mail server-এর host name, সাথে একটা **অগ্রাধিকার** (Priority) (0 থেকে 65535) | `mail.example.net` |
+| `TXT`   | এক লাইনের লেখা, সর্বোচ্চ 4096 অক্ষর          | `v=spf1 include:_spf.example.net ~all` |
+| `CAA`   | Flags, tag আর উদ্ধৃতিচিহ্নের ভেতরে মান         | `0 issue "letsencrypt.org"`   |
+| `NS`    | একটা name server-এর host name              | `ns1.example.net`             |
+
+**নাম**-এ লিখুন `www`, domain নিজের জন্য `@`, অথবা zone-এর ভেতরের পূর্ণ নাম, যেমন `blog.example.com`। শুধু
+`A`, `AAAA` আর `CNAME` record proxy করা যায়।
+
+আপনার বানানো record বদলানো (পেন্সিল) আর মোছা (বিন) যায়। ekPanel-এর বানানো record যায় না: সেগুলো যে website বা
+app-এর, তার সাথেই চলে আর তার সাথেই চলে যায়। এগুলোর ক্ষেত্রে আপনি শুধু proxy বদলাতে পারেন। Cloudflare-এ থাকা
+অন্য type-এর record (যেমন `SRV`) তালিকায় দেখা যায়, আর এখান থেকে মুছতেও পারেন, কিন্তু বদলাতে গেলে ফিরিয়ে দেওয়া
+হয়; সেগুলো Cloudflare-এর dashboard-এ বদলান।
+
+## SSL/TLS mode
+
+Record proxy করা থাকলে Cloudflare আপনার server-এর সাথে কীভাবে যুক্ত হবে, সেটা ঠিক করে Cloudflare-এর SSL/TLS
+mode। **SSL/TLS মোড** (SSL/TLS mode) card-এ domain-এর এখনকার mode দেখায়:
+
+| Mode            | এর মানে                                                        | ekPanel যা বলে        |
+| --------------- | -------------------------------------------------------------- | ------------------- |
+| Off             | ভিজিটরদের জন্য কোনো HTTPS নেই                                    | প্রস্তাবিত নয়         |
+| Flexible        | Cloudflare পর্যন্ত HTTPS, তারপর আপনার server পর্যন্ত **encryption ছাড়া** | প্রস্তাবিত নয়         |
+| Full            | আপনার server পর্যন্ত encrypted, কিন্তু certificate যাচাই হয় না     | প্রস্তাবিত নয়         |
+| Full (strict)   | আপনার server পর্যন্ত encrypted, certificate যাচাই হয়               | প্রস্তাবিত           |
+
+ekPanel-এ আপনার site-গুলোর নিজস্ব বৈধ certificate আছে, তাই **Full (strict)** পুরো পথ encrypt করে আর যাচাইও করে।
+Mode অন্য কিছু হলে **Full (strict) ব্যবহার করুন** (Use Full (strict)) বেছে নিন।
+
+<Aside type="caution">
+**Flexible**-এ যে site HTTP থেকে HTTPS-এ redirect করে, সেটা redirect loop-এ আটকে যেতে পারে, আর Cloudflare ও
+আপনার server-এর মাঝের traffic encrypted থাকে না। Full (strict) ব্যবহার করুন।
+</Aside>
+
+## Cache খালি করুন
+
+Domain-এর পাতার উপরে **ক্যাশ খালি করুন** (Purge cache) এই domain-এর পুরো Cloudflare cache খালি করে দেয়। এমন file
+(যেমন CSS বা ছবি) বদলানোর পর এটা ব্যবহার করুন, যেগুলোর পুরোনো version Cloudflare এখনো দেখিয়ে যাচ্ছে।
+
+## ভিজিটরদের আসল address
+
+Record proxy করা থাকলে প্রতিটা request আপনার server-এ পৌঁছায় Cloudflare-এর কোনো একটা address থেকে। ভিজিটরের
+নিজের address Cloudflare পাঠায় `CF-Connecting-IP` header-এ।
+
+ekPanel-এর web server (Caddy) এই header বিশ্বাস করে **শুধু** তখন, যখন request আসে
+[Cloudflare-এর প্রকাশিত address range](https://www.cloudflare.com/ips/) থেকে। ফলে আপনার access log, traffic
+chart আর [CrowdSec](/guides/security/crowdsec/) ভিজিটরের আসল address দেখে, আর অন্য কোথাও থেকে আসা জাল header
+উপেক্ষা করা হয়।
+
+## Domain চালানো বন্ধ করুন
+
+Domain-এর পাতায় **সেটিংস**-এ গিয়ে **চালানো বন্ধ করুন** (Stop managing) বেছে নিন। ekPanel তখন আর এই domain-এর
+record মিলিয়ে রাখে না; domain Cloudflare-এ থেকে যায়।
+
+Cloudflare থেকেও record সরাতে **ekPanel-এর তৈরি রেকর্ডগুলোও মুছুন** (Also delete the records ekPanel made) টিক
+দিন। কেউ হাতে বদলেছে এমন record কখনো মোছা হয় না। তখন এই domain-এর আপনার website আর app আর নামে পাওয়া যাবে না।
+
+পুরো একটা Cloudflare account বিচ্ছিন্ন করতে **Cloudflare অ্যাকাউন্ট**-এর নিচে সেটার পাশের বিন বেছে নিন। এর
+domain-গুলো আর মিলিয়ে রাখা হয় না; record-গুলো Cloudflare-এ থেকে যায়।
+
+## সীমা আর যা এখনো নেই
+
+- আসল Cloudflare API-তে এখনো পরীক্ষা হয়নি (উপরের note দেখুন)।
+- DNS দিয়ে wildcard certificate (DNS-01) এখনো নেই।
+- Zone editor শুধু `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `CAA` আর `NS` দেয়।
+- এরপর কী আসছে, দেখুন [roadmap](/project/roadmap/)।
+
+## সমস্যা সমাধান
+
+**Domain "নেমসার্ভারের অপেক্ষায়"-তেই থেকে যাচ্ছে।** Registrar-এ এখনো পুরোনো name server আছে, অথবা পরিবর্তন
+এখনো সব জায়গায় ছড়ায়নি। `dig NS example.com +short` দিয়ে দেখে নিন।
+
+**কোনো record আসছে না।** দেখুন site-এর domain এই zone-এর নিচে কিনা, server-এর public address আছে কিনা, তারপর
+**এখনই মেলান** বেছে নিন। কোনো customer-এর host name শুধু সেই customer-এর নিজের zone-এ বা administrator-এর
+zone-এ যায়।
+
+**ভিজিটররা redirect loop বা "too many redirects" দেখছেন।** SSL/TLS mode সম্ভবত Flexible। **Full (strict)
+ব্যবহার করুন** বেছে নিন।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="ekPanel-এর নিজের name server" href="/guides/dns/name-servers/" description="Cloudflare-এর বদলে নিজের server থেকে DNS-এর উত্তর দিন।" />
+	<LinkCard title="Email" href="/guides/dns/email/" description="Mail domain, যেগুলোর record ekPanel Cloudflare-এ বসায়।" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="Cloudflare দিয়ে আসা ভিজিটরদের ক্ষেত্রে ban কীভাবে কাজ করে।" />
+</CardGrid>

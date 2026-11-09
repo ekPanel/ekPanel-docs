@@ -1,0 +1,287 @@
+---
+title: File, SFTP আর FTP
+description: Browser থেকে, বা SFTP বা FTP program দিয়ে website-এর file manage করুন, আর disk space-এর সীমা কীভাবে খাটে।
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Website-এ file রাখার তিনটা উপায় আছে: panel-এর **file manager**, **SFTP** (FileZilla বা WinSCP-এর মতো program-এর
+জন্য recommended উপায়), আর যেসব পুরনো tool শুধু FTP বোঝে তাদের জন্য **FTP over TLS**। তিনটাই website-এর নিজের
+folder-এর ভেতরে আটকানো থাকে।
+
+## Website-এর folder
+
+প্রতিটা website-এর একটা home folder আছে, `/home/<account>/`, যেখানে `<account>` হলো site-এর Linux account
+(site-এর page-এ **বিস্তারিত** (Details)-এর নিচে দেখায়):
+
+| Folder | এতে কী থাকে |
+| --- | --- |
+| `public_html` | Website। আপনার file এখানে রাখুন |
+| `logs` | `php-error.log`, PHP site-এর PHP error log |
+| `tmp` | চলতে থাকা upload, PHP session আর temporary file |
+| `.trash` | File manager-এ মুছে ফেলা file, trash খালি না করা পর্যন্ত |
+
+কিছু application এখানে folder যোগ করে, যেমন [Moodle](/guides/websites/php-apps/)-এর জন্য `moodledata`।
+
+Home folder নিজে root-এর (SFTP-র lock-এর জন্য এটা দরকার), তাই সরাসরি এর ভেতরে file বানাতে পারবেন না।
+`public_html` বা অন্য folder-গুলোর ভেতরে কাজ করুন। `public_html`, `logs`, `tmp` আর trash মুছে ফেলা যায় না।
+
+## File manager
+
+Website খুলে **ফাইল** (Files)-এ click করুন। File manager `public_html`-এ শুরু হয়। **হোম ফোল্ডার** (Home folder)-এ
+যেতে বাড়ির icon ব্যবহার করুন, আর ওপরে ফিরে যেতে উপরের path ব্যবহার করুন।
+
+### Upload
+
+<Steps>
+
+1. যে folder-এ file গুলো রাখতে চান সেখানে যান।
+
+2. **আপলোড** (Upload)-এ click করে file বেছে নিন, বা আপনার computer থেকে file টেনে list-এর ওপর ছেড়ে দিন।
+
+3. Progress দেখুন। একই নামের file আগে থেকে থাকলে দেখবেন "এই নামে আগেই একটা ফাইল আছে।" (A file with this name
+   already exists.)। Overwrite করতে **বদলে দিন** (Replace it)-এ click করুন।
+
+</Steps>
+
+File ৫১২ KB-র টুকরো করে পাঠানো হয়, তাই বড় file-ও চলে। শেষ টুকরো পৌঁছানোর পরেই কেবল file টা তার নামে দেখা যায়।
+
+### File edit করুন
+
+কোনো file-এর নামে click করলে সেটা code editor-এ খোলে, PHP, HTML, CSS, JavaScript, TypeScript আর JSON-এর জন্য রং
+সহ। **Ctrl S** (Mac-এ **Cmd S**) চাপুন বা **সেভ** (Save)-এ click করুন। Save না করা পরিবর্তন রেখে বন্ধ করলে panel
+আগে জিজ্ঞেস করে।
+
+- Editor **২ MB** পর্যন্ত file খোলে। এর চেয়ে বড় file download করে নিন।
+- যেসব file text না সেগুলোতে দেখায় "এটা টেক্সট ফাইল নয়, তাই এখানে এডিট করা যাবে না" (This file is not text, so
+  it cannot be edited here)।
+
+**নতুন ফাইল** (New file) আর **নতুন ফোল্ডার** (New folder) বর্তমান folder-এ খালি একটা করে বানায়।
+
+### Select, নাম বদলানো, download
+
+Select করতে file-এ টিক দিন। যে bar টা আসে তাতে, আপনি কী select করেছেন তার ওপর নির্ভর করে, থাকে:
+**ডাউনলোড** (Download) (একটা file), **নাম বদলান** (Rename) (একটা item), **এক্সট্র্যাক্ট** (Extract) (একটা archive),
+**কম্প্রেস** (Compress) আর **মুছুন** (Delete)।
+
+### Zip আর unzip
+
+- **কম্প্রেস** select করা file আর folder-গুলোকে একটা নতুন `.zip` file-এ রাখে। নাম অবশ্যই `.zip` দিয়ে শেষ হতে
+  হবে। Link বাদ দেওয়া হয়।
+- **এক্সট্র্যাক্ট** একটা `.zip`, `.tar`, `.tar.gz` বা `.tgz` file যে folder-এ আছে সেখানেই খুলে দেয়।
+
+Server-কে রক্ষা করতে extraction:
+
+- **১০ GB** খোলা data বা **২,০০,০০০** file আর folder-এ পৌঁছালে থেমে যায়;
+- যেসব entry target folder-এর বাইরে গিয়ে পড়বে সেগুলো ফিরিয়ে দেয় ("zip slip" কৌশল);
+- archive-এর ভেতরে থাকা link কখনো বানায় না।
+
+Extract করা file-এর permission হয় `644`, বা executable হলে `755`; folder-এর হয় `755`।
+
+### Permission
+
+কোনো file-এর permission (যেমন `644`) বদলাতে তাতে click করুন। তিনটা digit ব্যবহার করুন: owner, group, others।
+বেশিরভাগ site-এর জন্য file-এ `644` আর folder-এ `755` ঠিক থাকে। Link-এর নিজের কোনো permission নেই আর বদলানো যায় না।
+
+### Trash
+
+**মুছুন** item-গুলোকে trash-এ সরিয়ে দেয়, যেখানে নামের সাথে মোছার সময় থাকে। এগুলো নিয়ে কাজ করতে **ট্র্যাশ**
+(Trash) খুলুন:
+
+- **ফেরত আনুন** (Restore) একটা item-কে তার পুরনো নামে `public_html`-এ ফিরিয়ে রাখে।
+- **স্থায়ীভাবে মুছুন** (Delete forever) select করা item-গুলো চিরতরে মুছে দেয়।
+- **ট্র্যাশ খালি করুন** (Empty trash) এর ভেতরের সবকিছু মুছে দেয়।
+
+<Aside type="caution">
+Trash-এর file তখনো disk space নেয় আর package-এর সীমার মধ্যে গোনা হয়, আর trash-এর backup নেওয়া হয় না। নিশ্চিত
+হলে এটা খালি করুন।
+</Aside>
+
+### File manager কীভাবে site-গুলোকে আলাদা রাখে
+
+প্রতিটা file-এর কাজ একটা আলাদা worker process-এ চলে, যেটা নিজেকে site-এর home folder-এ আটকে রাখে আর site-এর
+account হিসেবে চলে। Path-এ কোনো link বা `..` থাকলেও সেটা অন্য site-এর file বা `/etc/shadow`-এর মতো system file-এ
+পৌঁছাতে পারে না। Upload, মোছা আর নাম বদলানোর মতো পরিবর্তন audit log-এ লেখা হয়।
+
+## SFTP
+
+SFTP file পাঠায় SSH দিয়ে, encrypted অবস্থায়। FileZilla, WinSCP, Cyberduck বা আপনার code editor-এর deploy
+feature-এর জন্য এটাই সবচেয়ে ভালো।
+
+### চালু করুন
+
+<Steps>
+
+1. Website খুলে **SFTP অ্যাক্সেস** (SFTP access) খুঁজুন। **SFTP চালু করুন** (Turn on SFTP)-এ click করুন।
+
+2. দেখানো password টা copy করুন। "এটা শুধু একবার দেখানো হয়, ekPanel এটা রাখে না।"
+
+3. Card-এর তথ্য দিয়ে connect করুন:
+   - **সার্ভার** (Server): server-এর host name (বা এর IP address);
+   - **পোর্ট** (Port): `22`;
+   - **ইউজার নাম** (User name): site-এর Linux account, যেমন `myshop_3fa9`;
+   - **পাসওয়ার্ড** (Password): যেটা copy করেছেন।
+
+</Steps>
+
+Password হারিয়ে গেছে? **নতুন পাসওয়ার্ড** (New password)-এ click করুন। পুরনোটা আর কাজ করবে না।
+
+<Tabs>
+<TabItem label="FileZilla">
+
+**File → Site Manager**-এ এভাবে একটা site যোগ করুন:
+
+- **Protocol**: `SFTP - SSH File Transfer Protocol`
+- **Host**: আপনার server, **Port**: `22`
+- **Logon Type**: `Normal`, panel থেকে পাওয়া user name আর password দিয়ে
+
+প্রথমবার FileZilla জিজ্ঞেস করে আপনি server-এর key বিশ্বাস করেন কি না। Accept করুন।
+
+</TabItem>
+<TabItem label="Command line">
+
+```bash
+sftp myshop_3fa9@server.example.com
+```
+
+তারপর `put`, `get`, `ls` আর `cd` ব্যবহার করুন। আপনার file গুলো `public_html`-এ আছে।
+
+</TabItem>
+</Tabs>
+
+### SSH key দিয়ে sign in
+
+Key password-এর চেয়ে নিরাপদ, আর টাইপ করার ঝামেলাও বাঁচায়।
+
+<Steps>
+
+1. **SFTP অ্যাক্সেস** card-এ **SSH key** (SSH keys) খুলুন।
+
+2. আপনার **public** key paste করুন, যেমন `~/.ssh/id_ed25519.pub`-এর ভেতরের লেখা। প্রতি লাইনে একটা key, সর্বোচ্চ
+   ২০টা key।
+
+3. **key সেভ করুন** (Save keys)-এ click করুন।
+
+</Steps>
+
+যেসব key type চলে: Ed25519, ECDSA (security-key variant-গুলোও) আর অন্তত 2048 bit-এর RSA। ekPanel key-এর সামনের যেকোনো
+option (যেমন `command=` বা `from=`) সরিয়ে দেয়, তাই paste করা একটা লাইন কখনো key ছাড়া অন্য কিছু হতে পারে না।
+
+### SFTP account কী করতে পারে
+
+- এগুলো site-এর home folder-এ আটকানো থাকে (`chroot`): এরা `public_html`, `logs` আর `tmp` দেখে, server-এর আর কিছু
+  না।
+- এরা শুধু file আদান-প্রদান করতে পারে। Command চালাতে পারে না, আর port ও agent forwarding বন্ধ থাকে।
+- নতুন file আর folder umask `022` পায়, তাই সাধারণত সেগুলো `644` আর `755` হয়, যদি না আপনার SFTP program নিজেই
+  permission set করে।
+- SFTP বন্ধ করলে password ভুলে যাওয়া হয়; আবার চালু করলে নতুন একটা বানানো হয়।
+
+Customer-দের জন্য তাঁদের [package](/guides/admin/customers/)-এ SFTP-র অনুমতি থাকতে হবে। নাহলে panel উত্তর দেয়
+"প্যাকেজে SFTP নেই।" (the package does not include SFTP)।
+
+## FTP over TLS
+
+শুধু সেইসব tool আর website builder-এর জন্য FTP ব্যবহার করুন যেগুলো SFTP ব্যবহার করতে পারে না। ekPanel-এর FTP সবসময়
+encrypt করে: সাধারণ, encryption ছাড়া FTP ফিরিয়ে দেওয়া হয়।
+
+### চালু করুন
+
+<Steps>
+
+1. Website খুলে **FTP** খুঁজুন। **FTP চালু করুন** (Turn on FTP)-এ click করুন।
+
+2. দেখানো password টা copy করুন। এই FTP password SFTP password থেকে আলাদা, আর শুধু এখনই দেখানো হয়।
+
+3. Card-এর তথ্য দিয়ে connect করুন:
+   - **সার্ভার** (Server): server-এর host name বা IP address;
+   - **পোর্ট** (Port): `21`;
+   - **এনক্রিপশন** (Encryption): FTP over TLS (explicit), বাধ্যতামূলক;
+   - **ইউজার নাম** (User name): site-এর Linux account।
+
+</Steps>
+
+Password বদলাতে **নতুন পাসওয়ার্ড**-এ click করুন, আর দরকার না থাকলে **FTP বন্ধ করুন** (Turn off FTP)-এ click করুন।
+
+<Tabs>
+<TabItem label="FileZilla">
+
+**File → Site Manager**-এ এভাবে একটা site যোগ করুন:
+
+- **Protocol**: `FTP - File Transfer Protocol`
+- **Host**: আপনার server, **Port**: `21`
+- **Encryption**: `Require explicit FTP over TLS`
+- **Logon Type**: `Normal`, panel থেকে পাওয়া user name আর password দিয়ে
+
+Transfer mode **Passive**-এ রাখুন (FileZilla-র default)। প্রথম connection-এ FileZilla server-এর certificate-কে
+unknown হিসেবে দেখায়। **Always trust this certificate in future sessions**-এ টিক দিয়ে **OK**-তে click করুন।
+
+</TabItem>
+<TabItem label="WinSCP">
+
+**File protocol** `FTP` আর **Encryption** `TLS/SSL Explicit encryption` বেছে নিন, port `21`, তারপর user name আর
+password। WinSCP জিজ্ঞেস করলে certificate accept করুন।
+
+</TabItem>
+</Tabs>
+
+### FTP কীভাবে set up হয়
+
+- FTP server হলো Pure-FTPd। কোনো server-এ প্রথম website FTP চালু করলে এটা install হয়, আর শেষ website বন্ধ করলে
+  এটা থেমে যায়।
+- প্রতিটা site-এর নিজের login থাকে (site-এর account name আর আলাদা একটা password), site-এর home folder-এ আটকানো।
+  কোনো system account, root সহ, FTP দিয়ে sign in করতে পারে না।
+- Server FTP-র জন্য বানানো একটা **self-signed certificate** ব্যবহার করে, তাই FTP program একবার জিজ্ঞেস করে এটা
+  বিশ্বাস করবে কি না। এটা স্বাভাবিক।
+- Transfer হয় **passive port 30000 থেকে 30100** দিয়ে। Server-এর কোনো site-এ FTP চালু থাকলে
+  [ekPanel-এর manage করা firewall](/guides/security/firewall/) port 21 আর ওই range খুলে দেয়, আর পরে আবার বন্ধ করে।
+- NAT-এর পেছনে থাকা server-এ, যেখানে আপনি হাতে public address set করেন, FTP program-কে transfer-এর জন্য ওই address
+  ব্যবহার করতে বলা হয়।
+- একটা address থেকে সর্বোচ্চ ১০টা connection আর মোট ১০০টা।
+
+<Aside type="caution">
+ekPanel যদি server-এর firewall manage না করে, বা আপনার hosting provider-এর নিজের firewall থাকে, তাহলে সেখানে নিজে
+TCP port 21 আর TCP port 30000 থেকে 30100 খুলে দিন। নাহলে sign in কাজ করবে কিন্তু folder-এর list দেখা আর transfer
+আটকে থাকবে।
+</Aside>
+
+Customer-দের জন্য তাঁদের package-এ FTP-র অনুমতি থাকতে হবে। Default হিসেবে এটা বন্ধ থাকে।
+
+## Disk space-এর সীমা
+
+Customer-এর [package](/guides/admin/customers/) disk space সীমিত করতে পারে। ekPanel প্রতি ৩০ মিনিটে প্রতিটা
+customer-এর ব্যবহার মাপে: তাঁদের website folder (trash সহ), app আর database।
+
+জায়গা শেষ হয়ে গেলে:
+
+- file manager upload, নতুন file আর folder, editor-এ save, extract আর compress ফিরিয়ে দেয়, এই বার্তা দিয়ে:
+  "প্যাকেজের ডিস্কের জায়গা শেষ। কিছু ফাইল মুছে জায়গা খালি করুন।" (the disk space of the package is used up;
+  delete files to free some);
+- নতুন website, database আর app ফিরিয়ে দেওয়া হয়।
+
+মোছা, নাম বদলানো আর download তখনো কাজ করে, যাতে customer জায়গা খালি করতে পারেন। মনে রাখবেন, মুছে ফেলা file trash
+খালি না করা পর্যন্ত সেখানেই থাকে।
+
+<Aside type="note">
+সীমা টা মাপা হয়, এটা filesystem quota না। **SFTP আর FTP দিয়ে upload** এটা দিয়ে **এখনো আটকানো হয় না**, আর দুইবার
+মাপার মাঝের সময়ে ব্যবহার কিছুক্ষণের জন্য সীমা ছাড়িয়ে যেতে পারে।
+</Aside>
+
+## সমস্যা সমাধান
+
+**সবার ওপরের folder-এ upload করার সময় SFTP "permission denied" বলে।** Home folder root-এর। আগে `public_html` খুলুন।
+
+**FTP sign in করে কিন্তু "Retrieving directory listing"-এ আটকে থাকে।** আপনার আর server-এর মাঝে কোথাও passive port
+30000-30100 বন্ধ। সেগুলো খুলুন, বা SFTP ব্যবহার করুন।
+
+**FTP বলে server-এর TLS লাগবে।** আপনার program সাধারণ FTP দিয়ে চেষ্টা করেছে। Explicit FTP over TLS বেছে নিন।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="Backup" href="/guides/data/backups/" description="পুরো একটা website folder restore করুন।" />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" />
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+</CardGrid>

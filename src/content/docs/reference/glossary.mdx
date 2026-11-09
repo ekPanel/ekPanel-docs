@@ -1,0 +1,213 @@
+---
+title: Glossary
+description: Short explanations of the words used in ekPanel and these docs, from agent to zone.
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Words used in the panel and in these docs, in alphabetical order. Each explanation says what
+the word means **in ekPanel**.
+
+## A
+
+**Administrator**: A user with every right in the panel: servers, customers, packages, backups, security. The
+first administrator is created with the setup token. See [Roles](/reference/api/#roles).
+
+**Agent**: The small program (`ekpanel-agent`) that runs as root on every managed server. It connects
+out to the panel, reports statistics, and does the actual work on the server: it writes web
+server configuration, creates Linux accounts, databases and so on. It only accepts typed
+operations from a fixed list. See [Architecture](/concepts/architecture/).
+
+**Allowlist**: Addresses that CrowdSec and country blocking never block, such as your office's address. The
+server's own and Cloudflare's addresses are always on it.
+
+**App**: Something that runs in Docker containers: a Docker image, a Compose file, a Git repository
+built on the server, or a service from the catalogue. Apps can get a domain with HTTPS. Not
+the same as a [website](#w).
+
+**Audit log**: A record of every change made in the panel: who did what, when and from which address. The
+database refuses to change or delete its entries.
+
+## B
+
+**Bouncer**: The part of CrowdSec that turns its decisions into firewall rules (ekPanel uses the nftables
+firewall bouncer).
+
+## C
+
+**Caddy**: The web server on each server. It answers on ports 80 and 443, gets free HTTPS certificates
+by itself, and sends each domain to the right website, app or the panel.
+
+**CA pin**: The fingerprint of the panel's private certificate authority, `sha256:…`, in the connection
+command. The agent checks it when it connects the first time, so it cannot be tricked into
+talking to another panel.
+
+**Catalogue**: The list of one-click services (Nextcloud, Ghost, Uptime Kuma, n8n…). Each is a Compose file
+reviewed by the project.
+
+**cgroup, slice**: A Linux kernel feature that limits how much memory and CPU a group of processes may use. Each
+customer gets a systemd **slice** (a named cgroup) with their package's limits; their PHP,
+cron jobs and containers run inside it.
+
+**Compose file**: A YAML file that describes one or more Docker containers that belong together (Docker
+Compose). Administrators can run any Compose file as an app.
+
+**CrowdSec**: An open-source security engine. It reads SSH and web server logs, recognises attacks such as
+password guessing, and bans the attacking addresses in the firewall. It also shares a
+community blocklist. See [CrowdSec](/guides/security/crowdsec/).
+
+**Customer**: A user who signs in to the panel and sees only their own websites, databases, apps, DNS and
+email, within the limits of their package. See [Customers](/guides/admin/customers/).
+
+## D
+
+**Deploy key**: An SSH key the panel makes for a Git app, so the server can read a private repository. You add
+its public half to the repository as a read-only key.
+
+**Desired state**: What *should* exist on a server: its websites, apps, databases, firewall rules and so on. The
+panel keeps it in its database; the agent makes the server match it. See
+[Desired state](/concepts/desired-state/).
+
+**DKIM, SPF, DMARC**: DNS records that tell other mail servers which servers may send mail for your domain, and
+prove that a message really came from it. ekPanel makes them for every mail domain.
+
+**DNSSEC, DS record**: DNSSEC signs a zone's records, so resolvers can check they were not changed on the way. To
+turn it on for a domain, you give the domain's registrar a **DS record**, which the panel
+shows. Remove the DS record at the registrar **before** you turn DNSSEC off, or the domain
+stops resolving.
+
+**Drift**: A difference between the desired state and the real server, for example a configuration file
+someone deleted. The agent repairs it on the next apply.
+
+## E
+
+**Enrolment, connection command**: Connecting a server to the panel. The panel shows a command with a one-time token and the CA
+pin; running it on the server gives its agent a certificate. The token works once and for one
+hour.
+
+## F
+
+**FTPS**: FTP over TLS: the old FTP protocol, encrypted. ekPanel's FTP accepts encrypted sessions only.
+
+## G
+
+**Glue record**: When a domain's name servers are named inside the domain itself (`ns1.example.com` for
+`example.com`), the registrar must also know their addresses. These address records at the
+registrar are glue records. The panel tells you which ones to set.
+
+## H
+
+**Hosted zone**: A DNS zone served by ekPanel's own name servers, as opposed to a zone at Cloudflare.
+
+## M
+
+**Mutual TLS**: An encrypted connection where **both** sides prove who they are with a certificate. The panel
+and agents use it: the agent checks the panel's certificate, and the panel checks the agent's.
+
+**MX record**: The DNS record that says which server receives mail for a domain.
+
+## N
+
+**Name server**: A server that answers DNS questions for domains. In ekPanel, you can turn chosen servers into
+name servers: one **primary** and any number of **secondaries**, which copy the zones from
+the primary.
+
+**NOTIFY, AXFR**: How name servers stay in sync: the primary sends a NOTIFY message when a zone changes, and the
+secondaries fetch the zone with a zone transfer (AXFR).
+
+## O
+
+**open_basedir**: A PHP setting that keeps a website's PHP scripts inside its own folders. ekPanel sets it for
+every PHP website.
+
+## P
+
+**Package**: A set of limits for customers: how many websites, databases, apps, cron jobs, mail
+domains and mailboxes, how much disk, memory and CPU, the largest mailbox, which PHP versions,
+servers and Docker images, and whether SFTP, FTP and Git apps are included.
+
+**Panel**: The central program (`ekpanel`) with the web UI, the API and the PostgreSQL database. It keeps
+the desired state and sends work to the agents. It runs on one server and can manage many.
+
+**PHP-FPM pool**: A group of PHP worker processes for one website, running as that website's Linux account.
+Each website has its own pool, so websites cannot read each other's files.
+
+**Preview**: A temporary copy of a Git app, built from one pull request and reachable at its own address.
+It is removed when the pull request closes.
+
+## Q
+
+**Quarantine**: A folder only root can read (`/var/lib/ekpanel/quarantine`). The malware scan moves files it
+found there, so they can no longer run, but can still be put back if they were safe.
+
+## R
+
+**Railpack**: A tool that builds a container image from source code without a Dockerfile, by detecting the
+language and framework. ekPanel uses it for Git apps that have no Dockerfile.
+
+**Reconcile, apply**: The agent's work of making a server match the desired state. The panel asks for it after every
+change, when an agent reconnects, and every 10 minutes.
+
+**Recovery key**: The password that encrypts your backups. It is shown once when you set up a backup location
+and stays only on the server. Without it, nobody can read the backups, including you.
+
+**Reseller**: A role planned for phase 4e: someone who sells hosting to their own customers within limits an
+administrator gives them. It is not usable yet.
+
+**Restic repository**: The place where backups are stored: a folder on the server or a bucket in S3-compatible
+storage. ekPanel uses restic, which encrypts and deduplicates: unchanged data is stored only
+once.
+
+## S
+
+**Server**: A Linux machine managed by ekPanel, with an agent on it. The panel's own server is usually the
+first one.
+
+**Setup token**: A one-time token printed by the installer. It is needed to create the first administrator, so
+nobody else can claim a fresh install before you.
+
+**SFTP**: File transfer over SSH. Each website can have an SFTP login, locked into its own folder.
+
+**Sign in as**: An administrator acting inside a customer's account for one hour, to help them. The audit log
+names the administrator.
+
+**Snapshot**: One backup run of one website or database. You restore from a snapshot.
+
+**Staging copy**: A copy of a WordPress website at `staging.<domain>`, for trying changes before pushing them to
+the live site.
+
+**Stalwart, Roundcube**: The mail server (Stalwart) and the webmail (Roundcube) that ekPanel sets up for email.
+
+## T
+
+**Task**: Background work the panel does or asks an agent to do: applying a server's state, a backup, a
+deploy, an update. Tasks show their progress and result in the panel.
+
+**TOTP, two-factor authentication**: A six-digit code from an app on your phone, asked for after your password. It changes every 30
+seconds.
+
+**Typed operation**: One of a fixed list of actions the agent understands, each with checked fields (for example
+"apply this state" or "restart this service from the allowlist"). The agent refuses anything
+else; there is no operation that runs a shell command.
+
+## W
+
+**Website, site**: A domain served by Caddy from a folder on a server: static files, or PHP with a chosen version.
+Each website has its own Linux account, home folder and PHP pool. Not the same as an
+[app](#a).
+
+**WP-CLI**: WordPress's command line tool. ekPanel uses it, as the website's own account, to install and
+update WordPress.
+
+## Z
+
+**Zone, record**: A **zone** is all DNS information for one domain, such as `example.com`. It holds
+**records**: each one maps a name to a value of a type, such as `A` (an IPv4 address), `AAAA`
+(IPv6), `CNAME` (another name), `MX` (mail server) or `TXT` (text, used for SPF and DKIM).
+
+<Aside type="tip">
+Missing a word? Open an issue or a pull request on the
+[docs repository](https://github.com/ekPanel/ekPanel-docs).
+</Aside>

@@ -1,0 +1,131 @@
+---
+title: Desired state
+description: Panel যা থাকার কথা বলে, ekPanel কীভাবে server-গুলোকে সেই অনুযায়ী রাখে - পুরো state apply, generation, 10 মিনিটের drift check, offline server আর error।
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel server-কে চালানোর জন্য command-এর তালিকা পাঠায় না। Panel প্রতিটা server-এর **desired
+state** (কাঙ্ক্ষিত অবস্থা) রাখে, মানে ওই server-এ যা যা থাকার কথা তার সবকিছু, আর agent server-টাকে
+বদলাতে থাকে যতক্ষণ না সেটা মিলে যায়। একে বলে **reconcile করা**। এই কারণেই একটা নষ্ট server
+সাধারণত নিজে থেকেই ঠিক হয়ে যেতে পারে।
+
+## একটা উদাহরণে মূল ধারণা
+
+আপনি একটা website যোগ করলেন। Panel agent-কে বলে না "একটা Linux account তৈরি করো, একটা PHP pool
+লেখো, একটা Caddy file লেখো"। এটা website-টা মনে রাখে, তারপর agent-কে ওই server-এ যা যা থাকার কথা
+তার পুরো তালিকা পাঠায়। Agent সেই তালিকা server-এর সাথে মিলিয়ে দেখে, আর যা নেই তা করে: এখানে
+account, folder, PHP pool আর Caddy file তৈরি করা।
+
+পরে কেউ হাতে ওই Caddy file delete করে ফেললে, পরের apply দেখে যে এটা নেই, আর আবার লিখে দেয়। কী
+হয়েছিল তা panel-কে জানতে হয়নি।
+
+## Desired state-এ কী থাকে
+
+একটা operation, `state.apply`, একটা server-এর পুরো desired state বহন করে:
+
+- **website**, তাদের domain, PHP version, certificate, SFTP আর FTP setting-সহ;
+- **database** আর তাদের account;
+- **Docker app** আর Git app;
+- **cron job**;
+- **customer-দের limit**: প্রতিটা customer-এর জন্য একটা systemd slice, তার package-এর memory আর
+  CPU-সহ;
+- **firewall** আর তার rule, যখন ekPanel সেটা চালায়;
+- **security** setting: CrowdSec, malware scan, দেশ ধরে block;
+- **email**, যখন server-টা একটা mail server;
+- **name server**-এর ভূমিকা আর তার zone, যখন server-টা name server।
+
+Panel সবসময় **সবকিছু** পাঠায়, যেসব জিনিস delete হচ্ছে সেগুলোও (deleted হিসেবে চিহ্নিত করে)।
+Agent-কে কখনো আন্দাজ করতে হয় না কী সরাতে হবে, আর শুধু তালিকায় নেই বলে কোনো কিছু সে কখনো সরায় না।
+
+## State কখন apply হয়
+
+<Steps>
+
+1. **প্রতিটা পরিবর্তনের পরে।** একটা website, database, firewall rule ইত্যাদি save করলে ওই server-এর
+   জন্য একটা **সার্ভারের সেটিংস চালু করা** (Apply server settings) task queue-তে ওঠে। পরপর
+   কয়েকটা পরিবর্তন মিলে একটা task হয়ে যায়।
+
+2. **যখন agent connect করে।** প্রতিবার agent connect বা reconnect করলে panel ওই server-এর state
+   apply করে, কারণ offline থাকার সময় server হয়তো কিছু পরিবর্তন পায়নি।
+
+3. **প্রতি 10 মিনিটে।** একটা drift check প্রতিটা online server আবার apply করে, যেখানে চালানোর মতো
+   কিছু আছে (website, database, app, mail, managed firewall বা CrowdSec)। এই নিয়মিত run-গুলো task
+   list-এ দেখানো হয় না; এদের ফলাফল সংশ্লিষ্ট জিনিসগুলোতে দেখা যায়।
+
+</Steps>
+
+অপরিবর্তিত server-এ apply করলে কিছুই বদলায় না: agent যা লিখত তা আগে থেকে থাকা জিনিসের সাথে মিলিয়ে
+দেখে, Compose app শুধু তখনই নতুন করে তৈরি হয় যখন তার configuration বদলেছে, আর firewall শুধু
+পার্থক্যটুকু apply করে।
+
+## Generation: কী apply হয়েছে তা জানা
+
+প্রতিটা website, database, app আর cron job-এর দুটো counter আছে:
+
+- **`generation`** প্রতিবার আপনি জিনিসটা বদলালে এক করে বাড়ে;
+- **`applied_generation`** হলো agent-এর নিশ্চিত করা শেষ generation।
+
+`generation` বেশি হলে জিনিসটা apply হওয়ার অপেক্ষায় থাকে আর **চালু হচ্ছে…** (Applying…) দেখায়।
+Agent প্রতিটা জিনিসের ফলাফল জানায়, সাথে যে generation সে apply করেছে সেটাও। Panel জিনিসটাকে
+**চালু** (Live) হিসেবে চিহ্নিত করে (আর `applied_generation` বসায়) শুধু তখনই, যদি সেই generation
+এখনো বর্তমানটাই থাকে। তাই agent যখন আপনার আগের পরিবর্তন নিয়ে ব্যস্ত, তখন আপনি site-টা আবার বদলালে
+পুরোনো ফলাফল নতুন পরিবর্তনকে "হয়ে গেছে" হিসেবে চিহ্নিত করতে পারে না; পরের apply সেটা সামলে নেয়।
+
+Delete করা জিনিস panel-এ **মোছা হচ্ছে…** (Deleting…) হিসেবে থাকে, যতক্ষণ না agent নিশ্চিত করে যে
+সেটা চলে গেছে। শুধু তখনই panel সেটা ভুলে যায়।
+
+## কিছু ব্যর্থ হলে
+
+প্রতিটা জিনিস আলাদাভাবে apply হয়। একটা ব্যর্থ হলেও বাকিগুলো হয়ে যায়।
+
+- জিনিসটার অবস্থা হয় **সমস্যা** (Problem), আর তার page-এ server-এর দেওয়া কারণ দেখায় (website-এর
+  ক্ষেত্রে "সার্ভার এই ওয়েবসাইটের সেটিংস চালু করতে পারেনি"-এর নিচে)।
+- মালিক আর administrator-রা notification পান **একবার**, যখন জিনিসটা ব্যর্থ হতে শুরু করে, প্রতিটা
+  retry-তে না।
+- জিনিসটার page-এ **আবার চেষ্টা করুন** (Try again) একটা নতুন apply queue-তে তোলে। Drift check-ও
+  প্রতি 10 মিনিটে আবার চেষ্টা করে, তাই সাময়িক সমস্যা (যেমন, কোনো package mirror বন্ধ ছিল) প্রায়ই
+  নিজে থেকে ঠিক হয়ে যায়।
+- Agent যদি কিছুই apply করতে না পারে (যেমন, কারণ এটা root হিসেবে চলছে না), তাহলে অপেক্ষায় থাকা
+  প্রতিটা জিনিসে সেই কারণ দেখায়।
+
+Website-এর ক্ষেত্রে, web server-এর configuration load করার আগে check করা হয়। Caddy কোনো site-এর
+file বাতিল করলে agent আগের version ফিরিয়ে দেয়, আর শুধু ওই site-এই error দেখায়।
+
+## যখন server offline
+
+Offline server-এর পরিবর্তনগুলো রেখে দেওয়া হয় আর অপেক্ষা করে। জিনিসটা **চালু হচ্ছে…** (Applying…)
+দেখায়, সাথে একটা note যে server offline আর agent আবার connect হলেই setting apply হবে। কিছুই হারায়
+না, কিছুই আবার করতে হয় না: reconnect হলে panel পুরো state পাঠায়, এর মধ্যে করা প্রতিটা পরিবর্তন-সহ।
+
+Drift check offline server বাদ দেয়। 3 মিনিট offline থাকার পরে administrator-রা একটা "server
+offline" notification পান, আর server ফিরে এলে আরেকটা।
+
+## এতে মেরামত কেন সহজ হয়
+
+- **নিজে নিজে সেরে ওঠা।** Delete হয়ে যাওয়া configuration file, যে container চলার কথা কিন্তু থেমে
+  আছে, বা হারানো PHP pool, পরের apply-তে ফিরে আসে, বড়জোর 10 মিনিট পরে।
+- **কোনো পরিবর্তন হারায় না।** একদিন বন্ধ থাকা server একটা apply-তেই সব পূরণ করে নেয়।
+- **"আবার চেষ্টা করুন" নিরাপদ।** একই state দুবার apply করলে কোনো ক্ষতি হয় না, তাই retry করা
+  সবসময় চলে।
+- **Restore আর সরানো এর ওপরই দাঁড়িয়ে।** একটা server নতুন করে বানাতে panel-কে শুধু তাকে আবার state
+  পাঠাতে হয়। Server-এর মধ্যে জিনিস সরানো (phase 4-এ plan করা) একই ধারণা ব্যবহার করে।
+
+<Aside type="caution" title="Managed file হাতে edit করবেন না">
+ekPanel যেসব file লেখে, যেমন `/etc/ekpanel/caddy/sites/`-এ একটা website-এর Caddy file বা তার
+PHP pool, সেগুলো পরের apply-তে আবার লেখা হয়। পরিবর্তন panel দিয়ে করুন। ekPanel যা তৈরি করেনি,
+যেমন আপনার হাতে যোগ করা firewall rule, সেগুলোতে হাত দেওয়া হয় না।
+</Aside>
+
+## Desired state-এর বাইরে যা
+
+কিছু কাজ state না, একবারের task: backup আর restore, WordPress বা PHP app install করা, WordPress
+update আর staging copy, deploy, PHP extension আর malware scan। এদের অগ্রগতি task list-এ দেখা যায়।
+
+## আরও দেখুন
+
+- [Architecture](/concepts/architecture/): panel, agent আর task queue।
+- [Website guide](/guides/websites/websites/)
+- [Notification](/guides/admin/notifications/)

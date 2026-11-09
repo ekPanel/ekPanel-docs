@@ -1,0 +1,212 @@
+---
+title: Notification
+description: Offline server, fail করা backup, নষ্ট website আর আরও অনেক কিছুর alert পান, panel-এ আর email, Telegram, Discord, Slack বা signed webhook-এ।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+কোনো কিছুতে নজর দেওয়া দরকার হলে ekPanel আপনাকে জানায়: একটা server offline হয়ে গেছে, একটা backup fail
+করেছে, একটা website সেট করা যায়নি, একটা disk ভরে আসছে। প্রতিটা alert panel-এর ওপরে **ঘণ্টা**-র (bell)
+নিচে দেখা যায়। চাইলে alert-গুলো **channel**-এও পাঠাতে পারেন: email, Telegram, Discord, Slack বা আপনার
+নিজের webhook।
+
+প্রত্যেক user নিজের channel নিজে সেট করেন: admin আর customer দুজনেই। Customer-রা শুধু তাঁদের নিজের
+জিনিস নিয়ে alert পান।
+
+## ঘণ্টা
+
+ঘণ্টা দেখায় আপনার কয়টা alert পড়া হয়নি। দেখতে এতে click করুন, নতুনটা আগে, প্রতিটার সাথে যে পাতা নিয়ে
+alert সেটার একটা link। **সব পড়া হয়েছে** (Mark all read) সংখ্যাটা মুছে দেয়। "নোটিফিকেশন ৯০ দিন রাখা
+হয়।"
+
+## শুরু করার আগে: mail server (admin)
+
+Email channel পাঠায় একটা SMTP server দিয়ে, যা একজন admin পুরো panel-এর জন্য একবার সেট করেন। Panel-এর
+address-ও এখানেই সেট হয়, যাতে message-এর link কাজ করে।
+
+<Steps>
+
+1. **নোটিফিকেশন** (Notifications) খুলুন (**আপনার অ্যাকাউন্ট**-এর নিচে) আর **মেইল সার্ভার আর
+   প্যানেলের ঠিকানা** (Mail server and panel address) খুঁজুন।
+
+2. **প্যানেলের ঠিকানা** (Panel address) দিন: মানুষ যেভাবে panel খোলেন, যেমন
+   `https://panel.example.com`। এটা ছাড়া message-এ কোনো link থাকে না।
+
+3. **SMTP সার্ভার** (host name), **পোর্ট** (Port) আর **নিরাপত্তা** (Security) দিন:
+   - **STARTTLS (587)**: সাধারণত এটাই বাছা হয়;
+   - **TLS (465)**: শুরু থেকেই encrypted connection;
+   - **কিছু না (শুধু লোকাল রিলে)** (None (local relay only)): কোনো encryption নেই, একই machine বা
+     network-এর একটা mail relay-এর জন্য।
+
+4. **প্রেরক** (Sender) address দিন, যেমন `alerts@example.com`, আর server-এর লাগলে **ইউজার নাম** ও
+   **পাসওয়ার্ড**।
+
+5. Save করুন।
+
+</Steps>
+
+যেকোনো SMTP service ব্যবহার করতে পারেন: আপনার নিজের mail server, আপনার provider-এরটা, বা একটা
+transactional mail service। Password panel-এর database-এ encrypt করা থাকে, আর পরে কখনো দেখানো হয় না
+("আগেরটা রাখতে খালি রাখুন।")। Panel অন্য machine-এ unencrypted connection দিয়ে password পাঠাতে রাজি হয়
+না।
+
+## একটা channel যোগ করুন
+
+<Steps>
+
+1. **নোটিফিকেশন** খুলে **চ্যানেল যোগ করুন** (Add channel)-এ click করুন।
+
+2. **ধরন** (Type) বেছে নিয়ে তার field-গুলো পূরণ করুন (নিচে দেখুন)। চাইলে একটা **নাম** (Name) দিন।
+
+3. **ঘটনা** (Events)-এর নিচে এই channel কোন কোন alert পাবে তাতে tick দিন। "কিছু টিক না দিলে সব
+   ঘটনা।"
+
+4. **চ্যানেল যোগ করুন**-এ click করুন।
+
+5. **পরীক্ষামূলক বার্তা পাঠান** (Send a test)-এ click করুন। Panel সাথে সাথে একটা test message পাঠায় আর
+   service কী উত্তর দিল তা দেখায়, তাই সাথে সাথেই বুঝতে পারেন channel কাজ করছে কিনা।
+
+</Steps>
+
+প্রত্যেক user সর্বোচ্চ 20টা channel রাখতে পারেন। একটা channel না মুছেও বন্ধ রাখা যায়।
+
+<Tabs>
+  <TabItem label="Email">
+    **ইমেইল ঠিকানা** (Email address) দিন। Message যায় panel-এর mail server দিয়ে (ওপরে), plain text
+    হিসেবে, alert-এর title subject হিসেবে।
+  </TabItem>
+  <TabItem label="Telegram">
+    1. Telegram-এ **@BotFather**-এর সাথে কথা বলুন, `/newbot` দিয়ে একটা bot তৈরি করুন, আর
+       **বট টোকেন** (Bot token) copy করুন (যেমন `123456789:ABC…`)।
+    2. আপনার নতুন bot-কে `/start` পাঠান (বা এটাকে কোনো group বা channel-এ যোগ করুন)।
+    3. **চ্যাট আইডি** (Chat ID) খুঁজে নিন: আপনার chat-এর নম্বর (**@userinfobot**-কে জিজ্ঞেস করুন) বা
+       একটা public channel-এর `@name`।
+    4. দুটোই panel-এ দিন।
+  </TabItem>
+  <TabItem label="Discord">
+    Discord-এ: **Server settings → Integrations → Webhooks → New webhook**, channel বেছে নিন, আর
+    **Copy URL**। Address-টা `https://discord.com/api/webhooks/` দিয়ে শুরু হতে হবে। লম্বা message
+    Discord-এর limit-এ আঁটাতে ছোট করা হয়।
+  </TabItem>
+  <TabItem label="Slack">
+    একটা Slack app-এ একটা **Incoming Webhook** তৈরি করে তার URL paste করুন। Address-টা
+    `https://hooks.slack.com/services/` দিয়ে শুরু হতে হবে।
+  </TabItem>
+  <TabItem label="Webhook">
+    যে address-এ alert যাবে সেটা দিন। "ekPanel এই ঠিকানায় সই করা JSON POST পাঠায়।" দেখুন
+    [Webhook format](#webhook-format)।
+  </TabItem>
+</Tabs>
+
+Bot token, webhook address আর signing key হলো secret: এগুলো panel-এর database-এ encrypt করা থাকে
+(AES-256-GCM, একটা key file দিয়ে, যা panel `/var/lib/ekpanel/secret.key`-এ রাখে) আর কখনো browser-এ
+ফেরত পাঠানো হয় না। কোনো channel edit করার সময় save করা গুলো রাখতে এগুলো খালি রাখুন।
+
+## ঘটনা
+
+Admin-রা প্রতিটা ঘটনা থেকে বেছে নিতে পারেন; customer-রা তাঁদের নিজের website, app, database, disk space
+আর account নিয়ে ঘটনাগুলো থেকে।
+
+| ঘটনা (panel-এ) | কখন পাঠানো হয় | কে পান |
+| --- | --- | --- |
+| **সার্ভার অফলাইন** | একটা server-এর agent 3 মিনিট connected নেই। প্রতিবার বিভ্রাটে একবার পাঠানো হয় | Admin |
+| **সার্ভার আবার অনলাইন** | Offline জানানো হয়েছিল এমন server-এর agent আবার connect করেছে | Admin |
+| **সার্ভারের ডিস্ক প্রায় ভরা** | একটা server-এর disk 90% ভরা। আবার পাঠানো হয় শুধু 85%-এর নিচে নামার পর | Admin |
+| **ব্যাকআপ ব্যর্থ** | একটা backup চলতে পারেনি, বা কোনো জিনিসেরই backup নেওয়া যায়নি | Admin |
+| **ব্যাকআপ আংশিক ব্যর্থ** | কিছু website বা database-এর backup নেওয়া যায়নি, বা পুরোনো backup মোছা যায়নি | Admin |
+| **ওয়েবসাইটে সমস্যা** | একটা website তার server-এ সেট বা বদল করা যায়নি। একবার পাঠানো হয়, যখন fail করা শুরু হয় | Admin আর website-এর মালিক |
+| **সার্টিফিকেটের মেয়াদ শেষের পথে** | আপনার নিজের upload করা একটা certificate-এর মেয়াদ 14 দিনের মধ্যে শেষ হবে। প্রতি ঘণ্টায় check হয়, প্রতি certificate-এ একবার পাঠানো হয় | Admin আর মালিক |
+| **অ্যাপে সমস্যা** | একটা app তার server-এ সেট বা বদল করা যায়নি। একবার পাঠানো হয়, যখন fail করা শুরু হয় | Admin আর app-এর মালিক |
+| **ডিপ্লয় ব্যর্থ** | একটা [Git deploy](/guides/apps/git-deploys/) build বা release করতে fail করেছে | Admin আর app-এর মালিক |
+| **ডেটাবেসে সমস্যা** | একটা database সেট বা বদল করা যায়নি। একবার পাঠানো হয়, যখন fail করা শুরু হয় | Admin আর মালিক |
+| **ইমেইলে সমস্যা** | একটা mail domain mail server-এ সেট করা যায়নি। একবার পাঠানো হয়, যখন fail করা শুরু হয় | Admin আর মালিক |
+| **WordPress আপডেটে সমস্যা** | একটা WordPress update fail করেছে, বা site নষ্ট করেছিল বলে ফিরিয়ে নেওয়া হয়েছে | Admin আর website-এর মালিক |
+| **Malware পাওয়া গেছে** | একটা malware scan নতুন সন্দেহজনক file পেয়েছে (সর্বোচ্চ পাঁচটার নাম দেওয়া হয়) | Admin আর website-এর মালিক |
+| **ডিস্কের জায়গা প্রায় শেষ** | একজন customer তাঁর package-এর disk space-এর 90% ব্যবহার করছেন | Admin আর ওই customer |
+| **ডিস্কের জায়গা শেষ** | একজন customer পুরোটাই ব্যবহার করছেন | Admin আর ওই customer |
+| **কাজ ব্যর্থ** | একটা task (image update, restore, WordPress install …) শেষ চেষ্টার পর পাকাপাকিভাবে fail করেছে। Schedule করা আর হাতে চালানো backup, আর website, app ও database সেট করা, এর বদলে নিজেদের alert পাঠায় | Admin, আর যে customer এটা শুরু করেছেন |
+| **নতুন ঠিকানা থেকে সাইন-ইন** | কেউ আপনার account-এ এমন address থেকে sign in করেছে, যা গত 90 দিনে ব্যবহার হয়নি (একদম প্রথম sign-in-এ নয়) | শুধু আপনি |
+
+Alert যায় **প্রত্যেক** admin-এর কাছে। একজন customer শুধু ওপরে "মালিক" বা "customer" চিহ্নিত alert-গুলো
+পান, আর শুধু তাঁর নিজের জিনিস নিয়ে।
+
+প্রতিটা alert-এর একটা severity আছে: **info** (আবার online), **warning** বা **critical** (server offline,
+fail করা backup, website, app, database বা email-এ সমস্যা, malware, disk space শেষ)।
+
+## ভাষা
+
+Message লেখা হয় **প্রত্যেক প্রাপকের নিজের ভাষায়**, panel-এর জন্য তিনি যেটা বেছে নিয়েছেন: English বা
+বাংলা (Bangla)। Bangla ব্যবহার করা একজন admin আর English ব্যবহার করা একজন customer একই alert নিজের
+নিজের ভাষায় পান। Message-এর লেখাগুলো panel-এর নিজের লেখার মতোই অনুবাদ বাদ পড়েছে কিনা check করা হয়।
+কোনো ভাষায় কোনো লেখা না থাকলে English ব্যবহার হয়।
+
+Test message-ও আপনার নিজের ভাষায় পাঠানো হয়।
+
+## পৌঁছানো আর আবার চেষ্টা
+
+Alert কয়েক সেকেন্ডের মধ্যে পাঠানো হয়। কোনো channel fail করলে (service বন্ধ, token ভুল), ekPanel আবার
+চেষ্টা করে **1 মিনিট**, **5 মিনিট** আর **30 মিনিট** পর, তারপর ওই alert-এর জন্য হাল ছেড়ে দেয়। তখন
+channel তার শেষ error দেখায়, আর alert-টা যেভাবেই হোক ঘণ্টার নিচে থেকে যায়।
+
+## Webhook format
+
+ekPanel একটা JSON body-সহ `POST` পাঠায়:
+
+```json
+{
+  "event": "backup_failed",
+  "severity": "critical",
+  "title": "Backup to Offsite (S3) failed",
+  "body": "…the reason…",
+  "link": "https://panel.example.com/backups/…",
+  "params": { "repo": "Offsite (S3)", "message": "…" },
+  "at": "2026-11-09T02:00:12Z"
+}
+```
+
+আর এই header-গুলো:
+
+| Header | Value |
+| --- | --- |
+| `Content-Type` | `application/json` |
+| `User-Agent` | `ekPanel` |
+| `X-Ekpanel-Event` | Event-এর নাম, যেমন `backup_failed` |
+| `X-Ekpanel-Signature` | `sha256=` আর body-র HMAC-SHA256, channel-এর signing key দিয়ে বানানো |
+
+Webhook channel যোগ করলে ekPanel একটা signing key বানায় আর একবার দেখায় ("সই করার কী, শুধু এই একবারই
+দেখানো হচ্ছে"); অথবা 16 থেকে 200 character-এর নিজের একটা দিন। কোনো request-এ ভরসা করার আগে signature
+check করুন, যেমন Python-এ:
+
+```python
+import hmac, hashlib
+
+def valid(body: bytes, header: str, key: str) -> bool:
+    expected = "sha256=" + hmac.new(key.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, header)
+```
+
+300-এর নিচে status-এর যেকোনো উত্তর পৌঁছেছে বলে ধরা হয়।
+
+<Aside type="note">
+**Customer-দের webhook** `https://` ব্যবহার করতে হবে আর private বা local address-এ পৌঁছাতে পারবে না
+(`127.0.0.1`, `10.x`, `192.168.x`, `169.254.169.254` ইত্যাদি)। এটা check হয় আসলে যে address-এ connect
+করা হচ্ছে তার ওপর, তাই redirect বা DNS-এর কারসাজি দিয়ে এটা এড়ানো যায় না। Admin-রা নিজের network-এর
+কোনো service-এর জন্য `http://` আর private address ব্যবহার করতে পারেন।
+</Aside>
+
+## Limit আর যা এখনো নেই
+
+- Project-এর test VM-এ একটা webhook channel শুরু থেকে শেষ পর্যন্ত পরীক্ষা করা হয়েছে (একটা signed test
+  message, আর agent থামানোর তিন মিনিট পর "offline", তারপর "back online")। Email, Telegram, Discord আর
+  Slack ওই service-গুলোর ওপর নির্ভর করে; আপনারটা check করতে **পরীক্ষামূলক বার্তা পাঠান** ব্যবহার করুন।
+- এখনো নেই: fail করা **cron job**-এর alert (panel এখনো job-এর ফলাফল দেখে না), **সফল** deploy-এর alert,
+  আর নতুন customer-দের sign-in তথ্যসহ email। দেখুন [roadmap](/project/roadmap/)।
+- Customer হিসেবে কাজ করা একজন admin ("তাঁর হয়ে ঢুকুন") customer-এর channel বদলাতে পারেন না।
+
+## সম্পর্কিত
+
+- [Server](/guides/admin/servers/): কখন offline ধরা হয়, আর disk-এর সতর্কবার্তা।
+- [Backup](/guides/data/backups/): Fail করা backup alert পাঠায়।
+- [Customer আর package](/guides/admin/customers/): Customer-দের জন্য disk space-এর alert।

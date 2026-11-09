@@ -1,0 +1,98 @@
+---
+title: নিরাপত্তা নীতি
+description: ekPanel-এর কোনো vulnerability কীভাবে গোপনে জানাবেন, কী কী দেবেন, এরপর কী হয়, আর কোন version fix পায়।
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel root privilege দিয়ে server নিয়ন্ত্রণ করে, তাই security report সবার আগে গুরুত্ব পায়। একটা
+vulnerability কীভাবে গোপনে জানাবেন আর জানানোর পরে কী হয়, এই page-এ তা বলা আছে। এটা main
+repository-র [`SECURITY.md`](https://github.com/ekPanel/ekpanel/blob/dev/SECURITY.md) আর
+[organisation-এর security policy](https://github.com/ekPanel/.github/blob/main/SECURITY.md)-র সারাংশ।
+
+<Aside type="danger" title="কখনো public-এ vulnerability জানাবেন না">
+কোনো security সমস্যা নিয়ে public issue, pull request বা discussion খুলবেন না, আর কোনো chat-এ post
+করবেন না। নিচের মতো গোপনে জানান।
+</Aside>
+
+## কীভাবে জানাবেন
+
+এগুলোর একটা ব্যবহার করুন:
+
+- সংশ্লিষ্ট repository-তে **GitHub-এর private vulnerability reporting**: **Security** tab, তারপর
+  **Report a vulnerability**, যেখানে এটা পাওয়া যায়। (প্রথম release পর্যন্ত main repository private,
+  তাই সেখানে এটা শুধু access আছে এমন মানুষদের জন্য কাজ করে।)
+- **ekpanelbd@gmail.com**-এ **email**, subject-এ "Security" লিখে।
+
+## কী কী দেবেন
+
+<Steps>
+
+1. **একজন attacker কী করতে পারে**, আর তার আগে কী লাগে: একটা account (administrator না customer?),
+   network access, একই server-এ একটা website…
+
+2. **কীভাবে আবার ঘটানো যায় (reproduce)**: ধাপগুলো, বা একটা proof of concept।
+
+3. **Version**: `ekpanel version` আর `ekpanel-agent version`-এর output, অথবা যে commit-এ test
+   করেছেন।
+
+</Steps>
+
+আপনি যা পাঠাবেন, তা থেকে আসল password, key আর ব্যক্তিগত data সরিয়ে দিন।
+
+## এরপর কী হয়
+
+- আমরা চেষ্টা করি **৩ দিনের মধ্যে** আপনার report **পেয়েছি বলে জানাতে**।
+- আমরা চেষ্টা করি **গুরুতর সমস্যা ১৪ দিনের মধ্যে fix করতে**।
+- Release notes-এ আমরা **report-কারীদের নাম উল্লেখ করি (credit দিই)**, যদি না আপনি নাম না দেওয়া
+  পছন্দ করেন।
+
+## Support করা version
+
+ekPanel শুরুর দিকের development-এ আছে আর এর **এখনো কোনো release নেই**, তাই সাধারণ অর্থে কোনো support
+করা version নেই। Fix যায় `dev` branch-এ। Release আসার পরে এই page বলবে কোনগুলো security fix পায়।
+
+## কী কী গণ্য হয়
+
+SECURITY.md-এ ekPanel-এর প্রতিশ্রুত design principle-গুলোর তালিকা আছে। একটা ভালো নিয়ম: এই
+প্রতিশ্রুতির কোনোটা ভাঙে এমন যেকোনো কিছুই একটা vulnerability, যা আমরা জানতে চাই। কিছু উদাহরণ:
+
+- একজন customer এমন কিছু দেখছেন বা বদলাচ্ছেন যা তাঁর নয়
+- একটা website-এর file, PHP, cron job, FTP বা SFTP login নিজের folder বা account-এর বাইরে পৌঁছাচ্ছে
+- Agent এমন কিছু করছে যা এর typed operation-গুলোর একটা নয়, বা panel থেকে check না করা input গ্রহণ
+  করছে
+- Password (আর two-factor code) ছাড়া panel-এ ঢুকে পড়া, বা setup token এড়িয়ে যাওয়া
+- Web UI-তে cross-site request forgery বা script injection
+- Secret এমন জায়গায় দেখা যাচ্ছে যেখানে থাকার কথা নয়: log-এ, API-এর উত্তরে, process list-এ, বা অন্য
+  account পড়তে পারে এমন file-এ
+- এমন একটা firewall, country blocking বা CrowdSec rule যা ekPanel বলে যে সে কখনো বানায় না (যেমন, এমন
+  rule যা administrator-এর নিজের address block করে)
+
+নিশ্চিত না হলেও জানান।
+
+## ekPanel কীভাবে security মাথায় রেখে বানানো
+
+SECURITY.md-এর design principle-গুলোর ছোট রূপ:
+
+- Agent শুধু একটা নির্দিষ্ট তালিকার typed, validated operation গ্রহণ করে। যেকোনো command চালানোর একমাত্র
+  উপায় হলো web terminal, একজন মানুষের জন্য একটা interactive shell, যা আবার password চায় আর audit log-এ
+  লেখা থাকে।
+- Panel আর agent mutual TLS দিয়ে কথা বলে, একটা private CA দিয়ে যা agent-রা enrolment-এর সময় pin করে।
+  Certificate ৯০ দিন থাকে আর নিজে নিজে renew হয়।
+- Password argon2id দিয়ে hash করা হয়; session আর enrolment token শুধু hash হিসেবে রাখা হয়। Database,
+  FTP আর mailbox-এর password শুধু service-গুলোর নিজস্ব hash হিসেবে রাখা হয়।
+- প্রতিটা website নিজস্ব Linux account হিসেবে, নিজস্ব PHP-FPM pool আর `open_basedir` দিয়ে চলে।
+- State বদলায় এমন request cross-site request থেকে সুরক্ষিত; session cookie `HttpOnly`,
+  `SameSite=Lax` আর `__Host-` prefix-যুক্ত; একটা কড়া Content-Security-Policy কোনো inline script চলতে দেয়
+  না।
+- প্রতিটা পরিবর্তন একটা append-only audit log-এ লেখা হয়, যা database বদলাতে দেয় না।
+
+এগুলো কীভাবে একসাথে কাজ করে, তা দেখুন [Security model](/concepts/security-model/)-এ।
+
+## সম্পর্কিত
+
+- [Security model](/concepts/security-model/)
+- [Security overview](/guides/security/overview/)
+- [সাহায্য](/project/support/)

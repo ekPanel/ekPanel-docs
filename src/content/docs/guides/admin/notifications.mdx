@@ -1,0 +1,210 @@
+---
+title: Notifications
+description: Get alerts about offline servers, failed backups, broken websites and more, in the panel and by email, Telegram, Discord, Slack or a signed webhook.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel tells you when something needs attention: a server went offline, a backup failed, a
+website could not be set up, a disk is filling up. Every alert appears under the **bell** at the
+top of the panel. You can also have alerts sent to **channels**: email, Telegram, Discord, Slack or
+your own webhook.
+
+Every user sets up their own channels: administrators and customers alike. Customers only receive
+alerts about their own things.
+
+## The bell
+
+The bell shows how many alerts you have not read. Click it to see them, newest first, each with a
+link to the page it is about. **Mark all read** clears the count. "Notifications are kept for 90
+days."
+
+## Before you start: the mail server (administrators)
+
+Email channels send through an SMTP server that an administrator sets once for the whole panel.
+The panel's address is also set here, so links in messages work.
+
+<Steps>
+
+1. Open **Notifications** (under **Your account**) and find **Mail server and panel address**.
+
+2. Enter the **Panel address**: how people open the panel, such as `https://panel.example.com`.
+   Without it, messages have no links.
+
+3. Enter the **SMTP server** (host name), **Port**, and **Security**:
+   - **STARTTLS (587)**: the usual choice;
+   - **TLS (465)**: an encrypted connection from the start;
+   - **None (local relay only)**: no encryption, for a mail relay on the same machine or network.
+
+4. Enter the **Sender** address, for example `alerts@example.com`, and the **User name**
+   and **Password** if the server needs them.
+
+5. Save.
+
+</Steps>
+
+You can use any SMTP service: your own mail server, your provider's, or a transactional mail
+service. The password is encrypted in the panel's database and never shown again ("Leave empty to
+keep the saved one"). The panel refuses to send a password over an unencrypted connection to
+another machine.
+
+## Add a channel
+
+<Steps>
+
+1. Open **Notifications** and click **Add channel**.
+
+2. Choose the **Type** and fill in its fields (see below). Give it a **Name** if you like.
+
+3. Under **Events**, tick the alerts this channel should get. "None ticked means every event."
+
+4. Click **Add channel**.
+
+5. Click **Send a test**. The panel sends a test message right away and shows what the service
+   answered, so you see at once whether the channel works.
+
+</Steps>
+
+Each user can have up to 20 channels. A channel can be turned off without deleting it.
+
+<Tabs>
+  <TabItem label="Email">
+    Enter the **Email address**. Messages go out through the panel's mail server (above), as plain
+    text, with the alert's title as the subject.
+  </TabItem>
+  <TabItem label="Telegram">
+    1. In Telegram, talk to **@BotFather**, create a bot with `/newbot`, and copy the
+       **Bot token** (such as `123456789:ABC…`).
+    2. Send `/start` to your new bot (or add it to a group or channel).
+    3. Find the **Chat ID**: your chat's number (ask **@userinfobot**) or a public channel's
+       `@name`.
+    4. Enter both in the panel.
+  </TabItem>
+  <TabItem label="Discord">
+    In Discord: **Server settings → Integrations → Webhooks → New webhook**, choose the channel, and
+    **Copy URL**. The address must start with `https://discord.com/api/webhooks/`. Long messages are
+    shortened to fit Discord's limit.
+  </TabItem>
+  <TabItem label="Slack">
+    Create an **Incoming Webhook** in a Slack app and paste its URL. The address must start with
+    `https://hooks.slack.com/services/`.
+  </TabItem>
+  <TabItem label="Webhook">
+    Enter the address that should receive the alerts. "ekPanel sends a signed JSON POST to this
+    address." See [Webhook format](#webhook-format).
+  </TabItem>
+</Tabs>
+
+Bot tokens, webhook addresses and signing keys are secrets: they are encrypted in the panel's
+database (AES-256-GCM, with a key file the panel keeps in `/var/lib/ekpanel/secret.key`) and never
+sent back to the browser. When you edit a channel, leave them empty to keep the saved ones.
+
+## Events
+
+Administrators can choose from every event; customers from those about their own websites, apps,
+databases, disk space and account.
+
+| Event (in the panel) | When it is sent | Who gets it |
+| --- | --- | --- |
+| **Server offline** | A server's agent has not been connected for 3 minutes. Sent once per outage | Administrators |
+| **Server back online** | The agent of a server that was reported offline connects again | Administrators |
+| **Server disk almost full** | A server's disk is 90% full. Sent again only after it dropped below 85% | Administrators |
+| **Backup failed** | A backup could not run, or no item could be backed up | Administrators |
+| **Backup partly failed** | Some websites or databases could not be backed up, or old backups could not be removed | Administrators |
+| **Website problem** | A website could not be set up or changed on its server. Sent once, when it starts failing | Administrators and the website's owner |
+| **Certificate expiring** | A certificate you uploaded yourself expires within 14 days. Checked hourly, sent once per certificate | Administrators and the owner |
+| **App problem** | An app could not be set up or changed on its server. Sent once, when it starts failing | Administrators and the app's owner |
+| **Deploy failed** | A [Git deploy](/guides/apps/git-deploys/) failed to build or release | Administrators and the app's owner |
+| **Database problem** | A database could not be set up or changed. Sent once, when it starts failing | Administrators and the owner |
+| **Email problem** | A mail domain could not be set up on the mail server. Sent once, when it starts failing | Administrators and the owner |
+| **WordPress update problem** | A WordPress update failed or was undone because it broke the site | Administrators and the website's owner |
+| **Malware found** | A malware scan found new suspicious files (up to five are named) | Administrators and the website's owner |
+| **Disk space almost used up** | A customer uses 90% of their package's disk space | Administrators and that customer |
+| **Disk space used up** | A customer uses all of it | Administrators and that customer |
+| **Task failed** | A task (an image update, a restore, a WordPress install …) failed for good, after its last attempt. Scheduled and manual backups, and setting up websites, apps and databases, send their own alerts instead | Administrators, and the customer who started it |
+| **Sign-in from a new address** | Someone signed in to your account from an address not used in the last 90 days (not on the very first sign-in) | Only you |
+
+Alerts go to **every** administrator. A customer receives only the alerts marked "owner" or
+"customer" above, and only about their own things.
+
+Each alert has a severity: **info** (back online), **warning** or **critical** (server offline, failed
+backup, website, app, database or email problem, malware, disk space used up).
+
+## Languages
+
+Messages are written in **each recipient's own language**, the one they chose for the panel:
+English or Bangla (বাংলা). An administrator using Bangla and a customer using English get the same
+alert in their own languages. The message texts are checked for missing translations, like the
+panel's own texts. If a text is missing in a language, English is used.
+
+The test message is sent in your own language too.
+
+## Delivery and retries
+
+Alerts are sent within a few seconds. If a channel fails (the service is down, the token is
+wrong), ekPanel tries again after **1 minute**, **5 minutes** and **30 minutes**, then gives up for
+that alert. The channel then shows its last error, and the alert stays under the bell anyway.
+
+## Webhook format
+
+ekPanel sends a `POST` with a JSON body:
+
+```json
+{
+  "event": "backup_failed",
+  "severity": "critical",
+  "title": "Backup to Offsite (S3) failed",
+  "body": "…the reason…",
+  "link": "https://panel.example.com/backups/…",
+  "params": { "repo": "Offsite (S3)", "message": "…" },
+  "at": "2026-11-09T02:00:12Z"
+}
+```
+
+and these headers:
+
+| Header | Value |
+| --- | --- |
+| `Content-Type` | `application/json` |
+| `User-Agent` | `ekPanel` |
+| `X-Ekpanel-Event` | The event name, such as `backup_failed` |
+| `X-Ekpanel-Signature` | `sha256=` and the HMAC-SHA256 of the body, made with the channel's signing key |
+
+When you add a webhook channel, ekPanel makes a signing key and shows it once ("The signing key,
+shown only this once"); or enter your own of 16 to 200 characters. Check the signature before you
+trust a request, for example in Python:
+
+```python
+import hmac, hashlib
+
+def valid(body: bytes, header: str, key: str) -> bool:
+    expected = "sha256=" + hmac.new(key.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, header)
+```
+
+Any answer with a status below 300 counts as delivered.
+
+<Aside type="note">
+**Customers' webhooks** must use `https://` and cannot reach private or local addresses
+(`127.0.0.1`, `10.x`, `192.168.x`, `169.254.169.254` and so on). This is checked on the address
+actually connected to, so redirects and DNS tricks do not get around it. Administrators may use
+`http://` and private addresses, for a service on their own network.
+</Aside>
+
+## Limits and what is not there yet
+
+- In the project's test VM, a webhook channel was tested end to end (a signed test message, and
+  "offline" three minutes after the agent was stopped, then "back online"). Email, Telegram,
+  Discord and Slack depend on those services; use **Send a test** to check yours.
+- Not there yet: alerts for failed **cron jobs** (the panel does not watch job results yet), alerts
+  for **successful** deploys, and email to new customers with their sign-in details. See the
+  [roadmap](/project/roadmap/).
+- An administrator acting as a customer ("Sign in as") cannot change the customer's channels.
+
+## Related
+
+- [Servers](/guides/admin/servers/): What counts as offline, and the disk warning.
+- [Backups](/guides/data/backups/): Backups that fail send alerts.
+- [Customers and packages](/guides/admin/customers/): Disk space alerts for customers.

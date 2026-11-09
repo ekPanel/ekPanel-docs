@@ -1,0 +1,145 @@
+---
+title: Firewall
+description: প্রতিটা server-এর ufw firewall ekPanel-কে চালাতে দিন, port খুলুন আর address আটকান, আর দেখুন কোন port সবসময় খোলা থাকে।
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Firewall ঠিক করে বাইরে থেকে আসা কোন সংযোগ আপনার server-এ পৌঁছাবে। ekPanel আপনার হয়ে server-এর `ufw` firewall
+চালাতে পারে: SSH, আপনার website, ekPanel agent আর আপনার খোলা port ছাড়া বাইরে থেকে আসা সবকিছু আটকায়, আর email,
+FTP বা DNS ব্যবহার করলে সেগুলোর port নিজে থেকেই খুলে দেয়।
+
+## শুরু করার আগে
+
+- Firewall শুধু administrator-রাই চালান।
+- এটা থাকে প্রতিটা server-এর নিজের পাতায়: **সার্ভার** (Servers) খুলুন, server বেছে নিন, তারপর নিচে
+  **ফায়ারওয়াল** (Firewall) card-এ যান।
+- আপনার provider-এরও যদি server-এর সামনে firewall থাকে (প্রায়ই একে security group বলে), সেটা আলাদা। Port দুই
+  জায়গাতেই খোলা থাকতে হবে।
+
+## তিনটা mode
+
+| Mode | এর মানে |
+| --- | --- |
+| Unmanaged (শুরুতে এটাই থাকে) | Card-এ লেখা থাকে "ekPanel এই সার্ভারের ফায়ারওয়াল পরিচালনা করছে না"। Server-এ যে firewall আছে, ekPanel সেটা যেমন আছে তেমন রাখে: কিছু install করে না, বদলায় না, বন্ধও করে না। |
+| **চালু** (On) | দরকার হলে ekPanel `ufw` install করে, default হিসেবে বাইরে থেকে আসা সংযোগ আটকায়, বাইরে যাওয়া সব সংযোগ allow করে, আর নিচের নিয়মগুলো বহাল রাখে। |
+| **বন্ধ** (Off) | ekPanel `ufw` বন্ধ করে দেয়। কোনো program যে port-এ শোনে, internet থেকে সেখানে পৌঁছানো যায়। আবার চালু করার জন্য আপনার নিয়মগুলো রেখে দেওয়া হয়। |
+
+**বন্ধ** থেকে বেরিয়ে firewall আবার server-এর হাতে ফিরিয়ে দিতে **পরিচালনা ছেড়ে দিন** (Stop managing) বেছে নিন।
+
+## Firewall চালু করুন
+
+<Steps>
+
+1. Server-এর পাতায় **ফায়ারওয়াল** card-এ **ফায়ারওয়াল চালু করুন** (Turn on firewall) বেছে নিন।
+
+2. Dialog-টা পড়ুন। বাইরে থেকে ব্যবহার হয় এমন যা কিছু তালিকায় নেই (একটা game server, অন্য machine-এর ব্যবহার করা
+   একটা database), তার port না খোলা পর্যন্ত সেটা কাজ করবে না।
+
+3. **ফায়ারওয়াল চালু করুন** বেছে নিন। Card-এ <Badge text="চালু হচ্ছে…" variant="caution" /> দেখায়, তারপর server
+   প্রয়োগ করলে <Badge text="চালু" variant="success" />।
+
+</Steps>
+
+Server শেষ কখন firewall যাচাই করেছে card-এ সেটা লেখা থাকে ("সার্ভার যাচাই করেছে …"), আর server কোনো error জানালে
+সেটাও দেখায়।
+
+বন্ধ করতে **বন্ধ করুন** (Turn off) বেছে নিয়ে নিশ্চিত করুন।
+
+## যেসব port সবসময় খোলা থাকে
+
+Firewall চালু থাকা অবস্থায়, আপনি যা-ই নিয়ম যোগ করুন, এগুলো খোলা থাকে:
+
+| Port | কীসের জন্য |
+| --- | --- |
+| SSH, `sshd` যত port-এ শোনে তার প্রতিটা | Server-এ sign in করা। ekPanel `sshd -T` দিয়ে port-গুলো পড়ে; না পারলে port 22 খোলা রাখে। |
+| 80/tcp | HTTP (এটা HTTPS-এ redirect করে আর certificate renew হতে দেয়) |
+| 443/tcp আর 443/udp | HTTPS, HTTP/3-সহ |
+| 7443/tcp | ekPanel agent |
+
+তাই আপনি SSH port 2222-এ সরিয়ে থাকলে port 2222 খোলা থাকে, আর firewall চালু করে আপনি SSH থেকে নিজেকে আটকে ফেলতে
+পারবেন না।
+
+## নিজে থেকে খোলা port
+
+কোনো feature-এর দরকার থাকা পর্যন্ত ekPanel এই port-গুলো খুলে রাখে, আর দরকার ফুরোলে বন্ধ করে দেয়:
+
+| Feature | Port |
+| --- | --- |
+| Server-এ [email](/guides/dns/email/) চালু | 25, 465, 587, 993, 995 (TCP) |
+| Server-এর কোনো website-এ FTP চালু | 21 আর passive port 30000–30100 (TCP) |
+| Server-টা [ekPanel-এর name server](/guides/dns/name-servers/)-এর একটা | 53 (TCP আর UDP) |
+
+## নিয়ম যোগ করুন
+
+**নিয়ম যোগ করুন** (Add a rule)-এর নিচে বেছে নিন **নিয়ম** (Rule)-টা কী করবে:
+
+- **পোর্ট খুলুন** (Open a port): একটা port বা range-এ সংযোগ allow করে।
+- **ঠিকানা আটকান** (Block an address): একটা address বা range থেকে আসা সংযোগ ফিরিয়ে দেয়।
+
+| Field | পোর্ট খুলুন | ঠিকানা আটকান |
+| --- | --- | --- |
+| **পোর্ট বা পরিসর** (Port or range) | লাগবেই: `8080`, বা একটা range, যেমন `6000-6010` | ঐচ্ছিক; খালি রাখলে সব port আটকায় |
+| **প্রোটোকল** (Protocol) | TCP, UDP, বা TCP ও UDP | TCP, UDP, বা TCP ও UDP (port না দিলে সব protocol) |
+| **শুধু যেখান থেকে** (Only from) / **ঠিকানা বা পরিসর** (Address or range) | ঐচ্ছিক: একটা address বা network-এ সীমিত রাখতে | লাগবেই: `203.0.113.9` বা `203.0.113.0/24`, IPv4 বা IPv6 |
+| **নোট** (Note) | ঐচ্ছিক, সর্বোচ্চ 200 অক্ষর, কেন যোগ করেছেন মনে রাখতে | একই |
+
+**যোগ করুন** (Add rule) বেছে নিন। নিয়মটা তালিকায় আসে, যেমন:
+
+- "পোর্ট 8080 (TCP) খোলা — যেকোনো জায়গা থেকে"
+- "পোর্ট 5432 (TCP) খোলা — 198.51.100.4 থেকে"
+- "203.0.113.0/24 থেকে সব আটকানো"
+- "পোর্ট 25 (TCP) আটকানো — 192.0.2.7 থেকে"
+
+পাশের বিন দিয়ে নিয়ম সরান। একটা server-এ সর্বোচ্চ 200টা নিয়ম থাকতে পারে।
+
+<Aside type="tip">
+অন্য একটা machine-কে কোনো database-এ পৌঁছাতে দিতে চাইলে এর port যেকোনো জায়গার জন্য নয়, **শুধু** ওই machine-এর
+address **থেকে** খুলুন।
+</Aside>
+
+## নিজেকে আটকাতে পারবেন না
+
+আপনি **ঠিকানা আটকান** নিয়ম যোগ করলে panel দেখে নেয়, panel-এ পৌঁছাতে আপনি কোন address ব্যবহার করছেন। আপনার দেওয়া
+address বা range-এ সেটা পড়লে নিয়মটা ফিরিয়ে দেওয়া হয়: "এতে আপনার নিজের ঠিকানাই আটকে যাবে, আর আপনি এই প্যানেলে
+ঢুকতে পারবেন না।" এতে এক click-এ নিজের access কেটে ফেলা থেকে বাঁচবেন।
+
+এই যাচাই শুধু সেই address জানে, যেটা দিয়ে আপনার browser panel-এ যায়। Server-এর SSH-এ অন্য কোনো network থেকে
+যুক্ত হলে খেয়াল রাখুন যেন সেটা আটকে না ফেলেন।
+
+## কীভাবে কাজ করে
+
+Panel mode আর নিয়মগুলো রাখে; প্রতিটা পরিবর্তন server-এর agent একটা task হিসেবে প্রয়োগ করে। Agent:
+
+- নিজের বানানো প্রতিটা নিয়মে `ekpanel` comment দেয়, আর সেগুলো `/var/lib/ekpanel-agent/firewall.json`-এ মনে
+  রাখে;
+- **block** নিয়মগুলো আগে বসায়, যাতে যেকোনো allow নিয়মের ওপর এরা জেতে;
+- শুধু পার্থক্যটুকু প্রয়োগ করে, কারণ প্রতিটা `ufw` call firewall reload করে;
+- কেউ হাতে এর নিজের নিয়ম সরিয়ে ফেললে সেগুলো আবার বসায়, আর `ufw`-এ **আপনার হাতে যোগ করা** নিয়মে হাত দেয় না।
+
+[CrowdSec](/guides/security/crowdsec/) আর [দেশ অনুযায়ী
+আটকানো](/guides/security/countries/)-র block আলাদা: এরা `ufw`-এর পাশে নিজস্ব nftables table ব্যবহার করে, আর
+firewall বন্ধ থাকলেও কাজ করে।
+
+## সমস্যা সমাধান
+
+**Firewall চালু করার পর একটা service কাজ করছে না।** এর port খোলা নেই। এর জন্য একটা **পোর্ট খুলুন** নিয়ম যোগ
+করুন।
+
+**Card-এ একটা error দেখাচ্ছে।** `ufw` যা বলেছে agent সেটাই জানায়। Server online আছে কিনা দেখুন, আর server-এর পাতায়
+**সাম্প্রতিক কাজ** (Recent tasks) দেখুন।
+
+**তবুও SSH থেকে নিজেকে আটকে ফেলেছি।** ekPanel সবসময় SSH port খোলা রাখে, কিন্তু block নিয়ম আগে আসে: আপনি যে
+address থেকে SSH-এ যুক্ত হন সেটা পড়ে এমন একটা **ঠিকানা আটকান** নিয়ম সেটাও আটকে দেয়। হাতে যোগ করা নিয়ম আর আপনার
+provider-এর firewall-ও কারণ হতে পারে। Panel-এ এখনো পৌঁছাতে পারলে সেখান থেকে নিয়মটা সরান, নইলে provider-এর web
+console দিয়ে sign in করে `sudo ufw status numbered` চালান।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="সার্ভার নিরাপত্তা" href="/guides/security/overview/" description="যে checklist জানায় firewall চালু আছে কিনা।" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="নিজে থেকেই আক্রমণকারীদের ban করে।" />
+	<LinkCard title="দেশ অনুযায়ী আটকানো" href="/guides/security/countries/" description="পুরো দেশ আটকান বা অনুমতি দিন।" />
+</CardGrid>

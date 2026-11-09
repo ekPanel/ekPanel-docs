@@ -1,0 +1,141 @@
+---
+title: Requirements
+description: The server, operating system, memory, disk, ports and computer you need to run ekPanel.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Before you install ekPanel, check that your server and your own computer have what is on
+this page.
+
+## The server
+
+### Operating system and CPU
+
+The installer (`deploy/install.sh`) checks these and stops on anything else:
+
+| | Supported |
+| --- | --- |
+| Ubuntu | 24.04, 24.10, 25.x and 26.x |
+| Debian | 12 and 13 |
+| CPU architecture | amd64 (`x86_64`) and arm64 (`aarch64`) |
+
+All testing so far has been on Ubuntu 24.04. The other versions are accepted by the
+installer but have seen less use. Red Hat family systems (AlmaLinux, Rocky Linux) are not
+supported.
+
+Also needed:
+
+- **A fresh server.** The installer writes its own `/etc/caddy/Caddyfile` and expects to
+  own ports 80 and 443. Do not install it on a server that already runs a web server or
+  another control panel.
+- **Root access**, directly or with `sudo`.
+- **systemd.** ekPanel runs its services, cron jobs and customer limits through systemd, so
+  a plain container without systemd does not work. A normal VPS or a virtual machine does.
+- **Internet access** from the server, to download packages (PostgreSQL, Caddy, PHP, Docker
+  and so on), certificates and Docker images.
+
+### Memory and disk
+
+There is no measured minimum yet. ekPanel was developed and tested on a virtual machine with
+**2 CPU cores, 2 GB of memory and a 12 GB disk**, and everything in the
+[feature list](/start/features/) ran there. Use that as a starting point and add more for
+what you plan to run.
+
+What uses memory depends on the features you turn on. ekPanel installs most services only
+when you first use them:
+
+| What | When it runs | Notes |
+| --- | --- | --- |
+| Panel, agent, PostgreSQL, Caddy | Always (on the panel's server) | The panel and agent are single Go programs. PostgreSQL holds the panel's data. |
+| PHP-FPM | When you have PHP websites | One pool per website. Each customer gets a PHP-FPM process of their own. |
+| MariaDB | From the first MariaDB database or WordPress site | |
+| Docker | From the first Docker app | Each app needs its own memory. The catalogue shows what each service needs, from 64 MB (IT Tools, Excalidraw, ntfy) to 1 GB (Nextcloud). |
+| Git builds | While a Git app builds | Builds run on the app's server. Images of the last five builds stay on disk. |
+| Mail server and webmail | When email is turned on | Stalwart, plus Roundcube in its own PHP pool. |
+| PowerDNS | When the server is a name server | |
+| CrowdSec | When turned on | |
+| ClamAV | During malware scans | A scan takes about 1 GB of memory. The panel warns on servers with less than 2 GB. |
+
+Disk space goes to your websites, databases, Docker images and backups. Backups kept "on
+this server" use the same disk, and are lost with it; S3-compatible storage is safer.
+
+<Aside type="tip">
+If you only want to try ekPanel, a small VPS or a local virtual machine of the size above is
+enough. If you plan to host customers, start bigger and watch the server's charts.
+</Aside>
+
+## Ports
+
+### On the panel's server
+
+| Port | Used for | Who connects |
+| --- | --- | --- |
+| 80/tcp | HTTP, and Let's Encrypt certificate checks | Everyone |
+| 443/tcp and 443/udp | HTTPS for the panel, websites and apps (UDP is HTTP/3) | Everyone |
+| 7443/tcp | Agents connecting to the panel (mutual TLS) | Agents on your other servers |
+| 22/tcp (or your SSH port) | SSH, and SFTP for websites | You, and site owners using SFTP |
+
+The panel itself listens on `127.0.0.1:8080` only; Caddy passes requests to it. Do not open
+port 8080.
+
+If your hosting provider has a firewall in its control panel (a "cloud firewall" or
+"security group"), allow these ports there too. The installer opens 80, 443 and 7443 in ufw
+only if ufw is already active.
+
+### On every server, depending on what you use
+
+| Port | Feature |
+| --- | --- |
+| 80/tcp, 443/tcp, 443/udp | Websites and apps |
+| 25, 465, 587, 993, 995 (tcp) | [Email](/guides/dns/email/): SMTP, submission, IMAPS and POP3S |
+| 53/tcp and 53/udp | [Name servers](/guides/dns/name-servers/) |
+| 21/tcp and 30000-30100/tcp | [FTP](/guides/websites/files/) (control and passive ports) |
+| Your SSH port | SFTP |
+
+When the [firewall](/guides/security/firewall/) is managed by ekPanel, it opens the mail,
+DNS and FTP ports by itself while those features are on.
+
+### Outgoing
+
+- Servers with an agent connect **out** to the panel on TCP port 7443. They do not need any
+  incoming port for this, so they can sit behind NAT.
+- A mail server needs outgoing port 25 to deliver mail. Many cloud providers block it until
+  you ask; the delivery check in the panel tells you.
+
+The [ports and paths reference](/reference/ports-and-paths/) lists every port and file
+ekPanel uses.
+
+## A domain (optional)
+
+You can install ekPanel without a domain. The panel is then reachable at
+`https://<server IP>` with a self-signed certificate, and your browser shows a warning once.
+
+With a domain for the panel, such as `panel.example.com`, you get a trusted certificate from
+Let's Encrypt. Before you install, create a DNS record (A, and AAAA if the server has IPv6)
+that points the name at the server.
+
+For websites, each domain needs its DNS pointed at the server that hosts it, or ekPanel can
+make the records for you through [Cloudflare](/guides/dns/cloudflare/) or
+[your own name servers](/guides/dns/name-servers/).
+
+## Your own computer
+
+There is no release to download yet, so you build ekPanel from source. You need:
+
+- **Linux** (the build has been used on Linux only).
+- **Go 1.27 or newer.** An older `go` downloads 1.27 by itself when it builds ekPanel.
+- **Node.js 22 or newer** with npm, to build the web interface.
+- **make**, **git** and **tar**.
+- An **SSH client** to copy the build to the server and run the installer.
+- A **web browser**, and an **authenticator app** (Google Authenticator, Aegis, 1Password
+  or similar) for two-factor sign-in.
+
+You can also build on the server itself if you install Go and Node.js there. The
+[install guide](/start/install/) shows both ways.
+
+## Next
+
+Continue with [Install](/start/install/).

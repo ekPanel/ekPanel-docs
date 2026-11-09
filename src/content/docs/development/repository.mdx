@@ -1,0 +1,144 @@
+---
+title: Repository layout
+description: What is where in the ekPanel repository, what each Go package does, and which files to change for a given task.
+sidebar:
+  order: 3
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+The main repository holds the panel, the agent, the web UI, the installer and the test VM
+script, in one Go module named `ekpanel`. This page is a map: what each folder is, and where
+to look when you want to change something.
+
+## Top level
+
+<FileTree>
+
+- .github/workflows/ci.yml CI: Go checks and tests, UI typecheck, translations, build
+- assets/brand/ logo files and their rules (README.md)
+- cmd/
+  - ekpanel/ the panel program
+  - ekpanel-agent/ the agent program
+- deploy/
+  - install.sh installer for a fresh Ubuntu or Debian server
+- docs/
+  - TRANSLATING.md how to translate the UI
+- internal/ all Go packages (see below)
+- scripts/
+  - test-vm.sh disposable Ubuntu test VM
+- web/ React and TypeScript UI
+- CONTRIBUTING.md
+- LICENSE AGPL-3.0
+- Makefile build, test and dev tasks
+- PLAN.md the master plan and progress of every phase
+- README.md
+- SECURITY.md security policy and design principles
+- go.mod
+
+</FileTree>
+
+`bin/`, `dist/` and `.data/` (the development database) are made by `make` and are not in Git.
+
+## The two programs
+
+| Folder | Program | What `main.go` does |
+| --- | --- | --- |
+| `cmd/ekpanel` | `ekpanel` | Loads the configuration, opens and migrates the database, creates the agent CA, starts the task runner, notifier and cleanup loop, then serves the web UI and API and the agent listener. Also has the `version` and `add-server` commands. |
+| `cmd/ekpanel-agent` | `ekpanel-agent` | `enroll`, `run`, `version`, and the internal `files` worker. |
+
+## Go packages in `internal/`
+
+Each line comes from the package's own doc comment.
+
+| Package | What it is |
+| --- | --- |
+| `agent` | The server-side agent: collects facts and metrics from Linux, streams them to the panel, and carries out the panel's typed operations. One file per area: `sites.go`, `fpm.go`, `databases.go`, `apps.go`, `builds.go`, `backup.go`, `firewall.go`, `mail.go`, `nameserver.go`, `ftp.go`, `malware.go`, `countries.go`, `security.go`, `wordpress.go`, `wptoolkit.go`, `terminal.go`… |
+| `agentproto` | The messages exchanged between the panel and agents: the enrolment and connect paths, operation names, and every spec and result type. |
+| `api` | The panel's HTTP layer: the JSON API under `/api/v1`, the agent endpoints and the embedded web UI. `server.go` lists every route. |
+| `auth` | Password hashing (argon2id), random tokens and TOTP helpers. |
+| `catalog` | The one-click services: Compose files reviewed by the project (`templates/<id>.yaml`), with the variables each needs. |
+| `cloudflare` | The part of Cloudflare's API ekPanel uses: zones, DNS records, the SSL mode and cache purges. `cloudflaretest/` has a fake Cloudflare for tests and local use. |
+| `config` | Loads panel settings from flags and `EKPANEL_*` environment variables. |
+| `cron` | Reads five-field cron schedules, finds their next run times, and writes them as systemd `OnCalendar` expressions. Used by both panel and agent. |
+| `db` | Opens the PostgreSQL pool and applies the embedded schema migrations (`migrations/*.sql`). Also the embedded development database. |
+| `dnssync` | Decides how to bring a Cloudflare zone to the records ekPanel wants, changing only records it made and nobody changed since. |
+| `hub` | Live state of connected servers (online status, recent metrics), fan-out to browsers, and routing operations to agents. |
+| `notify` | Notifications: the panel's inbox and channels (email, Telegram, Discord, Slack, webhooks), in each user's language (`locales/`). |
+| `pki` | The panel's private certificate authority for agent connections. |
+| `secretbox` | Encrypts small secrets the panel must reuse, so a copy of the database alone does not reveal them. |
+| `store` | The data access layer over PostgreSQL: one file per area (`sites.go`, `apps.go`, `customers.go`…). |
+| `tasks` | Background work stored in the `tasks` table: anything slow, and anything that asks an agent to change a server. Includes the reconcile that builds a server's desired state. |
+| `webui` | Embeds the built web app. `make ui` copies `web/dist` into `internal/webui/dist`. |
+
+### Migrations
+
+`internal/db/migrations/` holds SQL files named `0001_init.sql` to (today) `0028_name_servers.sql`.
+The panel applies new ones in name order when it starts. Add a new file with the next number;
+never change one that is already on `dev`.
+
+## The web UI in `web/`
+
+<FileTree>
+
+- web/
+  - index.html
+  - package.json scripts: dev, build, typecheck, i18n:check
+  - vite.config.ts dev proxy to the panel, build settings
+  - public/
+    - favicon.svg
+    - theme-init.js sets theme and language before the app loads
+  - scripts/
+    - check-i18n.mjs finds missing and unused translation keys
+  - src/
+    - main.tsx routes and app start
+    - index.css Tailwind and theme colours
+    - components/ cards and widgets used on several pages
+      - ui/index.tsx buttons, inputs, dialogs, badges…
+    - i18n/
+      - index.ts languages and i18next setup
+      - locales/
+        - en.json English, the source language
+        - bn.json Bangla
+    - lib/
+      - api.ts API client and the TypeScript types of API answers
+      - format.ts numbers, sizes and dates through Intl
+      - live.ts live server statistics
+      - session.ts the signed-in user
+      - theme.ts light, dark or system theme
+    - pages/ one file per page, such as SitesPage.tsx and SiteDetailPage.tsx
+
+</FileTree>
+
+The UI uses React, TypeScript, Vite, Tailwind CSS, TanStack Query, React Router, i18next, lucide
+icons, CodeMirror (the file manager's editor) and xterm.js (the terminal). Fonts are
+self-hosted Noto Sans, Noto Sans Bengali and JetBrains Mono.
+
+## Where to change what
+
+| You want to… | Look at |
+| --- | --- |
+| Add or change an API endpoint | `internal/api/server.go` (route), a handler file in `internal/api/`, a test next to it |
+| Change what is stored | a new migration in `internal/db/migrations/`, then `internal/store/` |
+| Change what happens on a server | `internal/agentproto/` (the spec), `internal/agent/` (the work), `internal/tasks/tasks.go` (what the panel sends) |
+| Add a one-click service | `internal/catalog/templates/<id>.yaml` and `internal/catalog/catalog.go` |
+| Change a page or card | `web/src/pages/` or `web/src/components/` |
+| Change or add UI text | `web/src/i18n/locales/en.json` (and `bn.json`) |
+| Change a notification's text | `internal/notify/locales/en.json` (and `bn.json`) |
+| Change the installer | `deploy/install.sh`, then test it in the [test VM](/development/test-vm/) |
+| Change sign-in, sessions, roles | `internal/api/auth.go`, `internal/auth/` |
+| Change the panel's settings | `internal/config/config.go` |
+
+For a walk through all of these with one real feature, see
+[Adding a feature](/development/adding-a-feature/).
+
+<Aside type="note">
+`PLAN.md` describes an earlier, planned layout (`cmd/panel`, `internal/modules/`…). The real
+layout is the one on this page.
+</Aside>
+
+## Related
+
+- [Development setup](/development/setup/)
+- [Architecture](/concepts/architecture/)
+- [Contributing](/development/contributing/)

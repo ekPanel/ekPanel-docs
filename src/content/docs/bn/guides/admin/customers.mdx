@@ -1,0 +1,211 @@
+---
+title: Customer আর package
+description: মানুষদের আপনার panel-এ তাঁদের নিজস্ব account দিন, website, database, app, disk space, memory আর CPU-র এমন limit-সহ, যা সত্যিই মানানো হয়।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+আপনি যদি অন্যদের website host করেন, তাহলে প্রত্যেককে একটা **customer** account দিন। একজন customer
+একই panel-এ sign in করেন আর শুধু নিজের জিনিসগুলোই দেখেন, তাঁর **package**-এর limit-এর মধ্যে।
+Package হলো একটা plan, যেমন "Starter" বা "Business": কয়টা website, database আর app, কতটা disk space,
+আর তাঁর সব process মিলিয়ে কতটা memory আর CPU।
+
+## শুরু করার আগে
+
+- আপনি **admin** হিসেবে sign in করা আছেন। Customer আর package মেনুতে **অ্যাডমিন** (Administration)-এর
+  নিচে।
+- কমপক্ষে একটা server connected আছে। দেখুন [Server যোগ করুন](/start/add-server/)।
+
+## একটা package তৈরি করুন
+
+<Steps>
+
+1. **প্যাকেজ** (Packages) খুলে **প্যাকেজ যোগ করুন** (Add package)-এ click করুন।
+
+2. একটা **নাম** (Name) দিন, যেমন `Starter`।
+
+3. Limit-গুলো পূরণ করুন (নিচের table দেখুন)। যেমন: 3টা website, 3টা database, 1টা app, 10টা cron job,
+   10 GB disk, 1024 MB memory, 1টা CPU core।
+
+4. **প্যাকেজ তৈরি করুন** (Create package)-এ click করুন।
+
+</Steps>
+
+### Package limit
+
+| Field | কী সীমিত করে | খালি বা 0 মানে |
+| --- | --- | --- |
+| **ওয়েবসাইট**, **ডাটাবেস**, **অ্যাপ**, **ক্রন জব** | Customer প্রতিটা কয়টা রাখতে পারবেন (0 থেকে 100,000)। WordPress staging-এর জন্য বানানো website-ও গোনা হয় | 0 মানে একটাও না। "অ্যাপ ০ মানে Docker অ্যাপ নয়।" |
+| **মেইল ডোমেইন**, **মেইলবক্স** | Customer-এর সব domain মিলিয়ে mail domain আর mailbox | 0 মানে একটাও না |
+| **মেইলবক্সের আকার (GB)** | একটা mailbox-এর সর্বোচ্চ size | খালি: কোনো limit নেই |
+| **ডিস্ক (GB)** | Website file, app folder ও volume, database আর mail সব মিলিয়ে | খালি: সীমাহীন |
+| **মেমরি (MB)** | Customer-এর **সব** PHP আর app process মিলিয়ে memory, কমপক্ষে 64 MB | খালি: কোনো limit নেই |
+| **CPU (কোর)** | এগুলো সব মিলিয়ে CPU, যেমন `0.5` বা `2`, কমপক্ষে একটা core-এর 5% | খালি: কোনো limit নেই |
+| **PHP ভার্সন** | তাঁদের website কোন কোন PHP version ব্যবহার করতে পারবে | "কিছু টিক না দিলে সব ভার্সন।" |
+| **সার্ভার** | Customer কোথায় কিছু বানাতে পারবেন | "কিছু টিক না দিলে সব সার্ভার।" |
+| **অনুমোদিত Docker ইমেজ** | তাঁদের app আর catalogue service কোন কোন image ব্যবহার করতে পারবে। প্রতি লাইনে একটা: `nginx`-এর মতো একটা নাম (যেকোনো tag), অথবা `/` দিয়ে শেষ হওয়া একটা prefix, যেমন `ghcr.io/acme/` | "খালি মানে যেকোনো ইমেজ।" |
+| **তাঁদের ওয়েবসাইটে SFTP** | তাঁরা SFTP চালু করতে পারবেন কিনা | বন্ধ |
+| **তাদের ওয়েবসাইটের জন্য FTP (এনক্রিপ্টেড)** | তাঁরা FTP চালু করতে পারবেন কিনা | বন্ধ |
+| **Git অ্যাপ** | তাঁরা নিজেদের repository build আর deploy করতে পারবেন কিনা ([Git deploy](/guides/apps/git-deploys/)) | বন্ধ |
+
+Customer-রা কখনো নিজের Compose file চালাতে পারেন না: "গ্রাহক Compose ফাইল ব্যবহার করতে পারেন না।" তাঁরা
+একক image আর [catalogue](/guides/apps/catalog/)-এর যাচাই করা service চালাতে পারেন।
+
+### Package বদলানো
+
+একটা package edit করে save করুন। নতুন memory আর CPU limit সাথে সাথে customer-দের server-এ পৌঁছে যায়,
+কিছু **restart না করেই**। কোনো সংখ্যা কমালে customer-দের যা আগে থেকে আছে তা থেকে যায়; তাঁরা শুধু
+আর যোগ করতে পারেন না।
+
+যে package-এ এখনো customer আছে, সেটা মোছা যায় না: "আগে এর গ্রাহকদের অন্য প্যাকেজে সরান।"
+
+## একজন customer যোগ করুন
+
+<Steps>
+
+1. **গ্রাহক** (Customers) খুলে **গ্রাহক যোগ করুন** (Add customer)-এ click করুন।
+
+2. তাঁর নাম আর email address দিন, আর একটা **প্যাকেজ** (Package) বেছে নিন।
+
+3. **গ্রাহক তৈরি করুন** (Create customer)-এ click করুন।
+
+4. Password copy করুন: "গ্রাহকের পাসওয়ার্ড, শুধু এই একবারই দেখানো হচ্ছে। নিরাপদ কোনো উপায়ে তাঁকে
+   পাঠান।" Sign in করার পর তিনি **নিরাপত্তা** (Security)-তে এটা বদলাতে পারবেন।
+
+</Steps>
+
+Customer-এর panel-এর ভাষা শুরুতে হয় আপনার ভাষা, তাঁকে তৈরি করার মুহূর্তে আপনি যেটা ব্যবহার করছিলেন;
+তিনি এটা বদলাতে পারেন। তিনি password হারিয়ে ফেললে customer তালিকায় **নতুন পাসওয়ার্ড** (New
+password)-এ click করে নতুন একটা বানান (একবার দেখানো হয়)। এতে তিনি সব জায়গা থেকে sign out হয়ে যান।
+
+Customer তালিকায় প্রত্যেক customer-এর package আর ব্যবহার দেখায়, যেমন website-এর "3-এর মধ্যে 2" আর
+তাঁর disk space।
+
+### Customer-এর জন্য কিছু তৈরি করা
+
+Website, database বা app যোগ করার সময় **কার জন্য** (For)-এ customer-কে বেছে নিন। তখন সেটা তাঁর হয়ে যায়
+আর তাঁর package-এ গোনা হয়, ঠিক যেন তিনি নিজেই বানিয়েছেন।
+
+## Customer-রা কী দেখেন আর কী করেন
+
+একজন customer আপনার মতোই একই address-এ sign in করেন। তিনি দেখেন:
+
+- **ড্যাশবোর্ড** (Dashboard), যেখানে "আপনার প্যাকেজ: …", প্রতিটা limit-এর কতটা ব্যবহার হয়েছে, আর এই
+  মাসের traffic।
+- **ওয়েবসাইট**, **ডাটাবেস**, **অ্যাপ**, **ইমেইল** আর **DNS**: শুধু যা তাঁর নিজের। Mail domain হতে
+  হবে তাঁর নিজের website-এর domain; hosted DNS zone হতে হবে তাঁর নিজের website বা app-এর domain। তিনি
+  নিজের Cloudflare account connect করতে পারেন।
+- **নিরাপত্তা** (তাঁর password আর two-factor authentication) আর **নোটিফিকেশন** (তাঁর নিজের alert
+  channel)।
+
+তিনি দেখেন **না**: অন্য customer-দের জিনিস, **ব্যাকআপ**, **সার্ভার** (শুধু বেছে নেওয়ার জন্য server-এর
+নামের একটা তালিকা, তাঁর package অনুযায়ী সীমিত), **সার্ভার নিরাপত্তা**, **গ্রাহক**, **প্যাকেজ** বা
+**অডিট লগ**। তিনি server terminal খুলতে পারেন না।
+
+Customer-এর যা দেখার অনুমতি নেই, এমন যেকোনো কিছুর উত্তর হয় "not found", তাই ID বদলে বদলে কেউ অন্যের
+website খুঁজে বের করতে পারে না। প্রতিটা route-এর জন্য মালিকানা check হয় এক জায়গায়; একটা automated test
+অন্য customer হিসেবে 22টা route ঘুরে দেখে আর প্রতিটায় "not found" আশা করে।
+
+## Memory আর CPU limit কীভাবে মানানো হয়
+
+Limit-গুলো সত্যিকারের, শুধু panel-এর সংখ্যা নয়। প্রতিটা server-এ প্রত্যেক customer একটা **systemd
+slice** পান (একটা Linux control group, cgroup v2), নাম `ekpanel-c<customer id>.slice`, package-এর
+`MemoryMax` আর `CPUQuota`-সহ, আর সর্বোচ্চ 4,096টা process। Customer যা কিছু চালান সব এর ভেতরে যায়:
+
+- **PHP**: তাঁদের website চলে তাঁদের নিজস্ব একটা PHP-FPM master-এর অধীনে, প্রতি PHP version-এ একটা,
+  slice-এর ভেতরে।
+- **Docker app আর catalogue service**: প্রতিটা container slice-টাকে তার cgroup parent হিসেবে পায়।
+- **Git build**: build-ও slice-এর ভেতরে চলে।
+- তাঁদের website আর app-এর **cron job**।
+
+CPU দেওয়া হয় একটা core-এর শতাংশে: panel-এ `1` core মানে `CPUQuota=100%`, `0.5` মানে 50%।
+
+Customer-এর process-গুলো মিলিয়ে package-এর চেয়ে বেশি memory চাইলে kernel **তাঁরই** একটা process থামিয়ে
+দেয়, অন্য কারো নয়। Limit ছাড়িয়ে যাওয়া একটা PHP script শুধু নিজের worker-টাই হারায়; customer-এর অন্য
+request চলতে থাকে। Project-এর test VM-এ, 256 MB-এর একটা package-এ, 400 MB চাওয়া একটা script একাই থেমে
+গেছে, আর 50% CPU limit দুটো ব্যস্ত loop-কে 4 সেকেন্ডে 2 সেকেন্ড CPU দিয়েছে।
+
+Admin-দের নিজের website আর app কোনো slice-এ নেই, আর তাঁদের কোনো package নেই।
+
+## Disk space কীভাবে মাপা হয়
+
+Disk space **panel মাপে**, filesystem quota দিয়ে নয়:
+
+- প্রতি **30 মিনিটে** প্রতিটা server-এর agent website-এর home folder, আর app folder ও Docker volume যোগ
+  করে হিসাব করে। প্রতিটা file একবারই গোনা হয়, link ধরে যাওয়া হয় না।
+- **Database**-এর size জানানো হয় প্রতিবার server তার database-গুলো apply করার সময়।
+- **Mailbox**-এর ব্যবহার আসে mail server থেকে।
+
+Disk space শেষ হয়ে গেলে:
+
+- নতুন website, database, app, cron job আর mail domain নেওয়া হয় না: "প্যাকেজের ডিস্কের জায়গা শেষ।"
+- File manager-এর যেসব কাজে data বাড়ে (upload, নতুন file বা folder, unzip, zip), সেগুলো নেওয়া হয় না।
+- কিছুই মোছা হয় না, আর website চলতে থাকে।
+
+Customer আর admin-রা একটা [notification](/guides/admin/notifications/) পান 90%-এ ("ডিস্কের জায়গা প্রায়
+শেষ") আর 100%-এ ("ডিস্কের জায়গা শেষ")।
+
+<Aside type="caution">
+যেহেতু জায়গা মাপা হয় প্রতি 30 মিনিটে, দুটো মাপের মাঝে একজন customer limit কিছুটা ছাড়িয়ে যেতে পারেন।
+Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আর চলমান website বা app লিখতে থাকতে পারে। শুধু panel-এর
+নিজের কাজগুলোই নেওয়া হয় না।
+</Aside>
+
+## Customer হিসেবে sign in করুন
+
+একজন customer ঠিক কী দেখেন তা দেখতে, বা তাঁর জন্য কিছু ঠিক করে দিতে:
+
+<Steps>
+
+1. Customer তালিকায় customer-এর পাশে **তাঁর হয়ে ঢুকুন** (Sign in as)-এ click করুন।
+
+2. একটা banner দেখায় "আপনি … হিসেবে ঢুকেছেন। যা করবেন, সব আপনার নিজের নামেই লেখা থাকবে।"
+
+3. Customer হিসেবে কাজ করুন। শেষ হলে **নিজের অ্যাকাউন্টে ফিরুন** (Back to my account)-এ click করুন।
+
+</Steps>
+
+- এটা সর্বোচ্চ **এক ঘণ্টা** থাকে।
+- Audit log প্রতিটা কাজ **আপনার** নামে record করে, আর এটাও যে আপনি customer হিসেবে কাজ করেছেন।
+- Customer-এর নিজের account security তাঁরই থাকে: তাঁর হয়ে sign in করা অবস্থায় আপনি তাঁর password
+  বদলাতে, two-factor authentication চালু বা বন্ধ করতে, তাঁর অন্য session sign out করাতে, বা তাঁর
+  notification channel বদলাতে পারবেন না।
+- Customer হিসেবে sign in করা অবস্থায় terminal, app shell-সহ, পাওয়া যায় না।
+
+## যা শুধু admin-রা পারেন
+
+- Package আর customer তৈরি, বদল আর মুছে ফেলা, customer-দের password reset করা, আর তাঁদের হয়ে sign in
+  করা।
+- Server যোগ করা আর সরানো, তাদের metric আর service দেখা, আর একটা root
+  [terminal](/guides/apps/terminal/) খোলা।
+- [Backup](/guides/data/backups/), firewall, server security, email server আর built-in name server সেট
+  করা।
+- নিজের Compose file চালানো আর app-এর জন্য public port ব্যবহার করা।
+- [Notification](/guides/admin/notifications/)-এর জন্য panel-এর SMTP server আর address সেট করা।
+- Audit log পড়া।
+
+প্রত্যেক admin-এর এই সব অধিকার আছে; ছোট কোনো admin role এখনো নেই।
+
+## একজন customer মুছে ফেলুন
+
+যে customer-এর নামে এখনো কিছু আছে, তাঁকে মোছা যায় না: "তাঁর এখনো …টি ওয়েবসাইট, …টি ডেটাবেস আর …টি
+অ্যাপ আছে। আগে সেগুলো মুছুন বা সরান।" আগে সেগুলো মুছুন, তারপর customer তালিকায় delete button-এ click
+করুন।
+
+## Limit আর যা এখনো নেই
+
+- একজন customer-কে **suspend** করা (মুছে না ফেলে তাঁর site বন্ধ রাখা): এখনো নেই।
+- একটা website, database বা app অন্য মালিকের কাছে **সরানো**: এখনো নেই।
+- Package-এ **bandwidth limit**: এখনো নেই। Traffic অবশ্য আগে থেকেই মাপা হয় আর দেখানো হয়।
+- নতুন customer-দের sign-in তথ্যসহ **email**: এখনো নেই; password নিজে পাঠান।
+- **Reseller** (যাঁরা আপনার package নিজের customer-দের কাছে বিক্রি করেন) আর **sub-user**: এখনো নেই।
+- সত্যিকারের filesystem quota: এখনো নেই; disk space ওপরে যেভাবে বলা হয়েছে সেভাবে মাপা হয়।
+
+দেখুন [roadmap](/project/roadmap/)।
+
+## সম্পর্কিত
+
+- [Notification](/guides/admin/notifications/): Customer-রা তাঁদের নিজের website, app আর disk space নিয়ে alert পান।
+- [Docker app](/guides/apps/docker-apps/): Customer-রা কী চালাতে পারেন আর কী পারেন না।

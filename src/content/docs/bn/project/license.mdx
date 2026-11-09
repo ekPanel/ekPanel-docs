@@ -1,0 +1,103 @@
+---
+title: Licence
+description: ekPanel-এর AGPL-3.0 licence সহজ কথায় - আপনি কী করতে পারেন, service হিসেবে চালালে কী শেয়ার করতে হবে - আর dependency, country data, docs আর logo-র licence।
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel হলো
+[GNU Affero General Public License, version 3](https://github.com/ekPanel/ekpanel/blob/dev/LICENSE)-এর
+(`AGPL-3.0-only`) অধীনে free software। বাস্তবে এর মানে কী, এই page-এ তা বোঝানো হয়েছে।
+
+<Aside type="note">
+এটা সহজ ভাষায় একটা সারাংশ, আইনি পরামর্শ নয়। আইনগতভাবে গণ্য হয় শুধু English-এ লেখা আসল licence
+text-টাই; এই বাংলা ব্যাখ্যা নয়।
+</Aside>
+
+## আপনি কী করতে পারেন
+
+- **ব্যবহার করুন** যেকোনো কাজে, টাকা দেওয়া customer-দের জন্য commercial hosting-সহ।
+- **পড়ে বুঝুন** এটা কীভাবে কাজ করে: পুরো source code আছে।
+- **বদলান** আপনার প্রয়োজন মতো।
+- **শেয়ার করুন**, বদলানো হোক বা না হোক, যে কারো সাথে।
+
+আপনাকে কিছুই দিতে হয় না, আর কারো অনুমতিও নিতে হয় না।
+
+## আপনাকে কী করতে হবে
+
+AGPL শুধু দুটো ক্ষেত্রে দায়িত্ব যোগ করে:
+
+| আপনি যদি… | তাহলে আপনাকে |
+| --- | --- |
+| অন্যদের ekPanel-এর **copy দেন** (বদলানো হোক বা না হোক), যেমন download হিসেবে | তাদের source code-ও দিতে হবে, একই licence-এ, licence আর copyright notice রেখে। |
+| একটা **বদলানো version চালান** এমন service হিসেবে যা অন্য মানুষ network-এর মাধ্যমে ব্যবহার করে, যেমন আপনার customer-রা আপনার বদলানো panel-এ sign in করে | ওই user-দের আপনার বদলানো version-এর source code দেওয়ার ব্যবস্থা রাখতে হবে, একই licence-এ। |
+
+ekPanel **না বদলে** চালালে, হাজার হাজার customer-এর জন্য হলেও, আপনার কোনো বাড়তি দায়িত্ব নেই। যে
+পরিবর্তন আপনি নিজের কাছে রাখেন আর অন্যদের ব্যবহার করতে দেন না, সেটাও আপনার নিজের ব্যাপার।
+
+এই দ্বিতীয় নিয়মটাই AGPL-কে GPL থেকে আলাদা করে। এ কারণেই project এটা বেছে নিয়েছে: যে company-গুলো
+ekPanel-কে hosted service হিসেবে দেয়, তাদের একটা বন্ধ (closed) fork রাখার বদলে নিজেদের উন্নতিগুলো
+শেয়ার করতে হবে। MIT বা Apache-2.0-এর মতো licence closed fork করতে দিত।
+
+### "Only"
+
+`AGPL-3.0-only` মানে AGPL-এর version 3, আর পরের কোনো version আপনা-আপনি নয়।
+
+### আপনার contribution
+
+Main repository-তে একটা pull request খুললে আপনি মেনে নেন যে আপনার contribution একই licence,
+`AGPL-3.0-only`-এর অধীনে প্রকাশ হবে। দেখুন [Contributing](/development/contributing/)।
+
+## Dependency
+
+Panel আর agent এমন library দিয়ে বানানো যাদের licence AGPL-এর সাথে compatible:
+
+- **Go library**: MIT (chi, pgx, embedded-postgres, pty), BSD (Go-এর `x/crypto` আর `x/net`, crypt
+  library), ISC (WebSocket library) আর Apache-2.0 (TOTP library)।
+- **Web UI**: React, Vite, Tailwind CSS, TanStack Query, i18next, CodeMirror, xterm.js আর lucide icon,
+  MIT-এর মতো permissive licence-এ।
+- **Font**: Noto Sans, Noto Sans Bengali আর JetBrains Mono, SIL Open Font License-এ, panel-এর ভেতরেই
+  self-hosted।
+
+### ekPanel আপনার server-এ যেসব program install করে
+
+আপনি কোনো feature ব্যবহার করলে agent আপনার server-এ আলাদা program install করে: Caddy, PostgreSQL,
+MariaDB, PHP, Docker, Stalwart, Roundcube, PowerDNS, CrowdSec, ClamAV, Pure-FTPd, restic, WP-CLI,
+Railpack এবং আরও কিছু। এগুলো ekPanel-এর code-এর অংশ নয়; প্রতিটা আসে নিজের project থেকে, নিজের
+licence-এ। Catalogue-এর app-গুলোর (Nextcloud, Ghost, Grafana…) ক্ষেত্রেও একই কথা, যাদের container image
+আসে তাদের publisher-দের কাছ থেকে।
+
+## Country data (DB-IP)
+
+Country blocking [DB-IP](https://db-ip.com)-এর free country list ("IP to Country Lite") ব্যবহার করে। এটা
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) licence-এ দেওয়া, যাতে
+credit দিতে হয়। যেখানে data ব্যবহার হয়, panel সেখানে একটা link-সহ **IP Geolocation by DB-IP**
+দেখায়। List-টা যে server ব্যবহার করে, সেখানে মাসে একবার download হয়; এটা ekPanel-এর ভেতরে দেওয়া থাকে
+না। Panel বদলালে এই credit রেখে দিন।
+
+## এই docs
+
+Documentation ([docs repository](https://github.com/ekPanel/ekPanel-docs)-র `src/content/`-এর file-গুলো)
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)-এ licensed: উপযুক্ত credit দিলে যেকোনো
+কাজে এটা শেয়ার করতে আর বদলে নিতে পারেন। Site-এর code (configuration আর style) MIT licence-এ।
+
+## নাম আর logo
+
+Logo file-গুলো আছে main repository-র `assets/brand/`-এ, আর এগুলো ব্যবহারের নিয়ম আছে
+`assets/brand/README.md`-এ। সংক্ষেপে:
+
+- নামটা লিখুন **ekPanel**: ছোট e, বড় P।
+- Logo টেনে লম্বা বা চেপে ছোট করবেন না, আর tile বা সবুজ cursor-এর রং বদলাবেন না।
+- এর চারপাশে অন্তত icon-এর উচ্চতার অর্ধেক ফাঁকা জায়গা রাখুন।
+- ছবি বা pattern-এর ওপর এক-রঙা বা উল্টানো (reversed) version ব্যবহার করুন।
+
+এখনো কোনো লিখিত trademark policy নেই। নিজের product, service বা fork-এর জন্য নাম বা logo ব্যবহার করতে
+চাইলে আগে ekpanelbd@gmail.com-এ জিজ্ঞেস করুন।
+
+## সম্পর্কিত
+
+- [সাধারণ প্রশ্ন: এটা কি free?](/reference/faq/#is-it-free-what-does-the-licence-allow)
+- [Contributing](/development/contributing/)
+- [পুরো licence text](https://www.gnu.org/licenses/agpl-3.0.html) (English)

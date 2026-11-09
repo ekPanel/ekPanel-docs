@@ -1,0 +1,188 @@
+---
+title: First steps
+description: After installing ekPanel, create the administrator, turn on two-factor sign-in, add your first website, put a page online and set up backups.
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+This page walks you through your first half hour with a freshly installed panel: from the
+first sign-in to a website that is online and backed up.
+
+## Before you start
+
+- ekPanel is [installed](/start/install/), and you have the address and the setup token the
+  installer printed.
+- For a website with a trusted certificate: a domain whose DNS record (A, and AAAA for IPv6)
+  points at your server.
+- An authenticator app on your phone, such as Google Authenticator, Aegis or 1Password.
+
+## 1. Create the administrator
+
+<Steps>
+
+1. Open the panel's address. On a panel without a domain, your browser warns about the
+   self-signed certificate; accept it once.
+
+2. The page **Welcome to ekPanel** opens. Paste the **Setup token**. If you lost it, run
+   `sudo cat /var/lib/ekpanel/setup-token` on the server.
+
+3. Fill in **Your name**, **Email** and **Password**. The password needs at least 10
+   characters; a short sentence is easy to remember and hard to guess.
+
+4. Click **Create administrator**. You are signed in.
+
+</Steps>
+
+You do this only once. Next time, the panel shows **Sign in**, where you enter your email
+and password. The panel's language follows your browser at first; you can switch between
+English and বাংলা at any time.
+
+## 2. Turn on two-factor authentication
+
+Two-factor authentication means signing in needs a 6-digit code from your phone as well as
+your password. An administrator can do everything on every server, so turn it on now.
+
+<Steps>
+
+1. In the menu, under **Your account**, open **Security**.
+
+2. Click **Turn on two-factor authentication**.
+
+3. Scan the QR code with your authenticator app. If you cannot scan it, type the key shown
+   under it into the app instead.
+
+4. Enter the 6-digit code the app shows, and click **Confirm and turn on**.
+
+</Steps>
+
+On the same page you can change your password and **Sign out all other devices**.
+
+<Aside type="caution">
+Keep your phone, or a backup of your authenticator app, safe. Without the code you cannot
+sign in.
+</Aside>
+
+## 3. Look around: dashboard and server
+
+The **Dashboard** greets you and shows whether everything is running. Until you are done, a
+**Getting started** card lists three steps: create the administrator, connect a server,
+and turn on two-factor authentication. The installer already connected your server, so
+after the step above all three are ticked and the card goes away.
+
+Open **Servers** in the menu. Your server is listed under its host name and shows
+**Online**. Click it to see:
+
+- **System**: host name, operating system, kernel, architecture, agent version and when it
+  connected.
+- Live **CPU**, **Memory**, **Disk** and **Network** charts. Pick a **Time range** of
+  **Live**, **1 hour**, **24 hours**, **7 days** or **30 days**.
+- **Services** such as Caddy, PostgreSQL and cron, with their state and a **Restart**
+  button for the ones ekPanel may restart.
+- The websites, databases and apps on this server, the firewall, and more.
+
+Slow work, such as restarting a service or installing PHP, runs as a background task. The
+task list in the panel shows it as **Waiting**, **Running**, **Done** or **Failed**.
+
+## 4. Add your first website
+
+<Steps>
+
+1. Open **Websites** and click **Add website**.
+
+2. Enter the **Domain**, for example `example.com`. Leave **Also answer on www.example.com**
+   ticked if you want both addresses to work.
+
+3. Pick the **Server**. You have only one for now.
+
+4. Choose the **Type of site**:
+   - **PHP** for WordPress, Laravel and other PHP applications. Then pick the **PHP
+     version**; the recommended one is marked. A version that is not on the server yet is
+     installed automatically, which can take a few minutes the first time.
+   - **Static** for plain HTML, CSS and JavaScript files.
+
+5. Choose the **SSL certificate (HTTPS)**:
+   - **Automatic, free**: Let's Encrypt, renewed automatically. The domain's DNS must point
+     at this server.
+   - **Self-signed**: for testing, or domains that are not on the public internet. Browsers
+     show a warning.
+
+6. For a PHP site you can tick **Install WordPress** to get WordPress right away. The
+   [WordPress guide](/guides/websites/wordpress/) explains the details.
+
+7. Click **Create website**.
+
+</Steps>
+
+The website's page shows **Applying…** for a few seconds while the agent sets it up, then
+**Live**. Click **Visit site**: you see a page that says your domain is ready.
+
+If the site shows **Problem**, the page explains what went wrong. Fix the cause (often the
+domain's DNS) and click **Try again**. More in the [websites guide](/guides/websites/websites/).
+
+## 5. Put a page online
+
+Each website has its own folder, `public_html`, in the home folder of the site's own Linux
+account. The page you just saw is `public_html/index.html`.
+
+<Steps>
+
+1. On the website's page, click **Files**.
+
+2. Open `public_html`.
+
+3. Drag your `index.html` (and any other files) from your computer onto the list, or click
+   **Upload**. When asked, choose **Replace it** to overwrite the welcome page.
+
+4. Reload your website in the browser.
+
+</Steps>
+
+You can also edit a file right in the browser: click a text file's name to open it in the
+editor, then click **Save** (or press `Ctrl+S`). For many files, or to work from your own editor, use SFTP; see the
+[files guide](/guides/websites/files/).
+
+## 6. Set up backups
+
+Backups are encrypted and deduplicated, and cover every website and database on a server.
+
+<Steps>
+
+1. Open **Backups** and click **Add backup location**.
+
+2. Pick the **Server**.
+
+3. Under **Where to keep the backups**, choose:
+   - **This server**: fast to set up, but lost if the server's disk is lost.
+   - **S3-compatible storage**: Amazon S3, Backblaze B2, Cloudflare R2, Wasabi, MinIO and
+     others. Safer, because the backups are off the server. Fill in the **Endpoint**,
+     **Bucket**, **Access key ID** and **Secret access key**.
+
+4. Choose **How often** (every hour, every day, every week, or only when you start it), the
+   time (**At**) and **How many to keep**.
+
+5. Click **Create**.
+
+6. The panel shows the **Recovery key** once. Save it somewhere away from this server, such
+   as a password manager, then tick **I have saved the recovery key**.
+
+7. Click **Back up now** to make the first backup.
+
+</Steps>
+
+<Aside type="danger" title="Save the recovery key">
+The recovery key is the only key to your backups. ekPanel does not keep it. Without it,
+nobody, including you, can read or restore them, for example after rebuilding the server.
+</Aside>
+
+## What next
+
+- [Add another server](/start/add-server/).
+- Connect [Cloudflare](/guides/dns/cloudflare/) so ekPanel makes the DNS records for your
+  sites.
+- Set up [notifications](/guides/admin/notifications/) so you hear about a full disk or a
+  failed backup.
+- Look at the [security overview](/guides/security/overview/) and turn on the
+  [firewall](/guides/security/firewall/).
+- Host other people: [customers and packages](/guides/admin/customers/).

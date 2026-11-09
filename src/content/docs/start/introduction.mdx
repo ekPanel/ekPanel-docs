@@ -1,0 +1,89 @@
+---
+title: What is ekPanel?
+description: ekPanel is a free, open-source control panel for your own Linux servers, for classic web hosting and Docker apps in one place.
+sidebar:
+  order: 1
+---
+
+import { Aside, Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+ekPanel is a control panel you install on your own Linux server. From one web page you host
+websites, databases, Docker apps, email and DNS on one server or many, and you can give
+customers accounts of their own.
+
+**ek** (এক) is Bangla for "one": one panel for your whole hosting.
+
+<Aside type="caution" title="Early development">
+ekPanel works end to end on a test server, but it has no release yet. Today you build it
+from source and install it with a script. Do not host anything important on it yet. The
+[roadmap](/project/roadmap/) shows what comes before the first release.
+</Aside>
+
+## Who it is for
+
+- **People with their first VPS** who want to put a website or a WordPress blog online
+  without learning every server tool first.
+- **Developers** who want to deploy apps from Git with Docker, next to their PHP sites, on a
+  server they control.
+- **Hosting companies and agencies** who host sites for other people and need customer
+  accounts, packages with limits, backups and more than one server.
+- **Contributors** who want an open, readable code base to learn from and improve.
+
+Every screen is in English and বাংলা (Bangla), and the panel is built so more languages can
+follow.
+
+## What it combines
+
+Hosting tools usually come in two kinds. ekPanel puts both in one panel.
+
+<CardGrid>
+	<Card title="Classic web hosting" icon="laptop">
+		The kind of hosting panels such as cPanel and aaPanel offer: websites with PHP, free
+		HTTPS, a file manager, SFTP and FTP, databases, WordPress tools, email, DNS, cron jobs
+		and backups.
+	</Card>
+	<Card title="App deployment" icon="rocket">
+		The kind of platform Coolify offers: run Docker images and Compose files, build
+		apps from a Git repository on every push, roll back, and get a preview for each pull
+		request.
+	</Card>
+</CardGrid>
+
+On top of that come a firewall, CrowdSec, malware scans, country blocking, two-factor
+sign-in, customer accounts with limits the Linux kernel enforces, and notifications. The
+[feature list](/start/features/) has the full picture.
+
+## The panel and the agent
+
+ekPanel has two parts. The **panel** stores what should exist (websites, databases, apps,
+settings) and shows you the web interface; a small **agent** on every server connects to the
+panel and does the work on that server.
+
+You install the panel once. Every server, including the panel's own, runs an agent. Read
+[architecture](/concepts/architecture/) when you want the details.
+
+## How it compares
+
+ekPanel takes ideas from the panels above, but it is its own project, and it is young. Some
+things to know:
+
+| | ekPanel today |
+| --- | --- |
+| Licence | Free software under the [AGPL-3.0](/project/license/). No paid edition. |
+| Servers | One panel manages many servers. Each server runs an agent that dials out to the panel, so servers behind NAT work too. |
+| How changes reach a server | The panel keeps the full wanted state of each server and the agent brings the server in line, also every 10 minutes. See [desired state](/concepts/desired-state/). |
+| Operating systems | Ubuntu 24.04 or newer, and Debian 12 or 13. No Red Hat family yet. |
+| Releases | None yet. No one-line installer, no self-update. |
+| Not there yet | Resellers, importers from other panels, moving sites between servers, a WAF, an API with tokens, billing. See [features](/start/features/#not-yet). |
+
+If you need a mature, supported panel for paying customers today, ekPanel is not ready for
+that. If you want to try it, give feedback or help build it, you are in the right place.
+
+## Where to go next
+
+<CardGrid>
+	<LinkCard title="Features" href="/start/features/" description="Everything ekPanel can do today, and what is not there yet." />
+	<LinkCard title="Requirements" href="/start/requirements/" description="The server, ports and computer you need." />
+	<LinkCard title="Install" href="/start/install/" description="Build ekPanel and install it on a server." />
+	<LinkCard title="How it works" href="/concepts/architecture/" description="The panel, the agents and how they talk." />
+</CardGrid>

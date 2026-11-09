@@ -1,0 +1,151 @@
+---
+title: CrowdSec
+description: Turn on CrowdSec to detect and ban password guessers, scanners and exploit attempts on SSH and your websites, ban addresses by hand, and keep an allowlist.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+[CrowdSec](https://www.crowdsec.net/) reads your server's logs, recognises attacks (password
+guessing, scans for weak spots, known exploits) and bans the attacking address in the firewall
+for a while. It also receives addresses that its community reports, and blocks those too.
+
+## Before you start
+
+- Only administrators manage CrowdSec, on the **Server security** page.
+- The server must run **Ubuntu or Debian**: ekPanel installs CrowdSec from CrowdSec's own
+  package repository, which has packages for those two.
+- CrowdSec works on its own; it does not need the [firewall](/guides/security/firewall/) to be
+  on. Its bans live in an nftables table of their own, next to `ufw`.
+
+## Turn CrowdSec on
+
+<Steps>
+
+1. Open **Server security** and pick the server.
+
+2. In the **CrowdSec** card, choose **Turn on CrowdSec**.
+
+3. The card shows <Badge text="Starting" variant="caution" />, then **Running** with
+   CrowdSec's version once it is installed and started.
+
+</Steps>
+
+The agent then:
+
+- adds CrowdSec's package repository (checking its signing key) and installs `crowdsec` and the
+  nftables firewall bouncer (`crowdsec-firewall-bouncer-nftables`), which carries out the bans;
+- moves CrowdSec's local API to `127.0.0.1:18910`, because its usual port 8080 is the panel's;
+- has it read SSH's log and every website's and app's access log (`/var/log/caddy/*.log`);
+- installs the detections listed below, and registers the bouncer with a key only root can read.
+
+**Turn off** stops CrowdSec and the bouncer, and with them all bans. CrowdSec stays installed
+with its data, ready for turning it on again.
+
+<Aside type="caution">
+If the card says "The firewall part of CrowdSec is not running, so bans have no effect",
+CrowdSec still detects attacks but nothing is blocked. Restart `crowdsec-firewall-bouncer`
+under **Services** on the server's page.
+</Aside>
+
+## What it detects
+
+ekPanel turns on these CrowdSec collections (sets of log parsers and detection scenarios):
+
+| Collection | Detects |
+| --- | --- |
+| `crowdsecurity/linux` | The basics for a Linux server |
+| `crowdsecurity/sshd` | SSH password guessing (fast and slow) and guessing user names |
+| `crowdsecurity/caddy` | Reads the web server's (Caddy's) access logs |
+| `crowdsecurity/base-http-scenarios` | Probing for files, aggressive crawling, known attack tools, looking for secret files, admin pages and backdoors, path traversal, SQL and script injection, open proxy tests |
+| `crowdsecurity/http-cve` | Attempts to use known security holes (CVEs) |
+| `crowdsecurity/wordpress` | WordPress password guessing, user name guessing, scans, trying to read `wp-config.php` |
+| `crowdsecurity/whitelist-good-actors` | Keeps known good services (such as search engine crawlers) from being banned |
+
+## Bans
+
+The **Banned addresses** card (shown while CrowdSec runs) lists the bans made on this server:
+the address and its country, the reason, whether it was **Detected** or **Banned by hand**, and
+**Until** when. The community's blocklist is not shown here; it can hold many thousands of
+addresses.
+
+To lift a ban, choose **Lift ban**.
+
+### Ban an address by hand
+
+<Steps>
+
+1. In **Banned addresses**, enter the **IP address**.
+
+2. Choose how long under **For**: 1 hour, 4 hours, 1 day, 1 week, 30 days or 1 year.
+
+3. Optionally write a **Reason** (one line, up to 100 characters). Without one it says
+   "Banned by hand".
+
+4. Choose **Ban**.
+
+</Steps>
+
+Bans by hand take **one public address** at a time, such as `203.0.113.7` or `2001:db8::7`.
+Networks (`203.0.113.0/24`) and private, loopback or similar addresses are refused, because
+the firewall bouncer stores single addresses. To block a whole network, add a **Block an
+address** rule in the [firewall](/guides/security/firewall/) instead.
+
+An address on the allowlist cannot be banned: "… is on the allowlist. Remove it there first."
+
+## Recent attacks
+
+The **Recent attacks** card lists what CrowdSec detected: the kind of attack in plain words
+(such as "SSH password guessing" or "WordPress password guessing"), the address, its country
+and network owner, when, and a **Banned** badge if it led to a ban. Bans by hand are listed with
+the bans, not here.
+
+## The allowlist
+
+The **Allowlist** card holds addresses and networks that are **never banned**, such as your
+office or your monitoring service. One per line, up to 200:
+
+```text
+203.0.113.10
+198.51.100.0/24
+2001:db8:1234::/48
+```
+
+Choose **Save**. The allowlist also keeps CrowdSec's community blocklist from blocking these
+addresses, and it applies to [country blocking](/guides/security/countries/) as well.
+
+Besides your entries, ekPanel always allows (see "Always allowed as well" in the card):
+
+- the server's own addresses, so it never bans itself;
+- [Cloudflare's published addresses](https://www.cloudflare.com/ips/).
+
+## Sites behind Cloudflare
+
+When a site's DNS record is proxied through Cloudflare, every visitor reaches your server from
+one of Cloudflare's addresses. ekPanel's web server reads the visitor's real address from
+Cloudflare's header (trusted only from Cloudflare's addresses), so CrowdSec detects and logs the
+**visitor's** address, never Cloudflare's.
+
+But the ban is made in your server's firewall, and the banned visitor still comes in through
+Cloudflare, whose addresses are never blocked. So:
+
+<Aside type="caution" title="Bans only stop direct access">
+For visitors through Cloudflare's proxy, a ban only stops them from reaching your server
+directly. Their requests through Cloudflare still arrive. Block such attackers at Cloudflare
+too, for example with Cloudflare's firewall rules.
+</Aside>
+
+## Limits and what is not there yet
+
+- Ubuntu and Debian only.
+- CrowdSec reads SSH and the web server's logs. Mail and FTP logs are not read yet.
+- A web application firewall (WAF) is planned for later; see the [roadmap](/project/roadmap/).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Server security" href="/guides/security/overview/" description="The checklist and how everything fits together." />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Block whole networks and open ports." />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="How visitors' real addresses reach your server." />
+</CardGrid>

@@ -1,0 +1,226 @@
+---
+title: Configuration
+description: ekPanel-এর panel আর agent-এর প্রতিটা setting, flag আর command, আর installer যেসব file লেখে।
+sidebar:
+  order: 1
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel-এ ইচ্ছা করেই setting খুব কম রাখা হয়েছে। প্রায় সবকিছু panel-এর web UI থেকে set করা হয়
+আর panel-এর database-এ রাখা হয়। বাকি যা থাকে, এই page-এ তার তালিকা: panel-এর environment
+variable আর flag, agent-এর command আর credential file, আর installer যেসব file লেখে।
+
+## Panel (`ekpanel`)
+
+Panel একটাই program, `/usr/local/bin/ekpanel`। এটা web UI আর API serve করে, আর agent-দের জন্য
+অপেক্ষা করে (listen করে)। এটা নিজের setting পড়ে `EKPANEL_*` environment variable থেকে। একই কাজের
+একটা command line flag দিলে সেটাই variable-এর চেয়ে বেশি গুরুত্ব পায়।
+
+| Variable | Flag | Default | কী করে |
+| --- | --- | --- | --- |
+| `EKPANEL_LISTEN` | `--listen` | `127.0.0.1:8080` | Web UI আর API-এর address। Caddy HTTPS traffic এখানে পাঠায়। |
+| `EKPANEL_AGENT_LISTEN` | `--agent-listen` | `:7443` | যে address-এ agent-রা mutual TLS দিয়ে connect করে। `:7443` মানে প্রতিটা address-এর port 7443। |
+| `EKPANEL_DATABASE_URL` | `--database-url` | (নেই) | PostgreSQL connection URL। Development database ব্যবহার না করলে এটা দিতেই হবে। |
+| `EKPANEL_DEV_DB` | `--dev-db` | `false` | Data folder-এর ভেতরে একটা আলাদা, embedded PostgreSQL চালু করে। শুধু development-এর জন্য। |
+| `EKPANEL_DATA_DIR` | `--data-dir` | `/var/lib/ekpanel` | Panel-এর যেসব state database-এ নেই, সেগুলোর folder (নিচে দেখুন)। |
+| `EKPANEL_SECURE_COOKIES` | `--secure-cookies` | `true` | Session cookie-কে `Secure` চিহ্ন দেয় আর এর নাম রাখে `__Host-ekpanel_session`। শুধু plain-HTTP development-এ এটা বন্ধ করুন। |
+
+True বা false value সাধারণ সব রূপে লেখা যায় (`true`, `false`, `1`, `0`)। পড়া যায় না এমন value
+দিলে default ব্যবহার হয়।
+
+Database ছাড়া panel চালু হয় না: আপনাকে `EKPANEL_DATABASE_URL` set করতে হবে, অথবা
+`EKPANEL_DEV_DB` চালু করতে হবে।
+
+<Aside type="caution" title="Server-এ development database ব্যবহার করবেন না">
+`--dev-db` PostgreSQL-এর binary download করে data folder-এর ভেতরে চালায়। এটা বানানো হয়েছে
+নিজের computer-এ `make dev`-এর জন্য। এটা চালু থাকলে panel একটা warning দেখায়।
+</Aside>
+
+### Data folder-এ কী থাকে
+
+| Path (`EKPANEL_DATA_DIR`-এর ভেতরে) | এটা কী |
+| --- | --- |
+| `setup-token` | এক-বারের setup token, যতক্ষণ কোনো administrator নেই। প্রথম administrator তৈরি করলেই এটা মুছে যায়। |
+| `agent-ca/` | Panel-এর private certificate authority। Agent-রা প্রথমবার connect করার সময় এর fingerprint ("CA pin") pin করে রাখে। |
+| `secret.key` | যে key দিয়ে panel তার রাখা secret encrypt করে, যেমন notification token আর SMTP password (AES-256-GCM)। |
+| `devdb/`, `devdb.log` | শুধু `--dev-db` দিলে: embedded database আর তার log। |
+
+<Aside type="danger" title="Data folder-এর backup রাখুন">
+`secret.key` না থাকলে panel তার encrypt করা secret পড়তে পারবে না। `agent-ca/` না থাকলে কোনো
+agent connect করতে পারবে না, যতক্ষণ না আপনি প্রতিটা server আবার connect করেন। পুরো data
+folder-এর একটা copy, panel-এর PostgreSQL database-এর একটা dump-এর সাথে একসাথে রাখুন।
+</Aside>
+
+### অন্যান্য variable
+
+| Variable | কে ব্যবহার করে | কী করে |
+| --- | --- | --- |
+| `EKPANEL_CLOUDFLARE_API` | panel | Cloudflare-এর API address বদলে দেয়। শুধু repository-তে থাকা নকল Cloudflare server-এর সাথে test করার জন্য (দেখুন [Development setup](/development/setup/))। |
+| `EKPANEL_DEV_TARGET` | Vite dev server | `npm run dev` কোথায় API request পাঠাবে। Default `http://127.0.0.1:8080`। শুধু development-এর জন্য। |
+
+Code-এ আরও কিছু `EKPANEL_*` নাম দেখা যায়, কিন্তু সেগুলো server-এ installer process-গুলোকে ভেতরে
+ভেতরে দেওয়া হয়। সেগুলো setting নয়।
+
+## Panel-এর command
+
+| Command | কী করে |
+| --- | --- |
+| `ekpanel` | Panel চালায়। Flag ওপরের table-এর মতো। |
+| `ekpanel version` | Version দেখায়, যেমন bug report-এর জন্য। Git tag ছাড়া বানানো build একটা commit বা `dev` দেখায়। |
+| `ekpanel add-server --name NAME` | একটা server register করে আর এক লাইন দেখায়: `<token> <ca-pin>`। এটা panel-এর flag-ও নেয়, যেমন `--database-url`। |
+
+`add-server` আছে installer-এর জন্য: কোনো administrator তৈরি হওয়ার আগেই এটা panel-এর নিজের
+server connect করে। এর জন্য আসল database লাগে (`--database-url`); development database-এ এটা কাজ
+করে না, কারণ সেটা শুধু panel process-এর ভেতরে চলে। সাধারণত server যোগ করবেন panel-এ
+**সার্ভার যোগ করুন** দিয়ে।
+
+Installer দিয়ে বানানো server-এ নিজে হাতে চালাতে চাইলে, এটা `ekpanel` user হিসেবে, service-এর
+মতো একই environment দিয়ে চালান:
+
+```bash
+sudo runuser -u ekpanel -- bash -c 'set -a; . /etc/ekpanel/panel.env; exec /usr/local/bin/ekpanel add-server --name "web 2"'
+```
+
+Token একবারই কাজ করে, আর এক ঘণ্টা পরে মেয়াদ শেষ হয়ে যায়।
+
+## Agent (`ekpanel-agent`)
+
+Agent প্রতিটা managed server-এ root হিসেবে চলে। এর তিনটা command আপনি ব্যবহার করবেন:
+
+| Command | কী করে |
+| --- | --- |
+| `ekpanel-agent enroll --panel HOST[:7443] --token TOKEN --ca-pin sha256:… [--config PATH]` | এই server-কে একবার একটা panel-এর সাথে connect করে: এক-বারের token দিয়ে একটা certificate নেয় আর credential file save করে। |
+| `ekpanel-agent run [--config PATH]` | Agent চালায়। এটা বাইরের দিকে panel-এ connect করে আর connection খোলা রাখে। |
+| `ekpanel-agent version` | Agent-এর version দেখায়। |
+
+`--config`-এর default হলো `/etc/ekpanel/agent.json`। `--panel`-এ port না থাকলে agent 7443 ব্যবহার
+করে। আপনি একটা host, একটা `host:port`, বা একটা URL দিতে পারেন; agent শুধু host আর port রাখে।
+
+**সার্ভার যোগ করুন** বা **নতুন সংযোগ কমান্ড**-এ click করলে panel হুবহু `enroll` command-টা
+দেখায়, token আর CA pin বসানো অবস্থায়। সেখান থেকেই copy করুন।
+
+<Aside type="note">
+একটা চতুর্থ command-ও আছে, `ekpanel-agent files`। File manager-এর প্রতিটা কাজের জন্য agent নিজেই
+এটা চালায়, website-এর folder-এর ভেতরে আর website-এর account হিসেবে। আপনাকে কখনো এটা চালাতে
+হয় না।
+</Aside>
+
+### Credential file `/etc/ekpanel/agent.json`
+
+`enroll` এই file-টা mode `0600` দিয়ে লেখে (শুধু root পড়তে পারে)। এটা পাঁচটা field-সহ JSON:
+
+| Field | এতে কী থাকে |
+| --- | --- |
+| `panel` | Panel-এর agent address, `host:port`। |
+| `server_id` | Panel-এ এই server-এর ID। |
+| `ca_pem` | Panel-এর CA certificate, enrolment-এর সময় pin করা। |
+| `cert_pem` | এই agent-এর client certificate (৯০ দিন valid)। |
+| `key_pem` | এই agent-এর private key। এটা কখনো server ছেড়ে যায় না। |
+
+এই file আপনি edit করবেন না। মেয়াদ শেষের আগে agent নিজেই certificate renew করে আর file-টা
+atomically আবার লেখে, তাই crash হলেও কখনো অর্ধেক file থেকে যায় না। File না থাকলে, অসম্পূর্ণ
+হলে, বা খুব পুরোনো agent-এর হলে, `run` থেমে যায় আর আপনাকে আবার enrol করতে বলে।
+
+একটা server আবার connect করতে (যেমন panel সরানোর পরে), panel-এ server-এর page-এ **নতুন সংযোগ
+কমান্ড**-এ click করুন আর নতুন `enroll` command-টা চালান। এতে পুরোনো certificate revoke হয় আর
+পুরোনো connection বন্ধ হয়ে যায়।
+
+## Installer যেসব file লেখে
+
+`deploy/install.sh` panel-এর server set up করে। এটা যেসব setting রেখে যায়:
+
+<Tabs>
+<TabItem label="/etc/ekpanel/panel.env">
+
+```bash
+EKPANEL_LISTEN=127.0.0.1:8080
+EKPANEL_AGENT_LISTEN=:7443
+EKPANEL_DATABASE_URL=postgres:///ekpanel?host=/var/run/postgresql
+EKPANEL_DATA_DIR=/var/lib/ekpanel
+```
+
+Database URL-টা PostgreSQL-এর local socket আর peer authentication ব্যবহার করে, তাই কোনো database
+password-ই নেই। Panel চলে `ekpanel` system user হিসেবে, আর `ekpanel` database-এর মালিক এই user-ই।
+
+</TabItem>
+<TabItem label="ekpanel.service">
+
+`/etc/systemd/system/ekpanel.service` `/usr/local/bin/ekpanel`-কে `ekpanel` user হিসেবে
+`EnvironmentFile=/etc/ekpanel/panel.env` দিয়ে চালায়। Fail করলে এটা আবার চালু হয়, আর এটা
+sandbox-এ চলে: নতুন privilege নেই, কোনো capability নেই, system read-only, `/home`-এ access নেই,
+আর লেখার access শুধু `/var/lib/ekpanel`-এ। Panel-এর কোনো privilege লাগে না, কারণ server-এ আসল
+কাজটা agent করে।
+
+</TabItem>
+<TabItem label="ekpanel-agent.service">
+
+`/etc/systemd/system/ekpanel-agent.service`
+`/usr/local/bin/ekpanel-agent run --config /etc/ekpanel/agent.json`-কে root হিসেবে চালায়, আর থেমে
+গেলে সবসময় তিন সেকেন্ড পরে আবার চালু করে।
+
+</TabItem>
+<TabItem label="Caddyfile">
+
+`/etc/caddy/Caddyfile` panel-এর address `127.0.0.1:8080`-এ পাঠায়, আর
+`/etc/ekpanel/caddy/sites/*.caddy` থেকে প্রতিটা website-এর file import করে। এটা
+`CF-Connecting-IP` header বিশ্বাস করে শুধু Cloudflare-এর প্রকাশিত address range থেকে এলে।
+`--domain` দিলে Caddy ওই নামের জন্য একটা free Let's Encrypt certificate নেয়। না দিলে, panel
+server-এর address-গুলোতে `/etc/ekpanel/tls/`-এর একটা self-signed certificate দিয়ে উত্তর দেয়।
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Installer এই file-গুলো আবার লেখে">
+`install.sh` আবার চালালে (upgrade করতে) `panel.env`, দুটো service file আর Caddyfile আবার লেখা
+হয়। নিজে হাতে করা পরিবর্তন হারিয়ে যায়। এগুলো বদলালে, কী বদলেছেন লিখে রাখুন আর প্রতিটা
+upgrade-এর পরে আবার করুন। আর `EKPANEL_LISTEN` `127.0.0.1:8080`-এই রাখুন: Caddyfile আর
+installer-এর start check panel-কে সেখানেই আশা করে।
+</Aside>
+
+### Installer-এর option
+
+```bash
+sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
+```
+
+| Option | কী করে |
+| --- | --- |
+| `--local-dir DIR` | যে folder-এ `ekpanel` আর `ekpanel-agent` binary আছে। আপাতত এটা দিতেই হবে: release download করার সুবিধা আসবে প্রথম release-এর সাথে। |
+| `--domain NAME` | এমন একটা DNS name যা এই server-এর দিকে point করে। Caddy এর জন্য একটা trusted certificate নেয়। না দিলে browser certificate warning দেখায়। |
+| `--email ADDRESS` | Let's Encrypt-এর মেয়াদ শেষের notice-এর জন্য যোগাযোগের address। ঐচ্ছিক। |
+| `-h`, `--help` | ব্যবহারের নিয়ম দেখায়। |
+
+পুরো প্রক্রিয়ার জন্য [Install](/start/install/) আর আবার চালানোর জন্য [Upgrade](/start/upgrade/)
+দেখুন।
+
+## Server-এ একটা setting বদলানো
+
+<Steps>
+
+1. Root হিসেবে `/etc/ekpanel/panel.env` edit করুন:
+
+   ```bash
+   sudo nano /etc/ekpanel/panel.env
+   ```
+
+2. Panel restart করুন:
+
+   ```bash
+   sudo systemctl restart ekpanel
+   ```
+
+3. চালু হয়েছে কিনা দেখুন:
+
+   ```bash
+   curl -fsS http://127.0.0.1:8080/api/v1/health
+   journalctl -u ekpanel -n 50
+   ```
+
+</Steps>
+
+## সম্পর্কিত
+
+- [Port আর path](/reference/ports-and-paths/)
+- [সমস্যা সমাধান](/reference/troubleshooting/)
+- [Development setup](/development/setup/): local development-এর জন্য একই setting

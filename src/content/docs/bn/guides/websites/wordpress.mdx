@@ -1,0 +1,256 @@
+---
+title: WordPress
+description: এক click-এ WordPress install করুন, তারপর নিরাপদে update রাখুন, hardening করুন, আর live site বদলানোর আগে একটা staging copy-তে কাজ করুন।
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+ekPanel এক click-এ WordPress install করে, তারপর এর দেখাশোনা করে: এমন update যা site ভেঙে দিলে নিজে থেকেই আগের
+অবস্থায় ফিরে যায়, স্বয়ংক্রিয় update-এর নিয়ম, plugin চালু-বন্ধ, hardening আর staging copy। আপনি নিজে install করা
+WordPress site-ও এটা খুঁজে পায়।
+
+## WordPress install করুন
+
+Website যোগ করার সময়ই WordPress install করতে পারেন, বা পরে কোনো PHP site-এ।
+
+### Website যোগ করার সময়
+
+**ওয়েবসাইট যোগ করুন** (Add website)-এ **PHP** বেছে নিয়ে **WordPress ইনস্টল করুন** (Install WordPress)-এ টিক দিন।
+Site তৈরি হওয়া মাত্র ekPanel database বানায় আর WordPress install করে। Admin account-এর জন্য এটা আপনার email address
+ব্যবহার করে আর সেখান থেকে একটা user name বেছে নেয় (`rahim.k@example.com` হয়ে যায় `rahim.k`)। WordPress-এর ভাষা panel-এর
+ভাষা অনুসরণ করে: panel বাংলায় থাকলে WordPress বাংলায় (`bn_BD`); নাহলে English।
+
+### আগে থেকে থাকা site-এ
+
+<Steps>
+
+1. Website খুলুন। এটা অবশ্যই **PHP** site হতে হবে, আর এর `public_html` খালি থাকতে হবে (ekPanel-এর স্বাগত page থাকলে
+   সমস্যা নেই), যাতে আপনার কোনো file overwrite না হয়।
+
+2. **WordPress ইনস্টল করুন** card-এ পূরণ করুন:
+   - **সাইটের শিরোনাম** (Site title): সর্বোচ্চ ১০০ character। শুরুতে এটা domain থাকে।
+   - **অ্যাডমিন ইউজার নাম** (Admin user name): ৩ থেকে ৬০টা অক্ষর, সংখ্যা আর `. _ @ -`।
+   - **অ্যাডমিন ইমেইল** (Admin email): WordPress যেখানে তার message পাঠায়।
+   - **WordPress-এর ভাষা** (WordPress language): ১৪টা ভাষার একটা, প্রতিটা তার নিজের লিপিতে দেখানো: English, বাংলা,
+     हिन्दी, اردو, العربية, Español, Français, Deutsch, Português (Brasil), Bahasa Indonesia,
+     Türkçe, Русский, 简体中文, 日本語।
+
+3. **WordPress ইনস্টল করুন**-এ click করুন।
+
+4. **Admin password এখনই copy করুন।** এটা শুধু একবার দেখানো হয়; ekPanel এটা রাখে না।
+
+5. প্রায় এক মিনিট অপেক্ষা করুন। চাইলে page থেকে চলে যেতে পারেন। তারপর **WordPress অ্যাডমিন খুলুন** (Open
+   WordPress admin)-এ click করুন (`https://<your domain>/wp-admin/`)।
+
+</Steps>
+
+### Installer কী করে
+
+1. `wp_<site account>` নামে একটা MariaDB database আর user বানায়, random password দিয়ে। মালিকের package-এ এটা একটা
+   database হিসেবে গোনা হয়।
+2. প্রতিটা server-এ একবার WP-CLI download করে আর এর প্রকাশিত SHA-512 checksum দিয়ে check করে।
+3. Site-এর account হিসেবে: WordPress download করে, `wp-config.php` লেখে, `FS_METHOD`-কে `direct` করে, WordPress install
+   করে আর আপনার admin account বানায়। English ছাড়া অন্য ভাষা হলে সেই ভাষার translation যোগ করে।
+4. `wp-config.php`-কে শুধু site-এর account পড়তে পারে এমন করে (permission `600`)।
+
+Admin আর database password শুধু memory-তে থাকে। WP-CLI এগুলো পায় তার input-এ, কখনো এমন command line-এ না যেটা অন্য
+account দেখতে পারে। Install শুরু হওয়ার আগে panel restart হলে task টা fail করে, সাথে আবার শুরু করার বার্তা দেয়।
+
+যেহেতু file গুলো সেই একই account-এর যেটা হিসেবে PHP চলে, তাই plugin, theme আর update WordPress-এর ভেতর থেকেই install
+হয়, FTP-র তথ্য চায় না।
+
+## WordPress page
+
+Menu-র **WordPress** আপনি দেখতে পান এমন প্রতিটা WordPress site-এর list দেখায়, সাথে:
+
+| Column | কী দেখায় |
+| --- | --- |
+| **ওয়েবসাইট** (Website) | Site টা, আর staging copy হলে "…-এর স্টেজিং কপি" (Staging copy of …) |
+| **ভার্সন** (Version) | Install করা WordPress version |
+| **যা দেখা দরকার** (Needs attention) | পাওয়া যাচ্ছে এমন core, plugin আর theme update, maintenance mode, ঢিলেঢালা permission-এর file, বা **পড়া যাচ্ছে না** (Cannot be read)। নাহলে **হালনাগাদ** (Up to date) |
+| **স্বয়ংক্রিয় আপডেট** (Automatic updates) | Site-এর নিয়ম |
+| **যাচাই** (Checked) | ekPanel শেষ কখন দেখেছে |
+
+ekPanel **প্রতিটা PHP site প্রায় দিনে একবার** দেখে, তাই হাতে install করা (বা অন্য কোথাও থেকে restore করা) WordPress-ও
+দেখা যায়। এখনই প্রতিটা PHP site দেখতে **WordPress খুঁজুন** (Look for WordPress)-এ click করুন।
+
+## Site-এর page-এ toolkit
+
+WordPress site-এর page-এ toolkit দেখায়। Site আবার পড়তে **এখনই যাচাই** (Check now)-এ click করুন।
+
+### নিজে থেকে আগের অবস্থায় ফেরা update
+
+কোনো plugin বা theme-এর পাশের **আপডেট** (Update), **সব আপডেট করুন** (Update all), বা **WordPress কোর** (WordPress core)-এর
+নিচের **…-এ আপডেট করুন** (Update to …) button-এ click করুন। দুটোই পাওয়া গেলে core অংশে আপনার বর্তমান branch-এর
+সবচেয়ে নতুন release (security আর maintenance release) আর সব মিলিয়ে সবচেয়ে নতুন version দুটোই দেখায়।
+
+Update চলে task হিসেবে, একবারে একটা করে:
+
+<Steps>
+
+1. শুরু করার আগে ekPanel check করে home page উত্তর দিচ্ছে কি না।
+
+2. Plugin বা theme হলে বর্তমান file গুলো আলাদা করে copy করে রাখে, তারপর update করে।
+
+3. প্রতিটা update-এর পর এটা আবার site-এর home page আনে। Server error (5xx), বা WordPress-এর "There has been a critical
+   error" page, বা PHP fatal error হলে সেটাকে ভাঙা ধরা হয়।
+
+4. Update site ভেঙে দিলে পুরনো file গুলো ফিরিয়ে আনা হয়। Core-এর ক্ষেত্রে আগের version-এর core file আবার download করা
+   হয়, আর `wp-content`-এ হাত দেওয়া হয় না।
+
+</Steps>
+
+প্রতিটা item-এর ফলাফল list-এ দেখায়: **আপডেট হয়েছে** (updated), **সাইট ভেঙে যাচ্ছিল, তাই আগের ভার্সন ফেরানো হয়েছে**
+(broke the site, so the previous version was put back), **ব্যর্থ, কিছু বদলায়নি** (failed, nothing changed), বা **আগেই
+হালনাগাদ** (already up to date)। কোনো update আগের অবস্থায় ফেরানো হলে বা fail করলে site-এর মালিকের কাছে একটা
+**WordPress আপডেটে সমস্যা** notification-ও যায়।
+
+<Aside type="caution">
+Check শুধু home page দেখে, আর শুধু তখনই কাজ করে যখন আগে home page ঠিক ছিল। কোনো plugin অন্য page (checkout, admin
+অংশ) ভাঙলে সেটা ধরা পড়ে না। Core আগের অবস্থায় ফেরালে পুরনো core file ফিরে আসে, কিন্তু নতুন version যে database upgrade
+করেছে সেটা ফেরে না। [Backup](/guides/data/backups/) রাখুন আর বড় update আগে একটা [staging copy](#staging-copies)-তে চালিয়ে
+দেখুন।
+</Aside>
+
+### স্বয়ংক্রিয় update
+
+**স্বয়ংক্রিয় আপডেট** (Automatic updates)-এর নিচে প্রতিটা site-এর জন্য বেছে নিন:
+
+- **কোর:** (Core) **কোনোটি না** (None), **নিরাপত্তা রিলিজ** (Security releases) (install করা branch-এর সবচেয়ে নতুন
+  release), বা **সব ভার্সন** (All versions);
+- **প্লাগইন** (Plugins) আর **থিম** (Themes): টিক দিলে এগুলোও update হয়।
+
+ekPanel প্রতিদিন check করে নিজেই update করে, একই নিরাপত্তা সহ: প্রতিটা update check করা হয় আর site ভাঙলে আগের অবস্থায়
+ফেরানো হয়। শেষ update-এর ফলাফলে এই update-গুলো **স্বয়ংক্রিয়** (automatic) চিহ্ন দেওয়া থাকে। Offline server ফিরে না
+আসা পর্যন্ত বাদ থাকে।
+
+### Plugin আর theme
+
+**প্লাগইন** আর **থিম** list-এ প্রতিটা item-এর title, version, status (**চালু** (On), **বন্ধ** (Off), must-use plugin-এর
+জন্য **সবসময় চালু** (Always on), **ড্রপ-ইন** (Drop-in), **মূল থিম** (Parent theme)) আর পাওয়া যাচ্ছে এমন update দেখায়।
+
+- **চালু করুন** (Turn on) আর **বন্ধ করুন** (Turn off) একটা plugin চালু-বন্ধ করে। বন্ধ করার কাজটা plugin load না করেই
+  হয়, তাই site ভেঙে দেওয়া plugin-ও বন্ধ করতে পারবেন, এমনকি যখন WP-CLI নিজেই সেটা নিয়ে চালু হতে পারে না।
+- Theme এখান থেকে update করা যায়। Active theme বেছে নেওয়া, আর plugin ও theme install বা delete করা WordPress-এর ভেতরেই
+  করতে হয়।
+
+### সেটিংস
+
+- **মেইনটেন্যান্স মোড** (Maintenance mode): ভিজিটররা ছোট একটা "briefly unavailable" page দেখেন; আপনি তবুও sign in
+  করতে পারবেন।
+- `WP_DEBUG` চালু থাকলে toolkit সাবধান করে: "ডিবাগ মোড (WP_DEBUG) চালু আছে। লাইভ সাইটে বন্ধ রাখুন" (Debug mode
+  (WP_DEBUG) is on. Turn it off on a live site)। এটা `wp-config.php`-এ বদলান।
+
+### Hardening
+
+প্রচলিত সুরক্ষা, যেগুলো ভিজিটরদের জন্য site-এর কাজ বদলায় না:
+
+| Option | কী করে |
+| --- | --- |
+| **ড্যাশবোর্ড থেকে প্লাগইন ও থিমের কোড সম্পাদনা বন্ধ** (No editing of plugin and theme code from the dashboard) | `wp-config.php`-এ `DISALLOW_FILE_EDIT` set করে, যাতে চুরি হওয়া admin password দিয়ে code যোগ করা না যায়। |
+| **xmlrpc.php বন্ধ করুন** (Block xmlrpc.php) | Web server `/xmlrpc.php`-এর জন্য `403` উত্তর দেয়। এটা একটা পুরনো remote interface, যেটা password অনুমান করার কাজে ব্যবহার হয়। Block editor আর REST API ব্যবহার করা app কাজ করতে থাকে। কিছু পুরনো mobile app আর plugin (যেমন Jetpack) XML-RPC ব্যবহার করে; চালু করার আগে check করে নিন। |
+| **আপলোড ফোল্ডারে PHP চলবে না** (No PHP in the uploads folder) | Web server `wp-content/uploads`-এর নিচের `.php`, `.phtml` আর `.phar` file ফিরিয়ে দেয়, যাতে দুর্বল plugin দিয়ে upload করা script চলতে না পারে। |
+| **পারমিশন ঠিক করুন** (Fix permissions) | যখন অন্য account file বা folder বদলাতে পারে তখন দেখায়। "Others"-এর write permission সরিয়ে দেয় আর `wp-config.php`-কে শুধু site-এর account পড়তে পারে এমন করে। |
+
+Web server-এর দুটো option website-এর configuration-এর অংশ, তাই WordPress নিজে ভেঙে থাকলেও এগুলো খাটে।
+
+## Staging copy
+
+Staging copy হলো `staging.<your domain>`-এ আপনার site-এর একটা private copy, নিজস্ব file আর database সহ। সেখানে update,
+নতুন plugin বা নতুন design চালিয়ে দেখুন, তারপর ফলাফল live site-এ পাঠান।
+
+### Staging copy বানান
+
+<Steps>
+
+1. Live WordPress site খুলুন। **স্টেজিং** (Staging)-এ **স্টেজিং কপি বানান** (Make a staging copy)-এ click করুন।
+
+2. ekPanel copy বানানো পর্যন্ত অপেক্ষা করুন। Card-এ দেখায় এটা কোথায় আছে।
+
+3. `https://staging.<your domain>/`-এ copy টা খুলুন আর আপনার live site-এর user name আর password দিয়ে sign in করুন।
+
+</Steps>
+
+ekPanel:
+
+- live site-এর PHP version আর একই ধরনের certificate দিয়ে `staging.<your domain>` নামে একটা নতুন PHP website বানায়
+  (যে site-এ নিজের upload করা certificate আছে, তার copy একটা ফ্রি certificate পায়);
+- এর জন্য একটা database বানায়। মালিকের package-এ copy টা **একটা website আর একটা database** হিসেবে গোনা হয়;
+- সব file আর database copy করে, আর সব জায়গায় live address-গুলো staging address দিয়ে বদলে দেয়, serialized data-র
+  ভেতরেও;
+- search engine-কে copy টা index না করতে বলে।
+
+<Aside type="note">
+যেকোনো website-এর মতোই, ফ্রি certificate-এর জন্য `staging.<your domain>`-কে server-এর দিকে point করা থাকতে হবে। Domain
+যদি [Cloudflare](/guides/dns/cloudflare/)-এ বা [ekPanel-এর নিজের name server](/guides/dns/name-servers/)-এ থাকে, record টা
+আপনার হয়ে বানিয়ে দেওয়া হয়।
+</Aside>
+
+একটা live site-এর একটাই staging copy থাকতে পারে, আর staging copy-র নিজের কোনো copy থাকতে পারে না। Copy টা **ওয়েবসাইট**
+(Websites) list-এ একটা সাধারণ website, তাই এর file, log আর settings খুলতে পারবেন।
+
+### Live-এ পাঠানো আর live থেকে হালনাগাদ
+
+Staging copy-র page-এ:
+
+- **লাইভে পাঠান** (Push to live) live site-কে staging copy-র মতো করে দেয়।
+- **লাইভ থেকে হালনাগাদ** (Refresh from live) staging copy-কে আবার live site-এর মতো করে দেয়। শুধু staging-এ করা
+  পরিবর্তনগুলো বদলে যায়।
+
+কী copy করবেন বেছে নিন:
+
+- **ফাইল** (Files): plugin, theme, upload আর WordPress নিজে। যেখানে copy যাচ্ছে সেই site নিজের `wp-config.php` রেখে দেয়।
+- **ডেটাবেস** (Database): post, page, settings, user আর order।
+
+<Aside type="danger">
+Database পাঠালে live site-এর পুরো database বদলে যায়। Copy বানানো বা হালনাগাদ করার পর থেকে live site-এ যেসব order, comment
+আর sign-up এসেছে, সেগুলো live site থেকে হারিয়ে যায়। Shop বা ব্যস্ত site-এ শুধু **ফাইল** পাঠান, বা পাঠানোর ঠিক আগে live
+থেকে হালনাগাদ করে নিন।
+</Aside>
+
+Copy চলার সময়:
+
+- যেখানে copy যাচ্ছে সেখানে একটা maintenance page দেখায়;
+- কিছু overwrite করার আগে লক্ষ্য site-এর database তার home folder-এ `tmp/ekpanel-before-copy-<time>.sql`-এ save করা হয়,
+  আর copy যেসব file বদলায় বা সরায় সেগুলো রাখা হয় `tmp/ekpanel-before-copy-<time>-files`-এ;
+- address-গুলো লক্ষ্য site-এর domain-এ বদলে দেওয়া হয়;
+- live site নিজের search engine setting রেখে দেয়, আর হালনাগাদ করা staging copy search engine থেকে লুকানোই থাকে।
+
+ekPanel ওই save করা copy-গুলো মোছে না। দরকার না থাকলে [file manager](/guides/websites/files/)-এ গিয়ে সেগুলো সরিয়ে ফেলুন;
+এগুলো disk space-এ গোনা হয়।
+
+Database copy করতে দুটো site-কেই একই table prefix ব্যবহার করতে হয়, ekPanel-এর বানানো copy-তে সেটাই হয়।
+
+## সীমা আর যা এখনো নেই
+
+- Plugin আর theme install, delete আর বেছে নেওয়া WordPress-এ হয়, panel-এ না।
+- Update-এর পর শুধু home page check করা হয়।
+- Fail করা install আপনার হয়ে পরিষ্কার করা হয় না। `public_html` আর খালি না থাকলে আবার চেষ্টা করার আগে file manager-এ সেটা
+  খালি করুন।
+- Test server-এ (VM) পরীক্ষা করা হয়েছে: site ভেঙে দেওয়া update আগের অবস্থায় ফেরানো, core-এর security release,
+  maintenance mode, hardening, আর live-এ পাঠানো staging copy।
+
+## সমস্যা সমাধান
+
+**"ওয়েবসাইটের ফোল্ডার খালি থাকতে হবে" (The website folder must be empty)।** `public_html`-এর file গুলো সরিয়ে দিন বা মুছে
+ফেলুন (ekPanel-এর স্বাগত page থাকতে পারে), তারপর আবার install করুন।
+
+**"WordPress-এর জন্য PHP সাইট লাগে" (WordPress needs a PHP site)।** **সেটিংস** (Settings)-এ site-এর **সাইটের ধরন** (Type of
+site) বদলে **PHP** করুন।
+
+**Site-এ "পড়া যাচ্ছে না" (Cannot be read) দেখায়।** WordPress আছে কিন্তু WP-CLI সেটা পড়তে পারেনি, প্রায়ই কোনো ভাঙা plugin বা
+ভাঙা `wp-config.php`-এর কারণে। [PHP error log](/guides/websites/logs-traffic/#php-error-log) check করুন।
+
+**Staging copy-তে certificate warning আসে।** `staging.<your domain>` এখনো server-এর দিকে point করছে না। DNS record যোগ করুন,
+তারপর এক মিনিট অপেক্ষা করুন।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="PHP settings" href="/guides/websites/php/" description="Memory, upload size আর আরও কিছু।" />
+	<LinkCard title="Backup" href="/guides/data/backups/" />
+	<LinkCard title="Malware scan" href="/guides/security/malware/" />
+</CardGrid>

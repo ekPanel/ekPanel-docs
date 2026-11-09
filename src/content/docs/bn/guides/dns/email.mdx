@@ -1,0 +1,281 @@
+---
+title: Email
+description: Stalwart আর Roundcube webmail দিয়ে নিজের server-এ email চালান, mail domain, mailbox আর forwarder যোগ করুন, আর DNS record ঠিকঠাক বসান।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+ekPanel আপনার নিজের server-এ email চালাতে পারে: `info@example.com`-এর মতো mailbox, forwarder, auto-reply আর
+webmail। Mail server হিসেবে এটা ব্যবহার করে [Stalwart](https://stalw.art/) (SMTP, IMAP আর POP3, spam filter আর
+DKIM signing-সহ), আর webmail হিসেবে [Roundcube](https://roundcube.net/)।
+
+<Aside type="caution" title="বাইরের আসল mail দিয়ে এখনো পরীক্ষা হয়নি">
+Email পরীক্ষা করা হয়েছে একটা test VM-এ: mailbox-গুলোর মধ্যে mail, forwarder, catch-all, auto-reply, webmail
+আর IMAP সবই কাজ করেছে। Internet থেকে আসা আর internet-এ যাওয়া আসল mail দিয়ে এখনো **পরীক্ষা হয়নি**, যার জন্য
+port 25 খোলা আর reverse DNS আছে এমন server লাগে। ততদিন এটাকে preview হিসেবে ধরুন।
+</Aside>
+
+## শুরু করার আগে
+
+অন্য provider-রা বিশ্বাস করবে এমন mail server চালাতে শুধু software যথেষ্ট নয়। এর ওপর ভরসা করার **আগে** আপনার
+server provider-এর সাথে এগুলো দেখে নিন:
+
+- **বাইরে যাওয়ার port 25 খোলা।** অনেক provider নতুন server-এ এটা বন্ধ রাখে, যতক্ষণ না আপনি চান। এটা ছাড়া
+  আপনার server mail পেতে পারে, কিন্তু পাঠাতে পারে না।
+- **Reverse DNS (PTR) বসানো যায়।** Server-এর IP address উল্টো দিকে যে নাম দেখায়, সেটা আপনার provider বসায়।
+  এটা হওয়া উচিত আপনার mail host name, যেমন `mail.example.com`। অনেক mail server এটা ছাড়া mail নেয় না।
+- **IP address কোনো spam blocklist-এ নেই।** আগের কোনো customer spam-এর জন্য যে address ব্যবহার করেছে, সেটা
+  তালিকায় থাকতে পারে।
+
+Email চালু হলে ekPanel-এর [delivery যাচাই](#check-delivery) আপনার হয়ে এই তিনটাই পরীক্ষা করে।
+
+আপনার একটা **mail host name**-ও লাগবে: server-এর দিকে point করা একটা আলাদা নাম, যেমন `mail.example.com`। অন্য
+mail server এখানেই mail পৌঁছায়, mail app এখানেই যুক্ত হয়, আর webmail-ও এখানেই খোলে। কোনো website বা app এটা
+ব্যবহার করতে পারবে না।
+
+## কোনো server-এ email চালু করুন
+
+এটা শুধু administrator-রা করেন, প্রতিটা server-এ একবার।
+
+<Steps>
+
+1. **ইমেইল** (Email) খুলুন। **মেইল সার্ভার** (Mail servers) card-এ server-এর পাশে **ইমেইল চালু করুন** (Turn
+   on email) বেছে নিন।
+
+2. **মেইল হোস্ট নাম** (Mail host name) লিখুন, যেমন `mail.example.com`।
+
+3. **সার্টিফিকেট** (Certificate) বেছে নিন:
+   - **Let's Encrypt** (host name আগে থেকেই এই server-এর দিকে point করা থাকতে হবে), আসল ব্যবহারের জন্য;
+   - **সেলফ-সাইনড (পরীক্ষার জন্য)** (Self-signed (for testing)): mail app আর browser এটা নিয়ে সতর্ক করবে।
+
+4. **ইমেইল চালু করুন** বেছে নিন। এক-দুই মিনিট লাগে।
+
+</Steps>
+
+Server-এ যা হয়:
+
+- Agent **Stalwart 1.0.3** download করে, প্রকাশিত SHA-256-এর সাথে মিলিয়ে দেখে, আর `ekpanel-mail` service হিসেবে
+  চালায়। এর management API শোনে শুধু `127.0.0.1:18900`-এ; agent sign in করে একটা random password দিয়ে, যেটা
+  root-only একটা file-এ রাখা থাকে।
+- Stalwart ঠিক এই listener-গুলো রাখে: SMTP **25**, submission **465** (TLS) আর **587** (STARTTLS), IMAPS
+  **993** আর POP3S **995**।
+- ekPanel firewall চালালে এই port-গুলো [managed firewall](/guides/security/firewall/)-এ খুলে দেওয়া হয়।
+- **Roundcube 1.7.5** (এটাও যাচাই করা download) webmail হিসেবে install হয় `https://<mail host name>/`-এ, নিজস্ব
+  PHP-FPM pool আর account-সহ।
+- Web server (Caddy) mail host name-এর জন্য একটা certificate নেয়, আর agent একই certificate mail server-কে দেয়,
+  প্রতিবার renew হওয়ার পরও।
+
+তারপর server-এ <Badge text="চলছে" variant="success" /> দেখায়। **বন্ধ করুন** (Turn off) mail server বন্ধ করে
+আর এর data রেখে দেয়, তবে শুধু তখনই, যখন server-এ আর কোনো mail domain বাকি নেই ("আগে সার্ভারের মেইল ডোমেইনগুলো
+মুছুন।")।
+
+## Mail domain যোগ করুন
+
+<Steps>
+
+1. **ইমেইল** পাতায় **মেইল ডোমেইন যোগ করুন** (Add mail domain) বেছে নিন।
+
+2. **ডোমেইন** (Domain) লিখুন, যেমন `example.com`। Mail-এর ঠিকানা হবে `name@example.com`।
+
+3. Email চালু থাকা server একাধিক হলে **সার্ভার** (Server) বেছে নিন। Administrator-রা domain-টা কোন customer-এর,
+   সেটাও বেছে নিতে পারেন।
+
+4. **ডোমেইন যোগ করুন** (Add domain) বেছে নিন। এটা প্রথমে **প্রয়োগ হচ্ছে** (Applying), তারপর **সক্রিয়**
+   (Active) দেখায়।
+
+</Steps>
+
+নিয়ম:
+
+- Customer-রা email যোগ করতে পারেন শুধু নিজেদের website বা app-এর domain-এর জন্য (domain নিজে, অথবা এর `www.`
+  নামের domain)। নইলে: "আগে এই ডোমেইনের একটি ওয়েবসাইট যোগ করুন।"
+- Mail host name নিজে mail domain হতে পারে না।
+- Panel-এ একটা domain-এর email একবারই থাকতে পারে।
+- Customer-এর [package](/guides/admin/customers/) mail domain, mailbox আর mailbox-এর আকার সীমিত করে, আর mail
+  package-এর disk space-এর মধ্যে গোনা হয়।
+
+<Aside type="danger">
+**মেইল ডোমেইন মুছুন** (Delete mail domain) domain-এর প্রতিটা mailbox তার সব mail-সহ, আর এর forwarder-গুলো মুছে
+দেয়। এটা আর ফেরানো যাবে না।
+</Aside>
+
+## Mailbox
+
+**Mailbox** mail জমা রাখে, আর webmail বা mail app দিয়ে পড়া যায়।
+
+<Steps>
+
+1. Mail domain খুলে **মেইলবক্স যোগ করুন** (Add mailbox) বেছে নিন।
+
+2. **ঠিকানা** (Address) লিখুন (`@`-এর আগের অংশ)। ছোট হাতের অক্ষর, সংখ্যা আর `. _ + -` ব্যবহার করুন, শুরু আর
+   শেষ অক্ষর বা সংখ্যা দিয়ে, যেমন `info` বা `sales.team`।
+
+3. অন্তত ১০ অক্ষরের একটা **পাসওয়ার্ড** (Password) দিন, অথবা খালি রাখুন, panel একটা বানিয়ে দেবে।
+
+4. **আকার (MB)** (Size (MB)) দিন, অথবা কোনো সীমা না চাইলে খালি রাখুন (package অনুমতি দিলে)।
+
+5. **মেইলবক্স তৈরি করুন** (Create mailbox) বেছে নিন।
+
+</Steps>
+
+Panel-এর বানানো password **মাত্র একবারই দেখানো হয়**। এটা password manager-এ রাখুন বা mailbox-এর মালিককে দিন।
+পরে **নতুন পাসওয়ার্ড** (New password) একটা নতুন random password বানায়, সেটাও একবারই দেখানো হয়। Mailbox-এর
+password শুধু SHA-512 crypt hash হিসেবে রাখা হয়।
+
+Mailbox-এর তালিকায় প্রতিটা mailbox কতটা জায়গা নিচ্ছে দেখায় (size limit থাকলে "…-এর মধ্যে …")।
+
+### Forwarding আর auto-reply
+
+Settings বদলাতে একটা mailbox খুলুন।
+
+- **ফরোয়ার্ডিং** (Forwarding): যেসব address প্রতিটা message-এর একটা কপি পায়, প্রতি লাইনে একটা, সর্বোচ্চ ২০টা।
+  এগুলো এখানকার mailbox হতে পারে, বা অন্য যেকোনো জায়গার। শুধু forward করতে চাইলে **এই মেইলবক্সেও একটি কপি
+  রাখুন** (Keep a copy in this mailbox)-এর টিক তুলে দিন; যে mailbox কোনো কপি রাখে না, তাকে অবশ্যই কোথাও
+  forward করতে হবে।
+- **অটো-রিপ্লাই** (Auto-reply): **আসা মেইলের স্বয়ংক্রিয় উত্তর দিন** (Answer incoming mail automatically) টিক
+  দিন, তারপর একটা **বিষয়** (Subject) (এক লাইন, সর্বোচ্চ 200 অক্ষর) আর একটা **বার্তা** (Message) (সর্বোচ্চ
+  4000 অক্ষর) লিখুন। **শুরু** (From) আর **শেষ** (Until) তারিখ ঐচ্ছিক; এগুলো না দিলে আপনি বন্ধ না করা পর্যন্ত
+  auto-reply চালু থাকে। প্রত্যেক প্রেরক দিনে সর্বোচ্চ একবার উত্তর পান।
+
+Forwarding আর auto-reply মিলে প্রতিটা mailbox-এর জন্য একটা filter script, যেটা ekPanel লেখে। Mail app এটা
+বদলাতে পারে না (ManageSieve বন্ধ)।
+
+## Forwarder
+
+**Forwarder** হলো mailbox ছাড়া একটা address, যেটা mail অন্যদের কাছে পাঠিয়ে দেয়, যেমন `sales@` থেকে কয়েকজনের
+কাছে।
+
+**ফরোয়ার্ডার যোগ করুন** (Add forwarder) বেছে নিন, address লিখুন, আর **যেখানে পাঠানো হবে** (Forward to)-এর নিচে
+address-গুলো দিন, প্রতি লাইনে একটা (সর্বোচ্চ ২০টা, এখানকার বা অন্য যেকোনো জায়গার)। একটা address হয় mailbox,
+নয়তো forwarder, দুটো একসাথে নয়। Forwarder মুছে ফেলার পর ওই address-এ আসা mail ফিরিয়ে দেওয়া হয়।
+
+## Catch-all
+
+সাধারণত যে address নেই, সেখানে আসা mail ফিরিয়ে দেওয়া হয়। **ক্যাচ-অল** (Catch-all) card-এ আপনি এমন একটা mailbox
+বেছে নিতে পারেন, যেটা এর বদলে সেই mail পাবে। বন্ধ করতে **বন্ধ: অজানা ঠিকানা ফিরিয়ে দিন** (Off: refuse unknown
+addresses) বেছে নিন।
+
+<Aside type="caution">
+Catch-all spam টানে: spammer-রা আপনার domain-এর বানানো address-এ mail পাঠায়। সত্যিই দরকার হলে তবেই এটা
+ব্যবহার করুন।
+</Aside>
+
+## Webmail
+
+Webmail খোলে `https://<mail host name>/`-এ, যেমন `https://mail.example.com/`। Mail domain-এর পাতায় একটা
+**ওয়েবমেইল খুলুন** (Open webmail) বাটন আছে।
+
+**পুরো address** (`info@example.com`) আর mailbox-এর password দিয়ে sign in করুন। Webmail মিনিটে তিনবার ভুল
+sign-in পর্যন্ত মেনে নেয়। এর installer আর configuration file web থেকে পৌঁছানো যায় না।
+
+## Mail app-এর settings
+
+Mail domain-এর পাতায় **মেইল অ্যাপ আর ওয়েবমেইল** (Mail apps and webmail)-এর নিচে এগুলো দেওয়া থাকে। Thunderbird,
+Outlook আর ফোনের mail app-এ এগুলো কাজ করে।
+
+| সেটিং                | মান                                                 |
+| ------------------- | -------------------------------------------------- |
+| সার্ভার              | Mail host name, যেমন `mail.example.com`            |
+| ব্যবহারকারীর নাম      | পুরো address, যেমন `info@example.com`               |
+| IMAP (আসা mail)     | port **993**, SSL/TLS                              |
+| POP3 (আসা mail)     | port **995**, SSL/TLS                              |
+| পাঠানো (SMTP)        | port **465** SSL/TLS, অথবা **587** STARTTLS        |
+
+Encryption ছাড়া সাধারণ IMAP (143) আর POP3 (110) দেওয়া হয় না। একটা mailbox শুধু নিজের address থেকেই mail পাঠাতে
+পারে; অন্য address থেকে পাঠাতে গেলে ফিরিয়ে দেওয়া হয়।
+
+## DNS record
+
+Mail পৌঁছানোর জন্য, আর আপনার পাঠানো mail-কে অন্য server-রা যাতে বিশ্বাস করে সেজন্য, প্রতিটা mail domain-এর এই
+DNS record-গুলো লাগে। Stalwart প্রতিটা domain-এর জন্য একটা DKIM key বানায়, আর ekPanel সেখান থেকে record-গুলো
+পড়ে নেয়:
+
+| Record | নাম | শুরু হয় যা দিয়ে | কী করে |
+| --- | --- | --- | --- |
+| `MX` | `example.com` | Mail host name | অন্য server-কে বলে domain-এর mail কোথায় পৌঁছাতে হবে |
+| `TXT` (SPF) | `example.com` | `v=spf1` | কোন কোন server domain-এর হয়ে mail পাঠাতে পারে, তার তালিকা |
+| `TXT` (DKIM) | `<selector>._domainkey.example.com` | `v=DKIM1;` | Public key, যেটা দিয়ে আপনার mail-এর signature যাচাই হয় |
+| `TXT` (DMARC) | `_dmarc.example.com` | `v=DMARC1;` | SPF আর DKIM-এ ফেল করা mail নিয়ে কী করতে হবে, প্রাপককে জানায় |
+| `TXT` (TLS reporting) | `_smtp._tls.example.com` | `v=TLSRPTv1;` | Encrypted delivery-তে সমস্যা হলে অন্য server-রা কোথায় জানাবে |
+
+Mail host name-এরও server-এর দিকে point করা `A` (আর `AAAA`) record লাগে।
+
+Mail server domain চালু করে ফেললে mail domain-এর পাতার **DNS রেকর্ড** (DNS records) card-এ সঠিক মানগুলো দেখায়
+("মেইল সার্ভার ডোমেইনটি চালু করলে রেকর্ডগুলো দেখা যাবে।")।
+
+এগুলো DNS-এ কীভাবে যাবে, তা নির্ভর করে domain-এর DNS কোথায় আছে তার ওপর:
+
+<Tabs>
+<TabItem label="Cloudflare">
+
+Domain যদি [ekPanel-এর চালানো একটা Cloudflare zone](/guides/dns/cloudflare/) হয়, তাহলে ekPanel record-গুলো
+সেখানে বসায় আর হালনাগাদ রাখে। Card-এ লেখা থাকে "ekPanel এই রেকর্ডগুলো Cloudflare জোন …-এ রাখে", সাথে zone-এর
+একটা link। Mail record সবসময় **শুধু DNS** (proxy করা নয়): Cloudflare-এর proxy শুধু web traffic বহন করে। একই
+নামের অন্য TXT record, যেমন site verification, যেমন আছে তেমন থাকে।
+
+</TabItem>
+<TabItem label="ekPanel-এর name server">
+
+Domain যদি [ekPanel-এর নিজের name server](/guides/dns/name-servers/)-এ থাকে, তাহলে ekPanel record-গুলো নিজে
+থেকেই zone-এ যোগ করে। Zone-এর পাতায় এগুলো ধূসর রঙে **ekPanel-এর** (By ekPanel) লেখাসহ দেখবেন। একই কাজের জন্য
+আপনার নিজের record রাখলে (যেমন আপনার নিজের SPF record), আপনারটাই ব্যবহার হয়, আর zone-এর পাতায় সেটা **যেসব record
+ekPanel যোগ করতে পারেনি** (Records ekPanel could not add)-এর নিচে দেখায়।
+
+Mail domain-এর পাতায় তবুও copy বাটনসহ record-গুলো আর "এই ডোমেইনের DNS যেখানে আছে সেখানে এই রেকর্ডগুলো যোগ করুন"
+লেখাটা থাকে; ekPanel-এর name server-এ থাকলে এগুলো আপনাকে যোগ করতে **হবে না**।
+
+</TabItem>
+<TabItem label="অন্য যেকোনো জায়গায়">
+
+যে company domain-এর DNS host করে, সেখানে প্রতিটা record যোগ করুন। প্রতিটা মানের পাশের copy বাটন ব্যবহার করুন।
+কিছু DNS host domain ছাড়া নাম চায় (`_dmarc.example.com`-এর বদলে `_dmarc`); তাদের help দেখে নিন।
+
+</TabItem>
+</Tabs>
+
+Mail host name-এর `A` আর `AAAA` record নিজে থেকে তৈরি হয় শুধু তখনই, যখন host name-টা ekPanel-এর চালানো (Cloudflare-এ
+বা এর name server-এ) কোনো administrator-এর zone-এ থাকে। নইলে এগুলো নিজে যোগ করুন।
+
+## Delivery যাচাই
+
+**ইমেইল** পাতায় server-এর পাশে **ডেলিভারি যাচাই** (Check delivery) বেছে নিন। যাচাইটা প্রশ্ন করে: "অন্য মেইল
+সার্ভার কি এই সার্ভারের মেইল গ্রহণ করবে?"
+
+| যাচাই | ভালো ফল | না হলে |
+| --- | --- | --- |
+| Mail host name-এর address | "mail.example.com এই সার্ভারের দিকে নির্দেশ করছে।" | দেখানো address-এর দিকে point করা host name-এর জন্য একটা `A` record যোগ করুন। |
+| বাইরে যাওয়ার port 25 | "এই সার্ভার ২৫ নম্বর পোর্টে অন্য মেইল সার্ভারে পৌঁছাতে পারে।" | "বাইরে যাওয়ার ২৫ নম্বর পোর্ট বন্ধ…": provider-কে এটা খুলে দিতে বলুন। |
+| প্রতিটা public address-এর reverse নাম (PTR) | "এই ঠিকানার রিভার্স নাম mail.example.com।" | Provider-কে address-এর reverse DNS mail host name-এ বসাতে বলুন। |
+| Blocklist | "যাচাই করা 3টি ব্লকলিস্টের কোনোটিতেই নেই।" | Blocklist-এর website-এ সরানোর অনুরোধ করুন। |
+
+যেসব blocklist-এ খোঁজা হয়: Spamhaus ZEN (`zen.spamhaus.org`), SpamCop (`bl.spamcop.net`) আর Barracuda
+(`b.barracudacentral.org`), server-এর IPv4 address-গুলোর জন্য। বড় public DNS resolver থেকে আসা প্রশ্নের উত্তর
+Spamhaus দেয় না; তখন যাচাইয়ে লেখা আসে ওই তালিকাকে "জিজ্ঞেস করা যায়নি"। এর মানে তালিকায় থাকা নয়।
+
+Port 25 পরীক্ষা করতে server Gmail-এর একটা mail server-এর সাথে port 25-এ যুক্ত হয়ে তার greeting-এর অপেক্ষা করে।
+
+## কীভাবে কাজ করে (সংক্ষেপে)
+
+Panel প্রতিটা server-এর পুরো mail setup রাখে: host name, domain, mailbox আর forwarder। প্রতিটা পরিবর্তন
+server-এর agent-এর কাছে যায়, agent আবার সবকিছু যাচাই করে Stalwart-এর API দিয়ে প্রয়োগ করে। Password কখনো
+agent-এর কাছে পৌঁছায় না, শুধু তার hash। কোনো domain-এর DNS record বদলালে ekPanel DNS sync করে। কিছু ব্যর্থ হলে
+domain-এ কারণসহ **সমস্যা** (Error) দেখায়, আর একটা **ইমেইলে সমস্যা** (Email problem) notification যায়।
+
+## সীমা আর যা এখনো নেই
+
+- বাইরের আসল mail দিয়ে এখনো পরীক্ষা হয়নি (উপরের note দেখুন)।
+- প্রতিটা server-এ একটাই mail host name; আলাদা domain-এর আলাদা host name এখনো নেই।
+- Mail app-এর জন্য automatic setup (autoconfig) এখনো নেই; উপরের settings হাতে দিন।
+- Mailing list এখনো নেই।
+- DNS দিয়ে wildcard certificate (DNS-01) এখনো নেই।
+- দেখুন [roadmap](/project/roadmap/)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="ekPanel-কে Cloudflare-এ mail record বসাতে দিন।" />
+	<LinkCard title="ekPanel-এর নিজের name server" href="/guides/dns/name-servers/" description="আপনার নিজের zone-এ mail record নিজে থেকে যোগ হয়।" />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Mail-এর port আপনার হয়ে খুলে দেওয়া হয়।" />
+</CardGrid>

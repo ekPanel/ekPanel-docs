@@ -1,0 +1,134 @@
+---
+title: Log আর traffic
+description: Website-এর request log আর PHP error log পড়ুন, live অনুসরণ করুন, আর গত ২৪ ঘণ্টা, ৭ দিন বা ৩০ দিনের traffic chart দেখুন।
+sidebar:
+  order: 8
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+প্রতিটা website-এর page-এ একটা **লগ** (Logs) card আছে, যেখানে প্রতিটা request আর PHP error ঘটার সাথে সাথে দেখা যায়, আর
+একটা **ট্রাফিক** (Traffic) card আছে, যেখানে সময় অনুযায়ী মোট হিসাব থাকে। Domain আছে এমন app-এরও একই request log আর traffic
+chart আছে।
+
+## Request log
+
+Request log-এ (একে *access log*-ও বলে) web server যতগুলো request-এর উত্তর দিয়েছে তার প্রতিটার জন্য একটা করে লাইন থাকে।
+
+<Steps>
+
+1. Website খুলে **লগ** খুঁজুন।
+
+2. **কোন লগ** (Which log)-এর নিচে **রিকোয়েস্ট** (Requests) বেছে নিন।
+
+3. সবচেয়ে নতুন request-গুলো পড়ুন: সময়, ভিজিটরের address, method, চাওয়া address, status, size আর উত্তর দিতে কত সময়
+   লেগেছে।
+
+</Steps>
+
+ছেঁকে দেখতে:
+
+- **দেখান** (Show) response অনুযায়ী filter করে: **সব উত্তর** (All responses), **সফল (2xx)** (Success (2xx)),
+  **রিডাইরেক্ট (3xx)** (Redirects (3xx)), **ক্লায়েন্টের ভুল (4xx)** (Client errors (4xx)) বা **সার্ভারের ভুল (5xx)**
+  (Server errors (5xx))।
+- **খুঁজুন** (Search) ভিজিটরের address, method, path, status আর browser (user agent)-এর মধ্যে খোঁজে।
+- **লাইভ** (Live) প্রতি ৩ সেকেন্ডে নতুন লাইন আনে, শুধু গতবার দেখার পর যেগুলো যোগ হয়েছে সেগুলো। থামাতে আবার click করুন।
+
+Card সবচেয়ে নতুন ৩০০টা request load করে, আর live অনুসরণ করার সময় page-এ সর্বোচ্চ ১,০০০টা রাখে।
+
+### Status code পড়া
+
+| Status | মানে | কোথায় দেখবেন |
+| --- | --- | --- |
+| 2xx | স্বাভাবিকভাবে উত্তর দেওয়া হয়েছে | |
+| 3xx | অন্য জায়গায় পাঠানো হয়েছে | আপনার [redirect](/guides/websites/redirects/), আর `http` থেকে `https` |
+| 403 | ফিরিয়ে দেওয়া হয়েছে | Hotlink protection, বন্ধ করা `xmlrpc.php` বা uploads-এ PHP |
+| 404 | পাওয়া যায়নি | হারানো file, আর `.env`-এর মতো লুকানো file, যেগুলো কখনো দেখানো হয় না |
+| 5xx | Server error | [PHP error log](#php-error-log) |
+
+### ভিজিটরদের আসল address
+
+Log-এ ভিজিটরের address দেখায়। Site যদি Cloudflare-এর proxy-র পেছনে থাকে, web server ভিজিটরের address নেয় Cloudflare-এর
+`CF-Connecting-IP` header থেকে, কিন্তু শুধু সেইসব request-এর জন্য যেগুলো সত্যিই Cloudflare-এর প্রকাশিত address থেকে আসে।
+অন্য কোথাও থেকে আসা কোনো request ওই header set করলে সেটা তার নিজের address দিয়েই log হয়।
+
+## PHP error log
+
+PHP website-এর জন্য **কোন লগ**-এর নিচে **PHP এরর** (PHP errors) বেছে নিন। Site-এর PHP error log-এর সবচেয়ে নতুন লাইনগুলো
+দেখবেন: warning, notice, fatal error আর আপনার code `error_log()` দিয়ে যা লেখে।
+
+- Card শেষ ৬৪ KB পর্যন্ত দেখায়, সর্বোচ্চ ৫০০ লাইন, আর **লাইভ** দিয়ে নতুন লাইন অনুসরণ করে।
+- **খুঁজুন** লাইনগুলো filter করে।
+- "কোনো PHP এরর লগ হয়নি" (No PHP errors logged) মানে এখনো কিছু নেই।
+
+File টা হলো `/home/<account>/logs/php-error.log`। [File manager](/guides/websites/files/)-এও এটা খুলতে বা download করতে
+পারবেন (**হোম ফোল্ডার** (Home folder), তারপর `logs`)।
+
+<Aside type="tip">
+PHP site ফাঁকা page বা "500" দেখালে প্রথমে এখানে দেখুন। Live site-এ `display_errors` **Off** রাখুন (দেখুন
+[PHP settings](/guides/websites/php/#php-settings-per-site)): তাহলে error এই log-এ যায়, ভিজিটরদের কাছে না।
+</Aside>
+
+Log পড়া হয় file manager-এর মতো একই আটকানো worker দিয়ে, site-এর account হিসেবে। কেউ log-কে অন্য কোনো file-এর link দিয়ে
+বদলে দিলে, যেমন `/etc/shadow`, panel সেখান থেকে কিছুই দেখায় না।
+
+## Web server error log
+
+Panel-এ আলাদা কোনো web server error log নেই। PHP error থাকে PHP error log-এ; website set up করতে গিয়ে কোনো সমস্যা হলে সেটা
+site-এর page-এ কারণ সহ **সমস্যা** (Problem) হিসেবে দেখায় (দেখুন [Site-এর অবস্থা](/guides/websites/websites/#site-states))।
+
+## Traffic
+
+**ট্রাফিক** card **সময়ের পরিসর** (Time range) **২৪ ঘণ্টা**, **৭ দিন** বা **৩০ দিন**-এর জন্য দেখায়:
+
+- **রিকোয়েস্ট** (Requests): site কতগুলো request-এর উত্তর দিয়েছে;
+- **ব্যান্ডউইথ** (Bandwidth): কতটা data পাঠিয়েছে;
+- **এরর** (Errors): 4xx বা 5xx দিয়ে উত্তর দেওয়া request;
+- **উত্তর** (Responses): 2xx, 3xx, 4xx আর 5xx-এর সংখ্যা;
+- **সবচেয়ে বেশি দেখা** (Most requested): যে path-গুলো সবচেয়ে বেশি চাওয়া হয়েছে।
+
+২৪ ঘণ্টা দেখানো হয় ঘণ্টা ধরে; ৭ আর ৩০ দিন দিন ধরে। Card প্রতি মিনিটে refresh হয়।
+
+<Aside type="note">
+Traffic গোনা হয় web server-এর log থেকে **প্রতি ১৫ মিনিটে**, তাই সবচেয়ে নতুন request chart-এ আসতে ১৫ মিনিট পর্যন্ত দেরি হতে
+পারে। Request log সেগুলো সাথে সাথেই দেখায়।
+</Aside>
+
+Customer-রা তাঁদের package-এর ব্যবহারের পাশে **এই মাসের ট্রাফিক** (Traffic this month)-ও দেখেন।
+
+## কী রাখা হয়, আর কতদিন
+
+| কী | কোথায় | কতদিন রাখা হয় |
+| --- | --- | --- |
+| Request log | Server-এ, `/var/log/caddy/site-<site id>.log` (JSON লাইন) | ২০ MB হলে নতুন file শুরু হয়; সবচেয়ে নতুন ৫টা পুরনো file রাখা হয় |
+| PHP error log | Server-এ, `/home/<account>/logs/php-error.log` | ekPanel এখনো rotate করে না; আপনি না মোছা পর্যন্ত বাড়তে থাকে |
+| ঘণ্টাভিত্তিক traffic-এর মোট হিসাব | Server-এ, agent রাখে | ৩ দিন (৭২ ঘণ্টা), panel সংগ্রহ না করা পর্যন্ত |
+| Traffic chart | Panel-এর database-এ | ৯০ দিন |
+
+Traffic কীভাবে গোনা হয়: agent প্রতিটা site-এর request log থেকে নতুন লাইন পড়ে আর সেগুলো ঘণ্টাভিত্তিক মোট হিসাবে যোগ করে
+(request, byte, status-এর শ্রেণি আর সবচেয়ে বেশি চাওয়া path)। এটা কোথায় থেমেছিল মনে রাখে, log নতুন file-এ গেলে সেটা অনুসরণ
+করে, আর কোনো লাইন কখনো দুইবার গোনে না। Panel প্রতি ১৫ মিনিটে প্রতিটা server থেকে মোট হিসাব সংগ্রহ করে আর ৯০ দিনের পুরনো
+হিসাব মুছে ফেলে।
+
+<Aside type="caution">
+PHP error log site-এর folder-এ থাকে, তাই এটা customer-এর disk space-এ গোনা হয়। এটা বড় হয়ে গেলে file manager-এ মুছে ফেলুন
+আর trash খালি করুন। পরের error-এর সাথে PHP এটা আবার বানায়।
+</Aside>
+
+কোনো website মুছে ফেলা হলে এর PHP error log home folder-এর সাথেই চলে যায়, আর এর traffic-এর ইতিহাস panel থেকে মুছে ফেলা হয়।
+`/var/log/caddy/`-এর request log file ekPanel সরায় না।
+
+## সীমা আর যা এখনো নেই
+
+- Bandwidth দেখানো হয়, কিন্তু package এখনো এটা সীমিত করতে পারে না।
+- **লগ** card থেকে log download করা যায় না; PHP log-এর জন্য file manager ব্যবহার করুন।
+- Server-এর request log administrator-রা [server terminal](/guides/apps/terminal/) দিয়ে পড়তে পারেন।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="PHP" href="/guides/websites/php/" description="display_errors আর অন্যান্য PHP settings।" />
+	<LinkCard title="রিডাইরেক্ট আর hotlink protection" href="/guides/websites/redirects/" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="এই log-এর ভিত্তিতে ban।" />
+	<LinkCard title="নোটিফিকেশন" href="/guides/admin/notifications/" />
+</CardGrid>

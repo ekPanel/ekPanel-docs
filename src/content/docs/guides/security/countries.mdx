@@ -1,0 +1,141 @@
+---
+title: Country blocking
+description: Block connections from some countries, or allow only some, for everything on a server, and learn what is never blocked.
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Country blocking drops connections to a server by the country of the sender's address. It
+covers everything on that server: websites, SSH, email and FTP. Use it when your visitors
+come from a few known countries and attacks come from elsewhere.
+
+## Before you start
+
+- Only administrators set it, per server, on the **Server security** page.
+- Know where **you** connect from. In "allow only" mode, a country you forget is shut out,
+  including you on a trip. Put your own address on the allowlist to be safe.
+- Countries are looked up in a free list that is accurate for most addresses but not all. Some
+  addresses are listed in the wrong country, and VPNs and proxies hide the real one.
+
+## Choose the countries
+
+<Steps>
+
+1. Open **Server security**, pick the server, and find the **Country blocking** card.
+
+2. Choose a mode:
+
+   | Mode | What it does |
+   | --- | --- |
+   | **Off** | Nothing is blocked by country. |
+   | **Block these countries** | The listed countries are blocked. Every other country can connect. |
+   | **Allow only these countries** | Only the listed countries can connect. Every other country is blocked, and so are addresses the list does not place in any country. |
+
+3. Type in **Add a country…** and pick countries from the list. Remove one with the × next
+   to it.
+
+4. Choose **Save**.
+
+</Steps>
+
+The first time, the server downloads the country list, then loads the rules. The card then says,
+for example, "On, 6,412 address ranges" and which month's list is in use.
+
+<Aside type="danger" title="Allow-only mode and visitors">
+In **Allow only these countries** mode, everyone else is blocked: also search engines' crawlers,
+uptime monitors and payment providers calling your site from other countries. Make sure the
+countries you, your visitors and your services connect from are on the list, or put those
+services' addresses on the allowlist.
+</Aside>
+
+## You cannot block yourself
+
+When you save, the panel looks up the country of the address you are using to reach the panel.
+If the new rules would block it, the change is refused:
+
+> This would block you: your address 203.0.113.9 is in Germany. Add it to the allowlist first.
+
+This check is skipped when you reach the panel from a private network or the server itself,
+which are never blocked anyway, and when your address is on the allowlist.
+
+<Aside type="caution">
+The check knows only the address your browser uses for the panel. If you connect to the server's
+SSH from another place, check that place's country too, or allowlist it.
+</Aside>
+
+## What is never blocked
+
+| Never blocked | Why |
+| --- | --- |
+| Connections already open, and replies to the server's own connections | Only **new** incoming connections are dropped, so the server's outgoing traffic (updates, sending mail) works in every mode. |
+| **Port 80** (HTTP) | So certificates can renew. It only redirects to HTTPS, so nothing else is reachable there. |
+| The **allowlist** | The addresses and networks in the Allowlist card, shared with [CrowdSec](/guides/security/crowdsec/). |
+| The server's own addresses | So it never blocks itself. |
+| [Cloudflare's published addresses](https://www.cloudflare.com/ips/) | See below. |
+| Private and local networks | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, loopback, link-local, multicast, and the IPv6 equivalents (`fc00::/7`, `fe80::/10`, …). |
+| Loopback traffic, DHCP replies and IPv6 neighbour discovery | So the server's own network keeps working. |
+
+### Sites behind Cloudflare
+
+Visitors who come through Cloudflare's proxy reach your server from Cloudflare's addresses, which
+are never blocked. So country blocking **does not stop** them. Block countries at Cloudflare too,
+for example with Cloudflare's firewall rules.
+
+## The country list
+
+ekPanel uses **DB-IP's free "IP to Country Lite" list**, published under the
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) license. The
+panel credits it with "IP Geolocation by DB-IP" under the card.
+
+- The server downloads it from DB-IP once a month, and keeps it in `/var/lib/ekpanel/geo/`.
+- DB-IP publishes each month's list during the month's first days. Until it is there, the server
+  keeps last month's list and tries again at most once a day.
+- The file is checked before use: it must be a well-formed list of address ranges, with far more
+  rows than a broken download would have.
+- It is data only; nothing in it is run.
+
+If the very first download fails, the card shows the error ("the country list could not be
+downloaded; trying again in a few minutes").
+
+## How it works
+
+Country blocking is an nftables table of its own, `inet ekpanel_countries`, written to
+`/etc/ekpanel/countries.nft`. It hooks into incoming traffic **before** everything else that
+filters it: before `ufw`, CrowdSec's bans and Docker's forwarded ports. So it applies even with the
+[firewall](/guides/security/firewall/) off.
+
+In order, the table:
+
+1. accepts connections that are already open, loopback traffic, port 80, DHCP and IPv6 neighbour
+   discovery;
+2. accepts the addresses that are never blocked (above);
+3. drops the listed countries (**block** mode), or accepts the listed countries and drops the rest
+   (**allow only** mode).
+
+A small service, `ekpanel-countries.service`, loads the rules again when the server boots. The
+agent also checks them on every apply and reloads them if they went missing. **Off** deletes the
+table, the file and the service.
+
+## Troubleshooting
+
+**I locked myself out.** Use your provider's web console to sign in, then remove the table:
+
+```bash
+sudo nft delete table inet ekpanel_countries
+```
+
+Then, in the panel, add your address to the allowlist or change the countries. The agent loads the
+rules again on its next apply, so fix the settings in the panel, not only on the server.
+
+**Which country is an address in?** The **Recent attacks** card of [CrowdSec](/guides/security/crowdsec/)
+shows countries too, but from CrowdSec's own lookup, which can differ from DB-IP's.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Server security" href="/guides/security/overview/" description="The allowlist and the other protections." />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="Ban single attackers instead of whole countries." />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Open ports and block networks." />
+</CardGrid>

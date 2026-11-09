@@ -1,0 +1,89 @@
+---
+title: Support
+description: Where to get help with ekPanel, and how to write a bug report that gets answered fast.
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel is made by volunteers. This page says where to ask for help, and how to ask so that
+someone can actually help you.
+
+## Where to get help
+
+| Where | For | Available |
+| --- | --- | --- |
+| **These docs** | Installing, every feature, [troubleshooting](/reference/troubleshooting/) and the [FAQ](/reference/faq/), in English and বাংলা | Now |
+| **Email:** ekpanelbd@gmail.com | Questions, bug reports and ideas, while the main repository is private | Now |
+| **GitHub issues** | Bug reports and feature requests, with templates | Once the main repository is public. Issues about the docs can go to the [docs repository](https://github.com/ekPanel/ekPanel-docs) now. |
+| **GitHub Discussions** | Questions and ideas | Once the main repository is public |
+| Community chat | | There is no chat (Discord, Telegram…) yet. |
+
+<Aside type="danger" title="Security problems">
+Never post a vulnerability in public. Follow the [security policy](/project/security-policy/).
+</Aside>
+
+There is no paid support. People help when they can; clear reports are answered fastest.
+
+## Before you ask
+
+<Steps>
+
+1. Search these docs, especially [Troubleshooting](/reference/troubleshooting/).
+
+2. Look at the logs. Most problems leave a message:
+
+   ```bash
+   sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
+   ```
+
+3. Check that you run a current build. ekPanel changes quickly before its first release.
+
+</Steps>
+
+## Writing a good bug report
+
+A report that someone can reproduce gets fixed. Include:
+
+- **What happened**: what you did, what you expected, and what happened instead. Copy error
+  messages exactly, or add a screenshot.
+- **Steps to reproduce**: numbered, from a starting point anyone can have ("a fresh install,
+  add a PHP website, then…").
+- **The ekPanel version**: run `ekpanel version` on the panel's server (and
+  `ekpanel-agent version` on the server concerned, if that is another one).
+- **The server's operating system**, such as Ubuntu 24.04, and the processor type (amd64 or
+  arm64) if it matters.
+- **Logs** from the time it happened:
+
+  ```bash
+  sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
+  ```
+
+  For a problem with a service ekPanel set up, add its log too (`caddy`, `php8.4-fpm`,
+  `ekpanel-mail`, `pdns`… see [where the logs are](/reference/troubleshooting/#where-the-logs-are)).
+
+<Aside type="caution" title="Remove secrets first">
+Logs and screenshots can contain passwords, keys, tokens, email addresses and domain names you
+want to keep private. Remove or replace them before you send anything.
+</Aside>
+
+One problem per report. If you found several, send several reports.
+
+## Feature requests
+
+Say what you want to do and why it is hard today, in your own words, and how other panels
+(cPanel, aaPanel, Coolify…) do it, if you know. Check the [roadmap](/project/roadmap/) first: it
+may already be planned.
+
+## Translations
+
+Found a wrong or missing translation? Say which language, where it appears, what it says now,
+and what it should say. A screenshot helps. See [Translating](/development/translating/).
+
+## Related
+
+- [FAQ](/reference/faq/)
+- [Troubleshooting](/reference/troubleshooting/)
+- [Contributing](/development/contributing/)
+- [Code of conduct](/project/code-of-conduct/)

@@ -1,0 +1,228 @@
+---
+title: Cron jobs
+description: Run a command on a schedule for a website or an app, with presets or any cron expression, in your time zone, with a time limit, logs and run now.
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+A cron job runs a command on a schedule: a backup script every night, WordPress's or Laravel's
+scheduler every minute, a report every Monday. In ekPanel a job belongs to a **website** or to an
+**app**, and goes away with it.
+
+## Add a job
+
+<Steps>
+
+1. Open the website (or app) and find **Cron jobs**. Click **Add job**.
+
+2. Type the **Command**. For a website it runs with `sh` as the website's own account, starting in
+   `public_html`. For an app it runs with `sh` inside the app's container.
+
+3. Choose **How often**: a preset, or **Custom (cron expression)**. For **Every day**,
+   **Every week** and **Every month (on the 1st)**, also choose the time (**At**), and for a weekly
+   job the **Day**.
+
+4. Check the **Time zone**. It starts as your browser's time zone.
+
+5. Read **Next runs**: the next five times the job will run, in that time zone. If the schedule is
+   wrong, an error shows here instead.
+
+6. Optionally give the job a **Name**. Without one, the command is used as the name.
+
+7. Set the **Time limit (minutes)**. The default is 60.
+
+8. Click **Create job**.
+
+</Steps>
+
+For an app, also choose the **Service** to run in. Image apps have one service, `app`; Compose apps
+have one per service in their Compose file.
+
+## Schedules
+
+### Presets
+
+| Preset | Cron expression |
+| --- | --- |
+| **Every minute** | `* * * * *` |
+| **Every 5 minutes** | `*/5 * * * *` |
+| **Every 15 minutes** | `*/15 * * * *` |
+| **Every hour** | `0 * * * *` |
+| **Every day**, at the time you choose (03:00 to start with) | `0 3 * * *` |
+| **Every week**, on the day and at the time you choose (here Monday 03:00) | `0 3 * * 1` |
+| **Every month (on the 1st)**, at the time you choose | `0 3 1 * *` |
+
+The preset you pick is saved as the cron expression on the right. When you edit a job whose
+schedule is not one of these, it shows as **Custom (cron expression)**.
+
+### Cron expressions
+
+A cron expression has five fields, separated by spaces:
+
+```text
+┌───────── minute (0-59)
+│ ┌─────── hour (0-23)
+│ │ ┌───── day of month (1-31)
+│ │ │ ┌─── month (1-12, or jan-dec)
+│ │ │ │ ┌─ day of week (0-7, or sun-sat; 0 and 7 are both Sunday)
+│ │ │ │ │
+30 2 * * 1-5
+```
+
+Each field takes:
+
+- `*` for every value;
+- a number, such as `30`;
+- a range, such as `1-5`;
+- a list, such as `0,15,30,45`;
+- a step, such as `*/10` (every 10) or `5/15` (from 5, every 15).
+
+These shortcuts work too: `@hourly`, `@daily` (or `@midnight`), `@weekly`, `@monthly`, `@yearly`
+(or `@annually`).
+
+| Expression | Runs |
+| --- | --- |
+| `30 2 * * 1-5` | 02:30 on weekdays |
+| `*/10 8-18 * * *` | Every 10 minutes from 08:00 to 18:50 |
+| `0 0 1,15 * *` | Midnight on the 1st and the 15th |
+| `0 9 * * mon` | 09:00 every Monday |
+| `0 6 1 jan *` | 06:00 on 1 January |
+
+<Aside type="note">
+As in classic cron, when both **day of month** and **day of week** are set (not `*`), the job runs
+when **either** matches. `0 0 13 * 5` runs on every 13th **and** every Friday.
+</Aside>
+
+A schedule that never happens (such as 30 February) shows no next runs. Every schedule is checked by
+the panel, and again on the server before it is used.
+
+### Time zone
+
+The job runs at the times you see, in the time zone you chose, such as `Asia/Dhaka`. Daylight saving
+changes are followed. `UTC` is first in the list.
+
+## Writing commands
+
+The command is a small shell script. You can use pipes, `&&`, `;` and redirections.
+
+<Tabs>
+<TabItem label="Laravel">
+
+```bash
+/usr/bin/php8.4 artisan schedule:run
+```
+
+Every minute. For Laravel made by the [PHP app installer](/guides/websites/php-apps/), `artisan`
+is in `public_html`, where the job starts.
+
+</TabItem>
+<TabItem label="WordPress">
+
+```bash
+/usr/bin/php8.4 wp-cron.php
+```
+
+WordPress runs its own scheduled tasks when visitors come. On a quiet site, run `wp-cron.php`
+every 5 or 15 minutes instead. The job starts in `public_html`, so the path is relative to it.
+
+</TabItem>
+<TabItem label="A script">
+
+```bash
+sh .scripts/nightly.sh >> ../logs/nightly.log 2>&1
+```
+
+Runs a script you uploaded to `public_html/.scripts/`, adding its output to a log file in the
+site's `logs` folder. Folders whose names start with a dot are never served to visitors.
+
+</TabItem>
+<TabItem label="An app">
+
+```bash
+php artisan schedule:run
+```
+
+Inside the app's container, with whatever programs the image has.
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip">
+Use the PHP binary of the site's own version, such as `/usr/bin/php8.4` for a PHP 8.4 site, so the
+job runs with the same PHP as the website. The site's [PHP settings](/guides/websites/php/#php-settings-per-site)
+apply to the web server's PHP, not to these command-line runs.
+</Aside>
+
+For website jobs, the job:
+
+- runs as the website's Linux account, never as root;
+- cannot gain more rights (`NoNewPrivileges`), has a private `/tmp`, and sees `/usr`, `/boot` and
+  `/etc` read-only;
+- runs with a lower priority (`nice` 5);
+- for a customer's website, runs inside the customer's slice, with their package's memory and CPU
+  limits.
+
+App jobs run with `docker exec` in the first running container of the service. If that service is
+not running, the job fails with "… is not running".
+
+## Time limit
+
+A job that runs longer than its **Time limit** is stopped. Allowed values are from 10 seconds to
+24 hours (in the panel, whole minutes up to 1440).
+
+A job that is still running when its next time comes is **not started a second time**. The next run
+waits for the following scheduled time.
+
+## Run now, pause, edit, delete
+
+In the list of jobs:
+
+- **Run now** starts the job right away, outside its schedule. It works once the job is set up on
+  the server.
+- The switch pauses a job (**Paused**) and turns it back **On**. A paused job keeps its settings.
+- **Edit job** changes everything except where it runs.
+- **Delete job** removes it from the server.
+
+## Status and output
+
+Each job shows its next run (**Next …**) and, under **Last run and output**:
+
+- **Last run** and **Next run** times;
+- the result: **Running**, **Succeeded**, **Failed (…, exit code …)** (for example, a time limit or
+  an error exit code), or **Not run yet**;
+- the output of recent runs (the last 200 lines), from the server's journal.
+
+Write a job's output to a file, as in the script example above, if you need to keep it longer.
+
+<Aside type="caution">
+ekPanel does not send notifications when a cron job fails yet. Check important jobs now and then.
+</Aside>
+
+## Package limit
+
+A customer's [package](/guides/admin/customers/) sets how many cron jobs they may have, across all
+their websites and apps. Moodle's job, added by the [PHP app installer](/guides/websites/php-apps/#moodle),
+counts too. When the limit is reached, adding a job is refused with "the package allows no more of
+these".
+
+## How it works
+
+Each job becomes a systemd timer and a one-shot service on the server (`ekpanel-cron-<id>.timer`
+and `.service`). The command is stored in a script file (`/etc/ekpanel/cron/<id>.sh`) readable only
+by root and the site's account, so quotes or `%` signs in a command cannot change the unit.
+The schedule is turned into systemd's `OnCalendar` form and checked with
+`systemd-analyze calendar`.
+
+Tested on a test server (VM): an every-minute job in `Asia/Dhaka`, exit codes and time limits
+reported as such, a job inside an Alpine container, a customer's job in their slice, pausing, and
+nothing left after deleting.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="PHP apps" href="/guides/websites/php-apps/" description="Laravel and Moodle need a scheduler." />
+	<LinkCard title="Docker apps" href="/guides/apps/docker-apps/" />
+	<LinkCard title="Logs and traffic" href="/guides/websites/logs-traffic/" />
+</CardGrid>

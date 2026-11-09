@@ -1,0 +1,218 @@
+---
+title: REST API
+description: How ekPanel's JSON API works today, how it signs you in and protects you, its errors, roles and endpoint groups.
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+Everything the web UI does goes through a JSON API under `/api/v1`. This page explains how
+that API works today, so you can read it, debug the UI, or script a few things with care.
+
+<Aside type="caution" title="Not a stable public API yet">
+The API has no stable version promise yet. **API tokens, an OpenAPI description and the
+`ekpanel` command line tool come in phase 4b** (see the [roadmap](/project/roadmap/)). Until
+then the API signs in with the same session cookie as the browser, and endpoints may change
+between commits.
+</Aside>
+
+## Basics
+
+- **Base address:** `https://<your panel>/api/v1`
+- **Format:** JSON in and out. Request bodies must be sent as `application/json` (file
+  uploads use `application/octet-stream`).
+- **Body size:** at most 1 MB per JSON request. Unknown fields in a body are refused, so
+  typing mistakes do not go unnoticed. File uploads go in pieces of at most 512 KB.
+- **Health check:** `GET /api/v1/health` needs no sign-in and answers
+  `{"status":"ok","version":"…"}`. The installer uses it to see that the panel started.
+
+## Signing in
+
+The API uses a session cookie, the same one the browser gets.
+
+<Steps>
+
+1. Sign in with `POST /api/v1/auth/login`:
+
+   ```bash
+   curl -sS -c cookies.txt -H 'Content-Type: application/json' \
+     -d '{"email":"you@example.com","password":"your password"}' \
+     https://panel.example.com/api/v1/auth/login
+   ```
+
+   If the account has two-factor authentication, the first answer is `401` with the code
+   `totp_required`. Send the same request again with `"totp_code":"123456"` added.
+
+2. Send the cookie with every later request:
+
+   ```bash
+   curl -sS -b cookies.txt https://panel.example.com/api/v1/sites
+   ```
+
+3. Sign out when you are done, so the session ends on the panel too:
+
+   ```bash
+   curl -sS -b cookies.txt -X POST https://panel.example.com/api/v1/auth/logout
+   ```
+
+</Steps>
+
+About the session:
+
+- The cookie is `__Host-ekpanel_session` on a normal install (`ekpanel_session` in plain-HTTP
+  development). It is `HttpOnly`, `SameSite=Lax` and, on HTTPS, `Secure`.
+- A session lasts 7 days. The panel stores only a SHA-256 hash of its token.
+- **Sign out all other devices** in your account ends every other session
+  (`POST /api/v1/auth/sessions/revoke-others`).
+- After 10 failed sign-ins from one address or for one email address, sign-ins are refused for
+  15 minutes (code `too_many_attempts`).
+
+<Aside type="danger">
+A session cookie is as powerful as your password. Keep `cookies.txt` private and delete it
+afterwards. Do not put an administrator's session into scripts that run unattended: wait for
+API tokens with limited scopes (phase 4b).
+</Aside>
+
+## Protection against cross-site requests
+
+The panel only accepts changes (anything but `GET`, `HEAD` and `OPTIONS`) that come from its
+own pages. Every such request must pass three checks:
+
+| Check | Refused when | Error |
+| --- | --- | --- |
+| `Sec-Fetch-Site` header | It is present and is not `same-origin` or `none` | `403 cross_site` |
+| `Origin` header | It is present and is not the panel's own address | `403 cross_site` |
+| Content type | A body is sent that is not `application/json` or `application/octet-stream` | `415 json_required` |
+
+HTML forms cannot send JSON, so a page on another site cannot submit to the panel. Tools such
+as `curl` send neither `Sec-Fetch-Site` nor `Origin`, so they pass as long as they send JSON.
+Live views (server statistics, the terminal) are WebSockets, and they also refuse other
+sites' pages.
+
+On top of this, every answer carries a strict Content-Security-Policy with no inline scripts,
+and `X-Frame-Options: DENY`.
+
+## Errors
+
+Every error has the same shape:
+
+```json
+{ "code": "invalid_credentials", "message": "email or password is not correct" }
+```
+
+- `code` is stable and machine-readable. The web UI translates it (the key `errors.<code>` in
+  the language files), so check `code` in your scripts, never `message`.
+- `message` is a short English explanation for people reading API answers.
+
+Common codes:
+
+| HTTP status | Code | Meaning |
+| --- | --- | --- |
+| 400 | `invalid_body` | The body is empty, not valid JSON, or has an unknown field. |
+| 401 | `unauthenticated` | You are not signed in, or the session expired. |
+| 401 | `totp_required` | The password was right; send the two-factor code too. |
+| 403 | `forbidden` | Your role may not do this. |
+| 403 | `cross_site` | The request came from another site. |
+| 404 | `not_found` | It does not exist, **or it is not yours**. |
+| 413 | `body_too_large` | The body is over the limit. |
+| 415 | `json_required` | Send the body as `application/json`. |
+| 429 | `too_many_attempts` | Too many failures; wait and try again. |
+| 500 | `internal` | Something went wrong in the panel; the details are in its log. |
+
+Features add their own codes, such as `ftp_not_allowed` when a customer's package does not
+include FTP.
+
+## Roles
+
+| Role | Can use |
+| --- | --- |
+| **Administrator** (`admin`) | Everything. |
+| **Customer** (`customer`) | Their own websites, databases, apps, DNS zones, email, cron jobs and notifications, within their package's limits. They see the servers they may use, but cannot manage servers, backups, packages or other customers. |
+| **Reseller** (`reseller`) | <Badge text="not yet" variant="caution" /> The role exists in the database, but no endpoint accepts it yet. Resellers come in phase 4e. |
+
+Customers never see what is not theirs: asking for someone else's website gives `404`, the same
+as a website that does not exist. An administrator who uses **Sign in as** on a customer acts
+with the customer's rights for one hour, is recorded as themselves in the audit log, and cannot
+change the customer's password or two-factor settings.
+
+Some actions need a fresh confirmation of the password (and two-factor code): opening a web
+terminal asks for it with `POST /api/v1/auth/confirm`, and the confirmation lasts 15 minutes.
+
+Every change is written to the audit log (`GET /api/v1/audit`, administrators only).
+
+## Endpoint groups
+
+All paths are below `/api/v1`. `{id}` is the long ID of a thing, as in the panel's addresses.
+
+### Open to everyone
+
+| Endpoints | What for |
+| --- | --- |
+| `GET /health` | Is the panel up, and which version. |
+| `GET /setup/status`, `POST /setup` | First administrator, with the setup token. |
+| `POST /auth/login` | Sign in. |
+| `POST /hooks/git/{id}` | Git webhooks from GitHub, GitLab, Gitea, Forgejo and Gogs. Checked by the app's webhook secret, not a session. |
+
+### Your account (any signed-in user)
+
+| Endpoints | What for |
+| --- | --- |
+| `/auth/me`, `/auth/logout` | Who you are, your language, signing out. |
+| `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable` | Two-factor authentication. |
+| `/auth/sessions/revoke-others`, `/auth/confirm`, `/auth/impersonation/end` | Sessions, password confirmation, ending **Sign in as**. |
+
+### Administrators and customers
+
+| Group | Endpoints start with |
+| --- | --- |
+| Usage, password, notifications | `/me/usage`, `/auth/password`, `/notifications` |
+| Websites | `/sites` (and `/sites/{id}/...` for SFTP, FTP, SSH keys, files, logs, traffic, web settings, certificates, malware findings) |
+| WordPress and PHP apps | `/wordpress`, `/sites/{id}/wordpress/...`, `/php-apps`, `/sites/{id}/app` |
+| PHP versions | `/php-versions` |
+| Databases | `/databases` |
+| Cloudflare DNS | `/dns/cloudflare`, `/dns/zones` |
+| Built-in DNS | `/dns/hosted`, `/dns/templates` |
+| Apps and Git deploys | `/catalog`, `/apps` (and `/apps/{id}/...` for start, stop, logs, terminal, deployments, previews) |
+| Email | `/mail/servers`, `/mail/domains`, `/mail/mailboxes`, `/mail/forwarders` |
+| Cron jobs | `/cron` |
+| Servers and tasks (read) | `GET /servers`, `GET /tasks` |
+
+### Administrators only
+
+| Group | Endpoints start with |
+| --- | --- |
+| Customers and packages | `/customers`, `/packages` |
+| Servers | `/servers` (add, delete, connection command, addresses, live statistics, metrics, services, terminal, PHP extensions, usage, traffic) |
+| Server security | `/servers/{id}/security/...` (CrowdSec, bans, alerts, automatic updates, countries, malware) |
+| Firewall | `/servers/{id}/firewall` |
+| Email servers | `/servers/{id}/mail` |
+| Name servers | `/dns/nameservers` |
+| Backups | `/backups` |
+| Notification settings | `/settings/notifications` |
+| Audit log | `/audit` |
+
+The full list, with methods, is in
+[`internal/api/server.go`](https://github.com/ekPanel/ekpanel/blob/dev/internal/api/server.go)
+in the main repository. Request and answer fields are the Go types in the handlers next to it,
+and the TypeScript types the UI uses are in
+[`web/src/lib/api.ts`](https://github.com/ekPanel/ekpanel/blob/dev/web/src/lib/api.ts).
+
+## The agent endpoints
+
+Agents talk to a different listener (port 7443) with mutual TLS: `/api/v1/agent/enroll`,
+`/api/v1/agent/renew` and the WebSocket `/api/v1/agent/connect`. These are not for people or
+scripts. See [Architecture](/concepts/architecture/).
+
+## Limits and what is not there yet
+
+- No API tokens yet: only session cookies (phase 4b).
+- No OpenAPI description and no API docs site yet (phase 4b).
+- No `ekpanel` command line tool for the API yet, and no Terraform provider (phase 4b).
+- Endpoints can change without notice until there is a release.
+
+## Related
+
+- [Security model](/concepts/security-model/)
+- [Configuration](/reference/configuration/)
+- [Roadmap](/project/roadmap/)

@@ -1,0 +1,214 @@
+---
+title: Customers and packages
+description: Give people their own accounts on your panel, with limits on websites, databases, apps, disk space, memory and CPU that are really enforced.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+If you host websites for other people, give each of them a **customer** account. A customer signs
+in to the same panel and sees only what they own, within the limits of their **package**. A
+package is a plan, such as "Starter" or "Business": how many websites, databases and apps, how much
+disk space, and how much memory and CPU for all their processes together.
+
+## Before you start
+
+- You are signed in as an **administrator**. Customers and packages are under **Administration**
+  in the menu.
+- At least one server is connected. See [Add a server](/start/add-server/).
+
+## Create a package
+
+<Steps>
+
+1. Open **Packages** and click **Add package**.
+
+2. Enter a **Name**, such as `Starter`.
+
+3. Fill in the limits (see the table below). For example: 3 websites, 3 databases, 1 app,
+   10 cron jobs, 10 GB disk, 1024 MB memory, 1 CPU core.
+
+4. Click **Create package**.
+
+</Steps>
+
+### Package limits
+
+| Field | What it limits | Empty or 0 means |
+| --- | --- | --- |
+| **Websites**, **Databases**, **Apps**, **Cron jobs** | How many of each the customer may have (0 to 100,000). Websites made for WordPress staging count too | 0 means none. "0 for apps means no Docker apps." |
+| **Mail domains**, **Mailboxes** | Mail domains and mailboxes over all the customer's domains | 0 means none |
+| **Mailbox size (GB)** | The largest size of one mailbox | Empty: no limit |
+| **Disk space (GB)** | Website files, app folders and volumes, databases and mail together | Empty: unlimited |
+| **Memory (MB)** | Memory for **all** the customer's PHP and app processes together, at least 64 MB | Empty: no limit |
+| **CPU (cores)** | CPU for all of them together, for example `0.5` or `2`, at least 5% of a core | Empty: no limit |
+| **PHP versions** | Which PHP versions their websites may use | "None ticked means every version." |
+| **Servers** | Where the customer may create things | "None ticked means every server." |
+| **Allowed Docker images** | Which images their apps and catalogue services may use. One per line: a name such as `nginx` (any tag), or a prefix ending in `/` such as `ghcr.io/acme/` | "Empty means any image." |
+| **SFTP access to their websites** | Whether they can turn on SFTP | Off |
+| **FTP (encrypted) for their websites** | Whether they can turn on FTP | Off |
+| **Git apps** | Whether they can build and deploy their own repositories ([Git deploys](/guides/apps/git-deploys/)) | Off |
+
+Customers can never run their own Compose files: "Customers cannot use Compose files." They can
+run single images and the reviewed services of the [catalogue](/guides/apps/catalog/).
+
+### Changing a package
+
+Edit a package and save it. New memory and CPU limits reach the customers' servers at once,
+**without restarting** anything. If you lower a count, what customers already have stays; they
+just cannot add more.
+
+A package that still has customers cannot be deleted: "move its customers to another package
+first".
+
+## Add a customer
+
+<Steps>
+
+1. Open **Customers** and click **Add customer**.
+
+2. Enter their name and email address, and choose a **Package**.
+
+3. Click **Create customer**.
+
+4. Copy the password: "The customer's password, shown only this once. Send it to them over a safe
+   channel." They can change it under **Security** after signing in.
+
+</Steps>
+
+The customer's panel language starts as yours at the moment you create them; they can change it.
+If they lose their password, click **New password** on the customers list to make a new one (shown
+once). This signs them out everywhere.
+
+The customers list shows each customer's package and use, such as "2 of 3" websites and their disk
+space.
+
+### Creating things for a customer
+
+When you add a website, database or app, choose the customer under **For**. It then belongs to
+them and counts toward their package, exactly as if they had made it.
+
+## What customers see and do
+
+A customer signs in at the same address as you. They see:
+
+- **Dashboard** with "Your package: …", their use of each limit, and their traffic this month.
+- **Websites**, **Databases**, **Apps**, **Email** and **DNS**: only what they own. Mail domains
+  must be domains of their own websites; hosted DNS zones must be domains of their own websites or
+  apps. They can connect their own Cloudflare account.
+- **Security** (their password and two-factor authentication) and **Notifications** (their own
+  alert channels).
+
+They do **not** see: other customers' things, **Backups**, **Servers** (only a list of server names
+to choose from, limited by their package), **Server security**, **Customers**, **Packages** or the
+**Audit log**. They cannot open a server terminal.
+
+Anything a customer may not see answers "not found", so nobody can probe for other people's
+websites by trying IDs. Ownership is checked in one place for every route; an automated test walks
+22 routes as another customer and expects "not found" on each.
+
+## How memory and CPU limits are enforced
+
+Limits are real, not just numbers in the panel. On each server, every customer gets a **systemd
+slice** (a Linux control group, cgroup v2) called `ekpanel-c<customer id>.slice` with the package's
+`MemoryMax` and `CPUQuota`, and at most 4,096 processes. Everything the customer runs goes inside
+it:
+
+- **PHP**: their websites run under a PHP-FPM master of their own, one per PHP version, inside
+  the slice.
+- **Docker apps and catalogue services**: every container gets the slice as its cgroup parent.
+- **Git builds**: builds run in the slice too.
+- **Cron jobs** of their websites and apps.
+
+CPU is given in percent of one core: `1` core in the panel is `CPUQuota=100%`, `0.5` is 50%.
+
+When a customer's processes together need more memory than the package allows, the kernel stops
+one of **their** processes, not someone else's. A PHP script over the limit costs only its own
+worker; the customer's other requests keep working. In the project's test VM, with a 256 MB
+package, a script asking for 400 MB was stopped alone, and a 50% CPU limit gave two busy loops
+2 seconds of CPU in 4 seconds.
+
+Administrators' own websites and apps are not in any slice and have no package.
+
+## How disk space is measured
+
+Disk space is **measured by the panel**, not by filesystem quotas:
+
+- Every **30 minutes**, each server's agent adds up the website home folders, and the app folders
+  and Docker volumes. Each file counts once, links are not followed.
+- **Database** sizes are reported each time the server applies its databases.
+- **Mailbox** use comes from the mail server.
+
+When the disk space is used up:
+
+- New websites, databases, apps, cron jobs and mail domains are refused: "the disk space of the
+  package is used up".
+- File manager actions that add data (upload, new file or folder, unzip, zip) are refused.
+- Nothing is deleted, and websites keep running.
+
+The customer and the administrators get a [notification](/guides/admin/notifications/) at 90%
+("Disk space almost used up") and at 100% ("Disk space used up").
+
+<Aside type="caution">
+Because space is measured every 30 minutes, a customer can go somewhat over the limit between two
+measurements. **SFTP and FTP uploads are not stopped** by the disk limit, and a running
+website or app can keep writing. Only the panel's own actions are refused.
+</Aside>
+
+## Sign in as a customer
+
+To see exactly what a customer sees, or to fix something for them:
+
+<Steps>
+
+1. On the customers list, click **Sign in as** next to the customer.
+
+2. A banner shows "You are signed in as … Everything you do is recorded under your own name."
+
+3. Work as the customer. When you are done, click **Back to my account**.
+
+</Steps>
+
+- This lasts **one hour** at most.
+- The audit log records each action with **your** name and that you acted as the customer.
+- The customer's own account security stays theirs: while signed in as them you cannot change their
+  password, turn two-factor authentication on or off, sign out their other sessions, or change
+  their notification channels.
+- Terminals, including app shells, are not available while signed in as a customer.
+
+## Only administrators can
+
+- Create, change and delete packages and customers, reset customers' passwords, and sign in as
+  them.
+- Add and remove servers, see their metrics and services, and open a root
+  [terminal](/guides/apps/terminal/).
+- Set up [backups](/guides/data/backups/), the firewall, server security, email servers and the
+  built-in name servers.
+- Run their own Compose files and use public ports for apps.
+- Set the panel's SMTP server and address for [notifications](/guides/admin/notifications/).
+- Read the audit log.
+
+Every administrator has all of these rights; there are no lesser administrator roles yet.
+
+## Delete a customer
+
+A customer who still owns something cannot be deleted: "They still have … websites, … databases and
+… apps. Delete or move them first." Delete those first, then click the delete button on the
+customers list.
+
+## Limits and what is not there yet
+
+- **Suspending** a customer (stopping their sites without deleting them): not yet.
+- **Moving** a website, database or app to another owner: not yet.
+- **Bandwidth limits** in packages: not yet. Traffic is already measured and shown.
+- **Email to new customers** with their sign-in details: not yet; send the password yourself.
+- **Resellers** (who sell your packages to their own customers) and **sub-users**: not yet.
+- Real filesystem quotas: not yet; disk space is measured as described above.
+
+See the [roadmap](/project/roadmap/).
+
+## Related
+
+- [Notifications](/guides/admin/notifications/): Customers get alerts about their own websites, apps and disk space.
+- [Docker apps](/guides/apps/docker-apps/): What customers can and cannot run.

@@ -1,0 +1,276 @@
+---
+title: সমস্যা সমাধান
+description: ekPanel-এর সাধারণ সমস্যা আর সেগুলো ঠিক করার উপায়, আর প্রতিটা service কোথায় log লেখে।
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+কিছু কাজ না করলে panel সাধারণত কারণটা বলে দেয়: **সমস্যা** অবস্থায় থাকা একটা website server-এর
+error message দেখায়, আর প্রতিটা background task তার ফলাফল দেখায় **সাম্প্রতিক কাজ**-এর নিচে। মানুষ
+সবচেয়ে বেশি যে সমস্যায় পড়ে, আর panel যখন বলতে পারে না তখন কোথায় দেখবেন, এই page-এ তা আছে।
+
+<Aside type="tip">
+এই page-এর command-গুলো server-এ, SSH দিয়ে, এমন একজন user হিসেবে চালান যিনি `sudo` ব্যবহার করতে
+পারেন।
+</Aside>
+
+## Log কোথায় থাকে
+
+ekPanel-এর প্রতিটা অংশ আর এর set up করা প্রতিটা service systemd-এর অধীনে চলে, তাই `journalctl`
+এর log দেখায়। নতুন লাইন দেখতে থাকতে `-f` যোগ করুন, অথবা অল্প সময়ের log দেখতে
+`--since "10 min ago"`।
+
+```bash
+sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
+```
+
+| Unit | এটা কী | কখন থাকে |
+| --- | --- | --- |
+| `ekpanel` | Panel | Panel-এর server-এ |
+| `ekpanel-agent` | Agent | Panel-এর server-এ (installer বানায়) |
+| `caddy` | Panel, website আর app-এর web server | Panel-এর server-এ |
+| `postgresql` | Panel-এর database, আর customer-দের PostgreSQL database | Panel-এর server; PostgreSQL database আছে এমন server |
+| `mariadb` | MariaDB database | প্রথম MariaDB database-এর পরে |
+| `php8.4-fpm` (যেকোনো version) | Administrator-দের website-এর PHP | ওই version-এর প্রথম PHP website-এর পরে |
+| `ekpanel-php8.4-c<customer>` | একজন customer-এর website-এর PHP, তাদের সীমার ভেতরে | PHP website আছে এমন customer |
+| `ekpanel-cron-<job id>` | একটা cron job-এর প্রতিবার চলা আর output | প্রতিটা cron job-এর জন্য |
+| `ekpanel-mail` | Mail server (Stalwart) | Email চালু থাকলে |
+| `pdns` | PowerDNS name server | Server-টা name server হলে |
+| `crowdsec`, `crowdsec-firewall-bouncer` | CrowdSec আর এর firewall bouncer | CrowdSec চালু থাকলে |
+| `clamav-freshclam` | ClamAV-এর virus database update | Malware scan চালু থাকলে |
+| `pure-ftpd` | FTP server | কোনো website-এ FTP চালু থাকলে |
+| `docker` | Docker | প্রথম Docker app-এর পরে |
+| `ekpanel-countries` | Boot-এর সময় country blocking-এর rule load করে | Country blocking চালু থাকলে |
+
+অন্য log-গুলো file-এ থাকে:
+
+| File | কী দেখায় |
+| --- | --- |
+| `/var/log/caddy/site-<site id>.log` | একটা website-এ আসা request (panel-এও, website-এর page-এ) |
+| `/var/log/caddy/app-<app id>.log` | একটা app-এ আসা request |
+| `/home/<account>/logs/php-error.log` | একটা website-এর PHP error (panel-এও আছে) |
+
+## Panel-এ ঢুকতে পারছি না
+
+Panel নিজে শুধু `127.0.0.1:8080`-এ listen করে। Caddy port 80 আর 443-এ উত্তর দেয় আর request
+সামনে পাঠায়। তাই server থেকে দুটোই check করুন:
+
+<Steps>
+
+1. Panel কি চলছে?
+
+   ```bash
+   curl -fsS http://127.0.0.1:8080/api/v1/health
+   ```
+
+   আপনার `{"status":"ok",...}` দেখার কথা। না দেখলে `journalctl -u ekpanel -n 100` পড়ুন। একটা
+   সাধারণ কারণ হলো PostgreSQL চলছে না: `sudo systemctl status postgresql`।
+
+2. Caddy কি চলছে, আর এর configuration কি valid?
+
+   ```bash
+   sudo systemctl status caddy
+   sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+   ```
+
+3. Port 80 আর 443 কি server-এ পৌঁছায়? অনেক provider-এর web console-এ একটা **cloud firewall**
+   থাকে, যা আপনি খোলেননি এমন সবকিছু আটকে দেয়। সেখানে TCP 80 আর 443 খুলুন (আর অন্য server-এর
+   agent-দের জন্য 7443)। আপনি নিজে `ufw` ব্যবহার করলে সেখানেও এগুলো allow করুন।
+
+4. `--domain` দিয়ে থাকলে: নামটা কি এই server-এর দিকে point করছে? `dig +short panel.example.com`
+   অবশ্যই server-এর address দেখাবে। সেটা হওয়ার পরেই Caddy একটা certificate নিতে পারে।
+
+</Steps>
+
+## Browser certificate নিয়ে warning দেয়
+
+`--domain` ছাড়া install করে থাকলে panel server-এর IP address-এর জন্য একটা **self-signed
+certificate** ব্যবহার করে। Browser একবার এ নিয়ে warning দেয়, কারণ তারা বিশ্বাস করে এমন কেউ এটা
+sign করেনি। Connection তবুও encrypted। আপনি warning মেনে নিতে পারেন, অথবা একটা trusted certificate-এ
+যেতে পারেন:
+
+<Steps>
+
+1. একটা DNS name, যেমন `panel.example.com`, server-এর address-এর দিকে point করুন।
+2. ওই নাম দিয়ে installer আবার চালান (একই binary বা নতুন binary দিয়ে):
+
+   ```bash
+   sudo ./install.sh --local-dir . --domain panel.example.com
+   ```
+
+3. `https://panel.example.com` খুলুন। প্রথমবার visit-এর সময় Caddy একটা free Let's Encrypt
+   certificate নেয়; এর জন্য port 80 আর 443 internet-এর দিকে খোলা থাকতে হবে।
+
+</Steps>
+
+## Setup token হারিয়ে ফেলেছি
+
+প্রথম administrator তৈরি না হওয়া পর্যন্ত token একটা file-এ আর panel-এর log-এ রাখা থাকে:
+
+```bash
+sudo cat /var/lib/ekpanel/setup-token
+sudo journalctl -u ekpanel | grep setup_token
+```
+
+প্রথম administrator তৈরি হওয়ার সাথে সাথেই token মুছে যায়।
+
+## "অনেকবার চেষ্টা করা হয়েছে"
+
+একটা address থেকে, বা একটা email address-এর জন্য ১০ বার sign in ব্যর্থ হলে, panel ১৫ মিনিট sign in
+ফিরিয়ে দেয়। অপেক্ষা করুন, তারপর আবার চেষ্টা করুন। Two-factor authentication ব্যবহার করলে দেখে নিন
+আপনার phone-এর ঘড়ি ঠিক আছে কিনা: code প্রতি ৩০ সেকেন্ডে বদলায়।
+
+## একটা server offline দেখাচ্ছে
+
+কোনো server-এর agent-এর connection চলে গেলে panel সেটাকে offline চিহ্ন দেয়, আর ৩ মিনিট পরে একটা
+notification পাঠায়।
+
+<Steps>
+
+1. Server নিজে কি চালু আছে? SSH দিয়ে কি এতে ঢোকা যায়?
+
+2. Agent কি চলছে?
+
+   ```bash
+   sudo systemctl status ekpanel-agent
+   sudo journalctl -u ekpanel-agent -n 100
+   ```
+
+   Panel-এর server-এ installer `ekpanel-agent` service বানিয়েছে। অন্য server-এ agent সেভাবেই চলে
+   যেভাবে আপনি চালু করেছেন (`sudo ekpanel-agent run`); দেখুন সেটা এখনো চলছে কিনা।
+
+3. Server কি TCP 7443-এ panel-এ পৌঁছাতে পারে? Managed server থেকে:
+
+   ```bash
+   nc -vz panel.example.com 7443
+   ```
+
+   না পারলে **panel-এর** server-এ TCP 7443 খুলুন (cloud firewall আর `ufw`)।
+
+4. Agent-এর log কি certificate error-সহ বারবার "lost connection to panel; retrying" লিখছে, বা বলছে
+   যে `/etc/ekpanel/agent.json` অসম্পূর্ণ? তাহলে server-টা আবার connect করতে হবে (যেমন এর
+   certificate revoke হওয়ার পরে)। Panel-এ server-এর page-এ **নতুন সংযোগ কমান্ড**-এ click করুন আর
+   নতুন `enroll` command-টা server-এ চালান, তারপর agent আবার চালু করুন।
+
+</Steps>
+
+Server offline থাকার সময় আপনি যে পরিবর্তন করেন, সেগুলো অপেক্ষা করে: panel দেখায় "অফলাইন। এজেন্ট
+আবার যুক্ত হলেই সেটিংস চালু হবে।" কিছুই হারায় না।
+
+## নতুন server "এখনো যুক্ত হয়নি" অবস্থায় থেকে যাচ্ছে
+
+Connection command-এর token **একবারই** কাজ করে আর **এক ঘণ্টা পরে** মেয়াদ শেষ হয়। মেয়াদ শেষ হলে
+বা ব্যবহার হয়ে গেলে **নতুন সংযোগ কমান্ড**-এ click করুন আর নতুন command চালান। `enroll` pin বা
+certificate error দিয়ে fail করলে দেখুন পুরো command copy করেছেন কিনা, `--ca-pin`-এর value-সহ। একদমই
+connect করতে না পারলে ওপরের মতো port 7443 check করুন।
+
+## একটা website "সমস্যা" দেখাচ্ছে
+
+Page-এ দেখায় **সার্ভার এই ওয়েবসাইটের সেটিংস চালু করতে পারেনি** আর server-এর error message। আগে
+message-টা পড়ুন: সাধারণত এতে কারণটা লেখা থাকে (যেমন, একটা PHP version যা চালু হয়নি)।
+
+<Steps>
+
+1. Message-এ কারণ লেখা থাকলে সেটা ঠিক করুন। PHP pool-এর ক্ষেত্রে PHP-এর log সাহায্য করে:
+
+   ```bash
+   sudo journalctl -u php8.4-fpm -n 100
+   ```
+
+2. Website-এর page-এ **আবার চেষ্টা করুন**-এ click করুন। এটা website-এর setting আবার server-এ
+   পাঠায়।
+
+3. তাও fail করলে ওই সময়ের আশেপাশের `journalctl -u ekpanel-agent` পড়ুন।
+
+</Steps>
+
+Panel প্রতি ১০ মিনিটে আর যখনই কোনো agent আবার connect করে, প্রতিটা server-এর পুরো state আবার apply
+করে, তাই সাময়িক কোনো সমস্যা (যেমন ধীর package download) প্রায়ই নিজে নিজে ঠিক হয়ে যায়। Web server
+যে Caddy configuration গ্রহণ করে না, সেটা roll back করা হয় আর শুধু ওই website-এ জানানো হয়, তাই অন্য
+website-গুলো কাজ করতে থাকে।
+
+## একটা website-এর valid certificate নেই
+
+Caddy নিজেই Let's Encrypt থেকে free certificate নেয়। এর জন্য domain-এর DNS record-গুলো server-এর
+দিকে point করতে হবে, আর port 80 আর 443 খোলা থাকতে হবে। Cloudflare-এর proxy ব্যবহার করলে zone-এর
+SSL mode **Full (strict)** করুন (DNS page-এ এর জন্য একটা switch আছে)। কী গোলমাল হয়েছে, Caddy-এর log
+তা বলে:
+
+```bash
+sudo journalctl -u caddy --since "30 min ago" | grep -i -E "error|challenge"
+```
+
+## Name server চালু হচ্ছে না (port 53)
+
+PowerDNS server-এর নিজের address-গুলোর port 53-এ listen করে (loopback আর network card-এর address,
+Docker-এর bridge নয়)। System-এর resolver, `systemd-resolved`, `127.0.0.53` রাখে, তাই দুটোর মধ্যে
+সংঘর্ষ হয় না।
+
+ওই address-গুলোর port 53-এ যদি আগে থেকেই অন্য কোনো DNS server listen করে (যেমন `bind9` বা
+`dnsmasq`), PowerDNS চালু হতে পারে না। সেটা খুঁজে বের করুন:
+
+```bash
+sudo ss -lunpt 'sport = :53'
+```
+
+দরকার না থাকলে অন্য DNS server-টা stop আর disable করুন, তারপর panel-এ name server-এর setting আবার
+save করুন। PowerDNS-এর নিজের error দেখায় `journalctl -u pdns`।
+
+## ছোট server-এ malware scan fail করে
+
+Scan করার সময় ClamAV-এর অনেক memory লাগে: 2 GB-এর কম memory-র server-এ panel warning দেয়, আর
+scan-এর সময় প্রায় 1.5 GB লাগবে বলে হিসাব করে। এর চেয়ে ছোট server-এ kernel scan থামিয়ে দিতে পারে।
+Memory বা swap বাড়ান, অথবা scan বন্ধ রাখুন।
+
+Scan চালু করার ঠিক পরে ClamAV প্রথমে তার virus database download করে (প্রায় 250 MB)। এটা শেষ না
+হওয়া পর্যন্ত scan উত্তর দেয় "ClamAV এখনো ভাইরাস database নামাচ্ছে"। কয়েক মিনিট অপেক্ষা করুন। অনেক
+file-এর একটা full scan সবচেয়ে কম priority-তে চলে আর এক ঘণ্টার বেশি সময় নিতে পারে।
+
+## Automatic update আর restart
+
+নতুন server-এ system প্রায়ই প্রথম কয়েক মিনিটে নিজে নিজে update install করে। ওই সময়ে agent কোনো
+package install করলে (PHP, MariaDB, Docker…), এটা package manager-এর জন্য সর্বোচ্চ ৫ মিনিট অপেক্ষা
+করে। এরপরও কোনো task fail করলে সেটা সহজেই আবার চালু করা যায়।
+
+Automatic security update চালু করলে (**সার্ভার নিরাপত্তা** page-এ), update-এর পরে update হওয়া
+service-গুলো restart হয়। এটা স্বাভাবিক। খেয়াল রাখুন:
+
+- Agent restart হলে খোলা web terminal আর চলমান Git build শেষ হয়ে যায়, কারণ এগুলো agent-এর
+  connection-এর অংশ। এগুলো আবার খুলুন বা চালু করুন।
+- প্রতিবার আবার connect হওয়ার পরে panel server-এর state আবার apply করে, তাই website আর app যেমন
+  থাকার কথা তেমনই ফিরে আসে।
+- **সার্ভার নিরাপত্তা** page-এর checklist দেখায় কখন server-এর restart দরকার।
+
+## একটা task fail করেছে
+
+Error দেখতে **সাম্প্রতিক কাজ** (task tray) খুলুন। বেশিরভাগ task সহজেই আবার চালু করা যায়। Panel
+থামার সময় যে task-গুলো চলছিল, panel চালু হলে সেগুলো আবার ধরা হয়। বিস্তারিত দেখতে
+`journalctl -u ekpanel`, আর server-এর কাজের জন্য `journalctl -u ekpanel-agent` দেখুন।
+
+## Installer আবার চালানো
+
+`install.sh` আবার চালানো নিরাপদ। এটা binary upgrade করে আর আপনার data রেখে দেয়:
+
+```bash
+sudo ./install.sh --local-dir . [--domain panel.example.com]
+```
+
+এটা নতুন binary install করে, setting file আর service file আবার লেখে, panel আর agent restart করে, আর
+Caddyfile আবার লেখে। Agent-কে আবার connect করে শুধু তখনই, যখন `/etc/ekpanel/agent.json`-এ কোনো
+credential নেই। `panel.env`, service file বা Caddyfile-এ নিজে হাতে করা পরিবর্তন হারিয়ে যায়। দেখুন
+[Configuration](/reference/configuration/)।
+
+## এখনো আটকে আছেন?
+
+কোথায় জিজ্ঞেস করবেন, আর কীভাবে এমন report লিখবেন যা নিয়ে আমরা কাজ করতে পারি, তা দেখুন
+[সাহায্য](/project/support/)-এ। সাথে দিন `ekpanel version`-এর output, আপনার OS, আর
+`journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"` থেকে log-এর লাইনগুলো (password আর key
+সরিয়ে)।
+
+## সম্পর্কিত
+
+- [Port আর path](/reference/ports-and-paths/)
+- [সাধারণ প্রশ্ন](/reference/faq/)
+- [Upgrade](/start/upgrade/)

@@ -1,0 +1,222 @@
+---
+title: শব্দকোষ
+description: ekPanel আর এই docs-এ ব্যবহৃত শব্দগুলোর ছোট ব্যাখ্যা, agent থেকে zone পর্যন্ত।
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Panel আর এই docs-এ যেসব শব্দ ব্যবহার হয়, বর্ণানুক্রমে (English alphabet অনুযায়ী)। প্রতিটা ব্যাখ্যা বলে
+শব্দটা **ekPanel-এ** কী বোঝায়।
+
+## A
+
+**Administrator**: এমন একজন user যাঁর panel-এ সব অধিকার আছে: server, customer, package, backup,
+security। প্রথম administrator তৈরি হয় setup token দিয়ে। Panel-এ এটা **অ্যাডমিন** নামে দেখায়। দেখুন
+[Role](/reference/api/#roles)।
+
+**Agent**: ছোট program (`ekpanel-agent`) যা প্রতিটা managed server-এ root হিসেবে চলে। এটা বাইরের দিকে
+panel-এ connect করে, statistics জানায়, আর server-এ আসল কাজটা করে: web server configuration লেখে,
+Linux account, database ইত্যাদি তৈরি করে। এটা শুধু একটা নির্দিষ্ট তালিকার typed operation গ্রহণ করে।
+দেখুন [Architecture](/concepts/architecture/)।
+
+**Allowlist**: এমন address যা CrowdSec আর country blocking কখনো block করে না, যেমন আপনার office-এর
+address। Server-এর নিজের আর Cloudflare-এর address সবসময় এতে থাকে। Panel-এ এটা **অনুমোদিত তালিকা**।
+
+**App**: এমন কিছু যা Docker container-এ চলে: একটা Docker image, একটা Compose file, server-এ build করা
+একটা Git repository, বা catalogue-এর একটা service। App একটা domain পেতে পারে, HTTPS-সহ। এটা
+[website](#w)-এর মতো এক জিনিস নয়।
+
+**Audit log**: Panel-এ করা প্রতিটা পরিবর্তনের রেকর্ড: কে কী করেছে, কখন আর কোন address থেকে। Database
+এর entry বদলাতে বা মুছতে দেয় না। Panel-এ এটা **অডিট লগ**।
+
+## B
+
+**Bouncer**: CrowdSec-এর সেই অংশ যা এর সিদ্ধান্তগুলোকে firewall rule-এ পরিণত করে (ekPanel nftables
+firewall bouncer ব্যবহার করে)।
+
+## C
+
+**Caddy**: প্রতিটা server-এর web server। এটা port 80 আর 443-এ উত্তর দেয়, নিজেই free HTTPS certificate
+নেয়, আর প্রতিটা domain-কে ঠিক website, app বা panel-এ পাঠায়।
+
+**CA pin**: Panel-এর private certificate authority-র fingerprint, `sha256:…`, যা connection command-এ
+থাকে। Agent প্রথমবার connect করার সময় এটা check করে, যাতে কেউ এটাকে ধোঁকা দিয়ে অন্য panel-এর সাথে
+কথা বলাতে না পারে।
+
+**Catalogue**: এক-click service-এর তালিকা (Nextcloud, Ghost, Uptime Kuma, n8n…)। প্রতিটা একটা Compose
+file, যা project review করেছে। Panel-এ এটা **অ্যাপ ক্যাটালগ**।
+
+**cgroup, slice**: Linux kernel-এর একটা feature, যা এক দল process কতটা memory আর CPU ব্যবহার করতে পারবে
+তা সীমিত করে। প্রতিটা customer তাদের package-এর সীমা-সহ একটা systemd **slice** (নাম দেওয়া একটা
+cgroup) পায়; তাদের PHP, cron job আর container এর ভেতরে চলে।
+
+**Compose file**: একটা YAML file, যা একসাথে থাকা এক বা একাধিক Docker container বর্ণনা করে (Docker
+Compose)। Administrator-রা যেকোনো Compose file app হিসেবে চালাতে পারেন।
+
+**CrowdSec**: একটা open-source security engine। এটা SSH আর web server-এর log পড়ে, password আন্দাজ
+করার মতো attack চিনতে পারে, আর attack করা address-গুলো firewall-এ ban করে। এটা একটা community
+blocklist-ও শেয়ার করে। দেখুন [CrowdSec](/guides/security/crowdsec/)।
+
+**Customer**: এমন একজন user যিনি panel-এ sign in করেন আর শুধু নিজের website, database, app, DNS আর
+email দেখেন, তাঁর package-এর সীমার মধ্যে। Panel-এ এটা **গ্রাহক**। দেখুন
+[Customer](/guides/admin/customers/)।
+
+## D
+
+**Deploy key**: একটা SSH key যা panel একটা Git app-এর জন্য বানায়, যাতে server একটা private
+repository পড়তে পারে। এর public অংশটা repository-তে read-only key হিসেবে যোগ করতে হয়। Panel-এ এটা
+**ডিপ্লয় কী**।
+
+**Desired state**: একটা server-এ যা যা *থাকার কথা*: এর website, app, database, firewall rule ইত্যাদি।
+Panel এটা নিজের database-এ রাখে; agent server-কে এর সাথে মিলিয়ে নেয়। দেখুন
+[Desired state](/concepts/desired-state/)।
+
+**DKIM, SPF, DMARC**: DNS record, যা অন্য mail server-দের বলে কোন server আপনার domain-এর হয়ে mail
+পাঠাতে পারে, আর প্রমাণ করে যে একটা message সত্যিই সেখান থেকে এসেছে। ekPanel প্রতিটা mail domain-এর
+জন্য এগুলো বানায়।
+
+**DNSSEC, DS record**: DNSSEC একটা zone-এর record-গুলো sign করে, যাতে resolver check করতে পারে যে পথে
+এগুলো বদলানো হয়নি। কোনো domain-এর জন্য এটা চালু করতে domain-এর registrar-কে একটা **DS record** দিতে
+হয়, যা panel দেখায়। DNSSEC বন্ধ করার **আগে** registrar থেকে DS record সরিয়ে ফেলুন, নইলে domain আর
+resolve হবে না।
+
+**Drift**: Desired state আর আসল server-এর মধ্যে একটা পার্থক্য, যেমন কেউ মুছে ফেলেছে এমন একটা
+configuration file। পরের apply-এ agent এটা ঠিক করে দেয়।
+
+## E
+
+**Enrolment, connection command**: একটা server-কে panel-এর সাথে connect করা। Panel এক-বারের token আর
+CA pin-সহ একটা command দেখায়; server-এ সেটা চালালে এর agent একটা certificate পায়। Token একবারই আর এক
+ঘণ্টার জন্য কাজ করে।
+
+## F
+
+**FTPS**: TLS-এর ওপর FTP: পুরোনো FTP protocol, encrypted। ekPanel-এর FTP শুধু encrypted session গ্রহণ
+করে।
+
+## G
+
+**Glue record**: যখন একটা domain-এর name server-গুলোর নাম ওই domain-এর ভেতরেই থাকে (`example.com`-এর
+জন্য `ns1.example.com`), তখন registrar-কে এদের address-ও জানতে হয়। Registrar-এ রাখা এই address record-ই
+glue record। কোনগুলো set করতে হবে, panel তা বলে দেয়।
+
+## H
+
+**Hosted zone**: ekPanel-এর নিজের name server যে DNS zone serve করে, Cloudflare-এর zone-এর বিপরীতে।
+
+## M
+
+**Mutual TLS**: এমন একটা encrypted connection যেখানে **দুই** পক্ষই একটা certificate দিয়ে প্রমাণ করে
+তারা কে। Panel আর agent এটা ব্যবহার করে: agent panel-এর certificate check করে, আর panel agent-এর।
+
+**MX record**: যে DNS record বলে একটা domain-এর mail কোন server গ্রহণ করে।
+
+## N
+
+**Name server**: এমন একটা server যা domain-এর DNS প্রশ্নের উত্তর দেয়। ekPanel-এ আপনি বাছাই করা
+server-গুলোকে name server বানাতে পারেন: একটা **primary** আর যত খুশি **secondary**, যারা primary থেকে
+zone copy করে।
+
+**NOTIFY, AXFR**: Name server-গুলো যেভাবে sync-এ থাকে: zone বদলালে primary একটা NOTIFY message পাঠায়,
+আর secondary-রা zone transfer (AXFR) দিয়ে zone নিয়ে আসে।
+
+## O
+
+**open_basedir**: একটা PHP setting, যা একটা website-এর PHP script-কে তার নিজের folder-এর ভেতরে আটকে
+রাখে। ekPanel প্রতিটা PHP website-এর জন্য এটা set করে।
+
+## P
+
+**Package**: Customer-দের জন্য সীমার একটা সেট: কতগুলো website, database, app, cron job, mail domain আর
+mailbox, কতটা disk, memory আর CPU, সবচেয়ে বড় mailbox, কোন PHP version, server আর Docker image, আর
+SFTP, FTP ও Git app এতে আছে কিনা। Panel-এ এটা **প্যাকেজ**।
+
+**Panel**: কেন্দ্রীয় program (`ekpanel`), web UI, API আর PostgreSQL database-সহ। এটা desired state
+রাখে আর agent-দের কাছে কাজ পাঠায়। এটা একটা server-এ চলে আর অনেক server manage করতে পারে।
+
+**PHP-FPM pool**: একটা website-এর জন্য PHP worker process-এর একটা দল, যা ওই website-এর Linux account
+হিসেবে চলে। প্রতিটা website-এর নিজস্ব pool আছে, তাই website-গুলো একে অপরের file পড়তে পারে না।
+
+**Preview**: একটা Git app-এর সাময়িক copy, একটা pull request থেকে build করা আর নিজস্ব address-এ পাওয়া
+যায়। Pull request বন্ধ হলে এটা সরিয়ে ফেলা হয়। Panel-এ এটা **প্রিভিউ**।
+
+## Q
+
+**Quarantine**: এমন একটা folder যা শুধু root পড়তে পারে (`/var/lib/ekpanel/quarantine`)। Malware scan
+যেসব file খুঁজে পায় সেগুলো এখানে সরিয়ে দেয়, যাতে সেগুলো আর চলতে না পারে, কিন্তু নিরাপদ হলে আবার
+ফিরিয়ে আনা যায়।
+
+## R
+
+**Railpack**: একটা tool, যা ভাষা আর framework চিনে নিয়ে Dockerfile ছাড়াই source code থেকে একটা
+container image build করে। Dockerfile নেই এমন Git app-এর জন্য ekPanel এটা ব্যবহার করে।
+
+**Reconcile, apply**: একটা server-কে desired state-এর সাথে মিলিয়ে নেওয়ার জন্য agent-এর কাজ। প্রতিটা
+পরিবর্তনের পরে, কোনো agent আবার connect করলে, আর প্রতি ১০ মিনিটে panel এটা চায়।
+
+**Recovery key**: যে password আপনার backup encrypt করে। Backup location set up করার সময় এটা একবার
+দেখানো হয় আর শুধু server-এ থাকে। এটা ছাড়া কেউই backup পড়তে পারবে না, আপনিও না। Panel-এ এটা
+**রিকভারি কী**।
+
+**Reseller**: Phase 4e-এর জন্য plan করা একটা role: এমন কেউ যিনি administrator-এর দেওয়া সীমার মধ্যে
+নিজের customer-দের কাছে hosting বিক্রি করেন। এটা এখনো ব্যবহার করা যায় না।
+
+**Restic repository**: যে জায়গায় backup রাখা হয়: server-এর একটা folder বা S3-compatible storage-এর
+একটা bucket। ekPanel restic ব্যবহার করে, যা encrypt আর deduplicate করে: না বদলানো data শুধু একবারই
+রাখা হয়।
+
+## S
+
+**Server**: ekPanel-এর manage করা একটা Linux machine, যাতে একটা agent আছে। সাধারণত panel-এর নিজের
+server-ই প্রথমটা।
+
+**Setup token**: Installer-এর দেখানো এক-বারের একটা token। প্রথম administrator তৈরি করতে এটা লাগে, যাতে
+আপনার আগে অন্য কেউ নতুন install-টা দখল করতে না পারে। Panel-এ এটা **সেটআপ টোকেন**।
+
+**SFTP**: SSH-এর ওপর file transfer। প্রতিটা website-এর একটা SFTP login থাকতে পারে, যা তার নিজের
+folder-এ আটকে থাকে।
+
+**Sign in as**: একজন administrator সাহায্য করার জন্য এক ঘণ্টা একজন customer-এর account-এর ভেতরে কাজ
+করছেন। Audit log-এ administrator-এর নাম থাকে। Panel-এ এই button হলো **তাঁর হয়ে ঢুকুন**।
+
+**Snapshot**: একটা website বা database-এর একবারের backup। Restore করা হয় একটা snapshot থেকে।
+
+**Staging copy**: `staging.<domain>`-এ একটা WordPress website-এর copy, live site-এ পাঠানোর আগে পরিবর্তন
+চেষ্টা করে দেখার জন্য। Panel-এ এটা **স্টেজিং কপি**।
+
+**Stalwart, Roundcube**: Mail server (Stalwart) আর webmail (Roundcube), যা ekPanel email-এর জন্য set up
+করে।
+
+## T
+
+**Task**: Background-এর কাজ যা panel করে বা কোনো agent-কে করতে বলে: একটা server-এর state apply করা, একটা
+backup, একটা deploy, একটা update। Task-গুলো panel-এ তাদের অগ্রগতি আর ফলাফল দেখায় (**সাম্প্রতিক কাজ**)।
+
+**TOTP, two-factor authentication**: আপনার phone-এর একটা app থেকে পাওয়া ছয় অঙ্কের code, password-এর
+পরে চাওয়া হয়। এটা প্রতি ৩০ সেকেন্ডে বদলায়।
+
+**Typed operation**: Agent বোঝে এমন নির্দিষ্ট তালিকার একটা কাজ, প্রতিটা check করা field-সহ (যেমন "এই
+state apply করো" বা "allowlist-এর এই service restart করো")। Agent এর বাইরে সবকিছু ফিরিয়ে দেয়; shell
+command চালায় এমন কোনো operation নেই।
+
+## W
+
+**Website, site**: একটা domain, যা Caddy একটা server-এর একটা folder থেকে serve করে: static file, বা বাছাই
+করা version-এর PHP। প্রতিটা website-এর নিজস্ব Linux account, home folder আর PHP pool আছে। এটা
+[app](#a)-এর মতো এক জিনিস নয়।
+
+**WP-CLI**: WordPress-এর command line tool। WordPress install আর update করতে ekPanel এটা website-এর
+নিজের account হিসেবে ব্যবহার করে।
+
+## Z
+
+**Zone, record**: একটা **zone** হলো একটা domain-এর সব DNS তথ্য, যেমন `example.com`। এতে থাকে
+**record**: প্রতিটা একটা নামকে একটা type-এর value-এর সাথে জোড়ে, যেমন `A` (একটা IPv4 address), `AAAA`
+(IPv6), `CNAME` (অন্য একটা নাম), `MX` (mail server) বা `TXT` (text, SPF আর DKIM-এর জন্য ব্যবহার হয়)।
+
+<Aside type="tip">
+কোনো শব্দ খুঁজে পাচ্ছেন না? [Docs repository](https://github.com/ekPanel/ekPanel-docs)-তে একটা issue
+বা pull request খুলুন।
+</Aside>

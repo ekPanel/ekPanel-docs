@@ -1,0 +1,135 @@
+---
+title: Desired state
+description: How ekPanel keeps servers in line with what the panel says should exist - full state applies, generations, the 10-minute drift check, offline servers and errors.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel does not send servers a list of commands to run. The panel keeps the **desired
+state** of every server, meaning everything that should exist on it, and the agent changes
+the server until it matches. This is called **reconciling**. It is the reason a broken
+server can usually be repaired by itself.
+
+## The idea in one example
+
+You add a website. The panel does not tell the agent "create a Linux account, write a PHP
+pool, write a Caddy file". It stores the website, then sends the agent the complete list of
+everything that should be on that server. The agent compares that list with the server and
+does whatever is missing: here, create the account, the folder, the PHP pool and the Caddy
+file.
+
+If someone later deletes that Caddy file by hand, the next apply sees it is missing and
+writes it again. The panel did not have to know what happened.
+
+## What is in the desired state
+
+One operation, `state.apply`, carries the whole desired state of one server:
+
+- **websites**, with their domains, PHP version, certificates, SFTP and FTP settings;
+- **databases** and their accounts;
+- **Docker apps** and Git apps;
+- **cron jobs**;
+- **customers' limits**: one systemd slice per customer with the memory and CPU of their
+  package;
+- the **firewall** and its rules, when ekPanel manages it;
+- **security** settings: CrowdSec, malware scans, country blocking;
+- **email**, when the server is a mail server;
+- the **name server** role and its zones, when the server is one.
+
+The panel always sends **everything**, including items that are being deleted (marked as
+deleted). The agent never has to guess what to remove, and it never removes something just
+because it is missing from a list.
+
+## When the state is applied
+
+<Steps>
+
+1. **After every change.** Saving a website, a database, a firewall rule and so on queues an
+   **Apply server settings** task for that server. Several changes in a row collapse into
+   one task.
+
+2. **When an agent connects.** Every time an agent connects or reconnects, the panel applies
+   that server's state, because the server may have missed changes while it was offline.
+
+3. **Every 10 minutes.** A drift check re-applies every online server that has something to
+   manage (websites, databases, apps, mail, a managed firewall or CrowdSec). These routine
+   runs are not shown in the task list; their results show on the items.
+
+</Steps>
+
+Applying an unchanged server changes nothing: the agent compares what it would write with
+what is there, Compose apps are only recreated when their configuration changed, and the
+firewall applies only the differences.
+
+## Generations: knowing what was applied
+
+Every website, database, app and cron job has two counters:
+
+- **`generation`** goes up by one each time you change the item;
+- **`applied_generation`** is the last generation the agent confirmed.
+
+When `generation` is higher, the item waits to be applied and shows as **Applying…**. The
+agent reports a result for each item together with the generation it applied. The panel
+only marks the item **Live** (and sets `applied_generation`) if that generation is still the
+current one. So if you change a site again while the agent is busy with your previous change,
+the old result cannot mark the newer change as done; the next apply takes care of it.
+
+A deleted item stays in the panel as **Deleting…** until the agent confirms it is gone.
+Only then does the panel forget it.
+
+## When something fails
+
+Each item is applied on its own. If one fails, the others still go through.
+
+- The item's state becomes **Problem**, and its page shows the reason the server gave (for
+  a website, under "The server could not apply this website's settings").
+- The owner and the administrators get a notification **once**, when the item starts
+  failing, not on every retry.
+- **Try again** on the item's page queues a new apply. The drift check also retries every 10
+  minutes, so a temporary problem (a package mirror that was down, for example) often fixes
+  itself.
+- If the agent cannot apply anything at all (for example because it does not run as root),
+  every waiting item shows that reason.
+
+For websites, the web server configuration is checked before it is loaded. If Caddy rejects
+a site's file, the agent puts the previous version back and only that site shows the error.
+
+## When a server is offline
+
+Changes for an offline server are stored and wait. The item shows **Applying…** with the
+note that the server is offline and the settings are applied as soon as its agent
+reconnects. Nothing is lost and nothing has to be repeated: on reconnect, the panel sends the
+full state, including every change made in the meantime.
+
+The drift check skips offline servers. After 3 minutes offline, administrators get a "server
+offline" notification, and another when it is back.
+
+## Why this makes repairs simple
+
+- **Self-healing.** A deleted configuration file, a stopped container that should run, or a
+  missing PHP pool comes back on the next apply, at the latest after 10 minutes.
+- **No lost changes.** A server that was off for a day catches up in one apply.
+- **"Try again" is safe.** Applying the same state twice does no harm, so retrying is always
+  allowed.
+- **Restores and moves build on it.** To rebuild a server, the panel only has to send it the
+  state again. Moving items between servers (planned for phase 4) uses the same idea.
+
+<Aside type="caution" title="Do not edit managed files by hand">
+Files ekPanel writes, such as a website's Caddy file in `/etc/ekpanel/caddy/sites/` or its
+PHP pool, are rewritten on the next apply. Make changes through the panel. Things ekPanel did
+not create, such as firewall rules you added by hand, are left alone.
+</Aside>
+
+## Not covered by desired state
+
+Some actions are one-off tasks rather than state: backups and restores, installing
+WordPress or a PHP app, WordPress updates and staging copies, deploys, PHP extensions and
+malware scans. Their progress shows in the task list.
+
+## Related
+
+- [Architecture](/concepts/architecture/): the panel, the agents and the task queue.
+- [Websites guide](/guides/websites/websites/)
+- [Notifications](/guides/admin/notifications/)

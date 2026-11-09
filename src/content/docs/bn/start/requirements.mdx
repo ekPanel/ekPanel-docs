@@ -1,0 +1,139 @@
+---
+title: যা যা লাগবে
+description: ekPanel চালাতে যে server, operating system, memory, disk, port আর computer লাগবে।
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel install করার আগে দেখে নিন, এই page-এ যা আছে তা আপনার server আর আপনার নিজের computer-এ
+আছে কি না।
+
+## Server
+
+### Operating system আর CPU
+
+Installer (`deploy/install.sh`) এগুলো check করে, আর অন্য কিছু পেলে থেমে যায়:
+
+| | Support করে |
+| --- | --- |
+| Ubuntu | 24.04, 24.10, 25.x আর 26.x |
+| Debian | 12 আর 13 |
+| CPU architecture | amd64 (`x86_64`) আর arm64 (`aarch64`) |
+
+এখন পর্যন্ত সব পরীক্ষা হয়েছে Ubuntu 24.04-এ। বাকি version-গুলো installer মেনে নেয়, কিন্তু
+সেগুলো কম ব্যবহার হয়েছে। Red Hat পরিবারের system (AlmaLinux, Rocky Linux) support করে না।
+
+আরও লাগবে:
+
+- **একটা নতুন (fresh) server।** Installer নিজের `/etc/caddy/Caddyfile` লেখে, আর ধরে নেয় port 80
+  আর 443 শুধু তার। যে server-এ আগে থেকেই কোনো web server বা অন্য control panel চলছে, সেখানে
+  এটা install করবেন না।
+- **Root access**, সরাসরি বা `sudo` দিয়ে।
+- **systemd।** ekPanel তার service, cron job আর customer limit systemd দিয়ে চালায়, তাই systemd
+  ছাড়া সাধারণ container-এ এটা চলে না। সাধারণ VPS বা virtual machine-এ চলে।
+- Server থেকে **internet access**, package (PostgreSQL, Caddy, PHP, Docker ইত্যাদি), certificate
+  আর Docker image download করার জন্য।
+
+### Memory আর disk
+
+এখনো মাপা কোনো minimum নেই। ekPanel develop আর test করা হয়েছে **2 CPU core, 2 GB memory আর
+12 GB disk**-এর একটা virtual machine-এ, আর [feature list](/start/features/)-এর সবকিছু সেখানে
+চলেছে। এটাকে শুরুর জায়গা ধরুন, আর আপনি যা চালাতে চান সেই অনুযায়ী বাড়িয়ে নিন।
+
+Memory কতটা লাগবে তা নির্ভর করে আপনি কোন feature চালু করেন তার ওপর। বেশিরভাগ service ekPanel
+তখনই install করে, যখন আপনি প্রথমবার সেটা ব্যবহার করেন:
+
+| কী | কখন চলে | মন্তব্য |
+| --- | --- | --- |
+| Panel, agent, PostgreSQL, Caddy | সবসময় (panel-এর server-এ) | Panel আর agent প্রতিটা একটা করে Go program। PostgreSQL-এ panel-এর data থাকে। |
+| PHP-FPM | যখন PHP website থাকে | প্রতিটা website-এর জন্য একটা pool। প্রতিটা customer নিজের একটা PHP-FPM process পান। |
+| MariaDB | প্রথম MariaDB database বা WordPress site থেকে | |
+| Docker | প্রথম Docker app থেকে | প্রতিটা app-এর নিজের memory লাগে। কোন service-এর কতটা লাগে তা catalogue-এ দেখায়, 64 MB (IT Tools, Excalidraw, ntfy) থেকে 1 GB (Nextcloud) পর্যন্ত। |
+| Git build | যখন একটা Git app build হয় | Build চলে app-এর server-এ। শেষ পাঁচটা build-এর image disk-এ থেকে যায়। |
+| Mail server আর webmail | যখন email চালু থাকে | Stalwart, সাথে নিজস্ব PHP pool-এ Roundcube। |
+| PowerDNS | যখন server-টা একটা name server | |
+| CrowdSec | যখন চালু থাকে | |
+| ClamAV | Malware scan-এর সময় | একটা scan-এ প্রায় 1 GB memory লাগে। 2 GB-এর কম memory-র server-এ panel সতর্ক করে। |
+
+Disk space যায় আপনার website, database, Docker image আর backup-এ। "এই server-এ" রাখা backup একই
+disk ব্যবহার করে, আর disk গেলে সেগুলোও যায়; S3-compatible storage বেশি নিরাপদ।
+
+<Aside type="tip">
+শুধু ekPanel চালিয়ে দেখতে চাইলে, ওপরের size-এর একটা ছোট VPS বা local virtual machine-ই যথেষ্ট।
+Customer host করার plan থাকলে বড় দিয়ে শুরু করুন, আর server-এর chart-গুলো খেয়াল রাখুন।
+</Aside>
+
+## Port
+
+### Panel-এর server-এ
+
+| Port | কীসের জন্য | কে connect করে |
+| --- | --- | --- |
+| 80/tcp | HTTP, আর Let's Encrypt-এর certificate check | সবাই |
+| 443/tcp আর 443/udp | Panel, website আর app-এর HTTPS (UDP হলো HTTP/3) | সবাই |
+| 7443/tcp | Agent-এর panel-এ connect করা (mutual TLS) | আপনার অন্য server-গুলোর agent |
+| 22/tcp (বা আপনার SSH port) | SSH, আর website-এর জন্য SFTP | আপনি, আর SFTP ব্যবহার করা site-এর মালিকরা |
+
+Panel নিজে শুধু `127.0.0.1:8080`-এ শোনে; Caddy request-গুলো তার কাছে পৌঁছে দেয়। Port 8080
+খুলবেন না।
+
+আপনার hosting provider-এর control panel-এ যদি firewall থাকে (একটা "cloud firewall" বা "security
+group"), সেখানেও এই port-গুলো allow করুন। ufw আগে থেকে চালু থাকলেই শুধু installer ufw-এ 80, 443
+আর 7443 খোলে।
+
+### প্রতিটা server-এ, আপনি কী ব্যবহার করেন তার ওপর নির্ভর করে
+
+| Port | Feature |
+| --- | --- |
+| 80/tcp, 443/tcp, 443/udp | Website আর app |
+| 25, 465, 587, 993, 995 (tcp) | [Email](/guides/dns/email/): SMTP, submission, IMAPS আর POP3S |
+| 53/tcp আর 53/udp | [Name server](/guides/dns/name-servers/) |
+| 21/tcp আর 30000-30100/tcp | [FTP](/guides/websites/files/) (control আর passive port) |
+| আপনার SSH port | SFTP |
+
+[Firewall](/guides/security/firewall/) যখন ekPanel চালায়, তখন mail, DNS আর FTP feature চালু
+থাকলে সেগুলোর port সে নিজেই খোলে।
+
+### বাইরের দিকে (outgoing)
+
+- যেসব server-এ agent আছে, সেগুলো TCP port 7443-এ panel-এর দিকে **বাইরে** connect করে। এর জন্য
+  কোনো incoming port লাগে না, তাই এগুলো NAT-এর পেছনেও থাকতে পারে।
+- Mail পৌঁছে দিতে mail server-এর outgoing port 25 লাগে। অনেক cloud provider আপনি না চাওয়া পর্যন্ত
+  এটা block করে রাখে; panel-এর delivery check আপনাকে সেটা জানিয়ে দেয়।
+
+ekPanel যত port আর file ব্যবহার করে, সবগুলোর তালিকা আছে
+[port আর path reference](/reference/ports-and-paths/)-এ।
+
+## একটা domain (ঐচ্ছিক)
+
+Domain ছাড়াও ekPanel install করা যায়। তখন panel পাওয়া যায় `https://<server IP>`-এ, একটা
+self-signed certificate দিয়ে, আর আপনার browser একবার একটা সতর্কবার্তা দেখায়।
+
+Panel-এর জন্য একটা domain থাকলে, যেমন `panel.example.com`, আপনি Let's Encrypt থেকে একটা trusted
+certificate পাবেন। Install করার আগে একটা DNS record (A, আর server-এ IPv6 থাকলে AAAA) তৈরি করুন,
+যা নামটাকে server-এর দিকে point করে।
+
+Website-এর ক্ষেত্রে, প্রতিটা domain-এর DNS তাকে host করা server-এর দিকে point করা থাকতে হবে,
+অথবা ekPanel আপনার হয়ে [Cloudflare](/guides/dns/cloudflare/) বা
+[আপনার নিজের name server](/guides/dns/name-servers/) দিয়ে record তৈরি করে দিতে পারে।
+
+## আপনার নিজের computer
+
+Download করার মতো কোনো release এখনো নেই, তাই ekPanel আপনাকে source থেকে build করতে হবে। যা লাগবে:
+
+- **Linux** (build শুধু Linux-এই ব্যবহার করা হয়েছে)।
+- **Go 1.27 বা নতুন।** পুরোনো `go` ekPanel build করার সময় নিজে থেকেই 1.27 download করে নেয়।
+- Web interface build করার জন্য npm-সহ **Node.js 22 বা নতুন**।
+- **make**, **git** আর **tar**।
+- Build-টা server-এ copy করতে আর installer চালাতে একটা **SSH client**।
+- একটা **web browser**, আর two-factor sign-in-এর জন্য একটা **authenticator app** (Google
+  Authenticator, Aegis, 1Password বা এ রকম কিছু)।
+
+Server-এ Go আর Node.js install করলে server-এই build করতে পারেন।
+[Install guide](/start/install/)-এ দুই উপায়ই দেখানো আছে।
+
+## এরপর
+
+[Install](/start/install/) দিয়ে এগিয়ে যান।

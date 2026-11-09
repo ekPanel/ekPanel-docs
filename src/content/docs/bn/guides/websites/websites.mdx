@@ -1,0 +1,291 @@
+---
+title: Website
+description: Static বা PHP website যোগ করুন, তাতে আরও domain দিন, HTTPS চালু করুন, আর এর অবস্থা, আবার চেষ্টা করা ও মুছে ফেলা বুঝে নিন।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+ekPanel-এ একটা website মানে এমন একটা domain, যেটা আপনার কোনো একটা server-এর web server (Caddy) দেখায়।
+প্রতিটা website-এর নিজের folder, নিজের Linux account, আর PHP site হলে নিজের PHP process থাকে। একটা site
+অন্য site-এর file পড়তে বা বদলাতে পারে না।
+
+## শুরু করার আগে
+
+- অন্তত একটা connected server লাগবে। দেখুন [server যোগ করুন](/start/add-server/)।
+- ফ্রি HTTPS-এর জন্য domain-এর DNS ওই server-এর দিকে point করা থাকতে হবে: server-এর address দিয়ে একটা `A`
+  record (আর IPv6-এর জন্য `AAAA`)। Domain যদি ekPanel-এ [Cloudflare](/guides/dns/cloudflare/)-এ বা
+  [আপনার নিজের name server](/guides/dns/name-servers/)-এ থাকে, তাহলে record-গুলো আপনার হয়ে বানিয়ে দেওয়া হয়।
+- Customer-রা কেবল ততগুলো website যোগ করতে পারেন যতগুলো তাঁদের [package](/guides/admin/customers/) অনুমতি দেয়
+  (দেখুন [package-এর সীমা](#limits-from-packages))।
+
+## Website-এর ধরন
+
+ekPanel-এ দুই ধরনের website আছে।
+
+| ধরন | কী দেখায় | কীসের জন্য ব্যবহার করবেন |
+| --- | --- | --- |
+| **PHP** | File, আর PHP-FPM দিয়ে চালানো `.php` file | WordPress, Laravel, Joomla, Drupal, Moodle আর যেকোনো PHP application |
+| **স্ট্যাটিক** (Static) | শুধু file (HTML, CSS, JavaScript, ছবি) | সাধারণ site আর static site generator দিয়ে বানানো site। সবচেয়ে দ্রুত উপায় |
+
+<Aside type="note">
+"Proxy" ধরনের কোনো website নেই। কোনো port-এ চলা program-এর (Node.js, Python, Go) সামনে একটা domain বসাতে
+চাইলে সেটা [Docker app](/guides/apps/docker-apps/) হিসেবে চালান: app নিজের domain আর HTTPS পায়, আর এর port
+private থাকে।
+</Aside>
+
+পরে site-এর **সেটিংস** (Settings)-এ গিয়ে PHP আর স্ট্যাটিকের মধ্যে বদলাতে পারবেন।
+
+## Website যোগ করুন
+
+<Steps>
+
+1. **ওয়েবসাইট** (Websites) খুলে **ওয়েবসাইট যোগ করুন** (Add website)-এ click করুন।
+
+2. **ডোমেইন** (Domain) লিখুন, যেমন `example.com`। যেকোনো ভাষা আর লিপির নাম চলে (দেখুন
+   [আন্তর্জাতিক domain name](#international-domain-names))।
+
+3. ভিজিটররা সামনে `www.` লিখতে পারেন বলে মনে হলে **www.example.com-এও চালু রাখুন** (Also answer on
+   www.example.com) টিক দেওয়া রাখুন। ekPanel তখন `www.example.com`-কে extra domain হিসেবে যোগ করে।
+
+4. একাধিক connected server থাকলে **সার্ভার** (Server) বেছে নিন। Administrator-রা website টা **কার জন্য**
+   (For) সেটাও বেছে নিতে পারেন: নিজের জন্য, নাকি কোনো customer-এর জন্য।
+
+5. **সাইটের ধরন** (Type of site) বেছে নিন: **PHP** বা **স্ট্যাটিক**। PHP হলে **PHP ভার্সন** (PHP version)
+   বেছে নিন। Recommended হলো PHP 8.4। যে version server-এ এখনো নেই সেটা নিজে থেকেই install হয়, প্রথমবার এতে
+   কয়েক মিনিট লাগতে পারে। দেখুন [PHP](/guides/websites/php/)।
+
+6. **SSL সার্টিফিকেট (HTTPS)** বেছে নিন:
+   - **স্বয়ংক্রিয়, ফ্রি** (Automatic, free): একটা Let's Encrypt certificate, যেটা নিজে থেকেই renew হয়।
+     Domain-এর DNS এই server-এর দিকে point করা থাকতে হবে।
+   - **সেলফ-সাইনড** (Self-signed): test করার জন্য, বা যে domain public internet-এ নেই তার জন্য। Browser
+     একটা warning দেখায়।
+
+7. PHP site-এর জন্য **WordPress ইনস্টল করুন** (Install WordPress) টিক দিতে পারেন। তাহলে ekPanel একটা
+   database বানায় আর site তৈরি হওয়া মাত্র WordPress install করে। দেখুন [WordPress](/guides/websites/wordpress/)।
+
+8. এখনই আরও domain যোগ করতে **এই সাইটের জন্য আরও ডোমেইন** (More domains for this site) খুলুন আর প্রতি
+   লাইনে একটা করে লিখুন।
+
+9. **ওয়েবসাইট তৈরি করুন** (Create website)-এ click করুন। Site-এর page খুলে যায়, আর server যতক্ষণ এটা set up
+   করে ততক্ষণ **চালু হচ্ছে…** (Applying…) দেখায়। সাধারণত এতে কয়েক সেকেন্ড লাগে।
+
+</Steps>
+
+Site **চালু** (Live) হলে **সাইট দেখুন** (Visit site) খুলুন। নতুন site-এ একটা page দেখায় যেখানে লেখা থাকে
+"example.com is ready"। [File manager, SFTP বা FTP](/guides/websites/files/) দিয়ে `public_html`-এ নিজের file
+upload করে এটা বদলে দিন।
+
+### ekPanel কী কী set up করে
+
+প্রতিটা website-এর জন্য server-এর agent:
+
+- একটা Linux account বানায়, যার নাম domain-এর প্রথম অংশ আর শেষে একটা random অংশ দিয়ে
+  (`my-shop.example.com` হয়ে যায় `myshop_3fa9`-এর মতো কিছু);
+- home folder `/home/<account>/` বানায়, তার ভেতরে `public_html` (website), `logs`, `tmp` আর একটা লুকানো
+  `.trash` folder;
+- site-এর জন্য একটা web server configuration লেখে, সেটা check করে, আর connection না কেটে Caddy reload করে।
+  Caddy যদি সেটা না মানে, পুরনো configuration ফিরিয়ে আনা হয় আর শুধু এই site-এ error দেখায়;
+- PHP site-এর জন্য একটা PHP-FPM pool বানায়, যেটা site-এর account হিসেবে চলে (দেখুন
+  [PHP-FPM pool কীভাবে কাজ করে](/guides/websites/php/#how-php-fpm-pools-work))।
+
+Web server কখনো লুকানো file আর folder দেখায় না (যেসব নাম dot দিয়ে শুরু, যেমন `.env` বা `.git`)। সেগুলো
+"404 Not Found" উত্তর দেয়। শুধু `/.well-known/` দেখানো হয়, কারণ certificate আর কিছু service-এর এটা লাগে।
+
+Site-এর page-এ **বিস্তারিত** (Details)-এর নিচে **লিনাক্স অ্যাকাউন্ট** (Linux account) আর
+**ওয়েবসাইটের ফোল্ডার** (Website folder) (`/home/<account>/public_html`) দেখায়, সাথে copy করার button।
+
+## Domain আর extra domain
+
+প্রতিটা website-এর একটা **main domain** আর সর্বোচ্চ **২০টা extra domain** (alias) থাকে। Extra domain-এ আসা
+ভিজিটররাও একই site দেখেন।
+
+- Extra domain বদলাতে site খুলুন, **সেটিংস**-এর নিচে **অতিরিক্ত ডোমেইন** (Extra domains) edit করুন (প্রতি
+  লাইনে একটা) আর **পরিবর্তন সেভ করুন** (Save changes)-এ click করুন।
+- Site বানানোর পর main domain বদলানো যায় না। কোনো site-কে অন্য main domain-এ নিতে হলে নতুন website যোগ করুন।
+- পুরো panel-এ প্রতিটা host name কেবল একটা website বা app-এর হতে পারে। কোনো নাম আগেই নেওয়া থাকলে দেখবেন
+  "… is already used by another site or app"।
+- Host name সত্যিকারের domain name হতে হবে: IP address না, wildcard (`*.example.com`) না, port না।
+
+Extra domain-এর ভিজিটরদের একই site না দেখিয়ে main domain-এ পাঠাতে চাইলে
+[রিডাইরেক্ট](/guides/websites/redirects/#send-extra-domains-to-the-main-domain)-এর নিচে
+**অন্য ডোমেইনগুলো …-এ পাঠান** (Send the other domains to …) চালু করুন।
+
+## আন্তর্জাতিক domain name
+
+যেকোনো লিপিতে domain লিখতে পারেন, যেমন `উদাহরণ.বাংলা` বা `例子.测试`। ekPanel:
+
+1. browser যে নিয়ম মানে সেই একই নিয়মে এটা check করে;
+2. DNS আর certificate যে ASCII রূপ ব্যবহার করে সেই রূপে এটা রাখে (এটা `xn--` দিয়ে শুরু হয়, একে বলে
+   *punycode*);
+3. websites list-এ আর site-এর page-এ আপনি যে লিপিতে লিখেছিলেন সেই লিপিতেই আপনাকে দেখায়।
+
+অন্য কোনো tool domain চাইলে আর মূল লিপি না নিলে ASCII (`xn--…`) রূপটা ব্যবহার করুন।
+
+## HTTPS
+
+প্রতিটা website HTTPS-এ উত্তর দেয়। `http://`-এ আসা request-কে web server `https://`-এ পাঠিয়ে দেয়।
+
+### স্বয়ংক্রিয় certificate
+
+**স্বয়ংক্রিয়, ফ্রি** বেছে নিলে Caddy main domain আর প্রতিটা extra domain-এর জন্য Let's Encrypt থেকে একটা
+certificate নেয়, আর নিজেই renew করে। এটা কাজ করার জন্য:
+
+- প্রতিটা domain-এর DNS server-এর দিকে point করা থাকতে হবে;
+- port 80 আর 443 internet থেকে reach করা যেতে হবে। ekPanel-এর manage করা [firewall](/guides/security/firewall/)
+  এগুলো সবসময় খোলা রাখে।
+
+DNS এখনো server-এর দিকে point না করলেও, পরে point করলেই site HTTPS-এ কাজ করবে; Caddy চেষ্টা চালিয়ে যায়।
+
+### নিজের certificate
+
+শুধু তখনই এটা ব্যবহার করুন যখন আপনার কেনা বা কারো দেওয়া certificate লাগবে।
+
+<Steps>
+
+1. Site খুলে **নিজের SSL সার্টিফিকেট** (Own SSL certificate) খুঁজুন। **সার্টিফিকেট আপলোড করুন** (Upload a
+   certificate)-এ click করুন।
+
+2. দুটো PEM file paste করুন বা বেছে নিন:
+   - **সার্টিফিকেট (মধ্যবর্তী সার্টিফিকেটসহ)** (Certificate (with the intermediate certificates)): প্রথমে আপনার
+     certificate, তারপর যে authority এটা issue করেছে তার intermediate certificate-গুলো।
+   - **প্রাইভেট কী** (Private key)।
+
+3. **এই সার্টিফিকেট ব্যবহার করুন** (Use this certificate)-এ click করুন।
+
+</Steps>
+
+ekPanel check করে যে certificate আর key একসাথে মেলে, certificate টা এখন valid (expire হয়নি, "not valid yet"
+না) আর এটা main domain cover করে। কিছু extra domain cover না হলে panel সেগুলোর list দেখায়: ওই address-গুলোতে
+browser warning দেখাবে।
+
+এরপর card-এ certificate-এর নামগুলোর সাথে **… পর্যন্ত বৈধ** (Valid until …) দেখায়, আর শেষ দুই সপ্তাহে
+**শিগগির মেয়াদ শেষ** (Expires soon) দেখায়।
+
+- Private key panel-এর database-এ encrypted থাকে, আর server-এ এমনভাবে রাখা হয় যাতে শুধু root আর web server
+  পড়তে পারে।
+- বদলাতে **বদলান** (Replace)-এ click করুন। আবার ফ্রি certificate-এ ফিরতে **আবার ফ্রি সার্টিফিকেট নিন** (Use a
+  free certificate again)-এ click করুন।
+- **সেটিংস**-এ **স্বয়ংক্রিয়, ফ্রি** বা **সেলফ-সাইনড** বেছে save করলেও upload করা certificate বাদ পড়ে যায়।
+
+### মেয়াদ শেষের alert
+
+Upload করা certificate ekPanel renew করে না। কোনোটার মেয়াদ শেষ হওয়ার দুই সপ্তাহ আগে site-এর মালিক একটা
+**সার্টিফিকেটের মেয়াদ শেষের পথে** (Certificate expiring) notification পান, প্রতিটা মেয়াদ শেষের তারিখের জন্য
+একবার। এমন নতুন certificate upload করলে যেটারও মেয়াদ শিগগির শেষ হবে, আবার warning আসে। Notification কোথায়
+যাবে সেটা [নোটিফিকেশন](/guides/admin/notifications/)-এ set up করুন।
+
+## Document root
+
+Default হিসেবে web server সরাসরি `public_html` দেখায়। কিছু application তাদের public file `public_html`-এর
+ভেতরের একটা folder-এ রাখে, আর শুধু সেই folder টাই দেখাতে হয়। ekPanel `public_html`-এর ভেতরের একটা folder
+support করে, যেমন `public` বা `web`।
+
+Site-এর page-এ এর জন্য এখনো কোনো field নেই। [PHP app installer](/guides/websites/php-apps/) এটা আপনার হয়ে
+set করে দেয়:
+
+| Application | যে folder দেখানো হয় |
+| --- | --- |
+| Drupal | `public_html/web` |
+| Moodle | `public_html/public` |
+| Laravel | `public_html/public` |
+| WordPress, Joomla | `public_html` |
+
+Site-এর page-এ application-এর card-এ "ওয়েবসাইট public_html/… দেখায়।" (The website serves public_html/…) লেখা
+থাকে।
+
+## Site-এর অবস্থা
+
+Site-এর পাশের badge দেখায় server এটা নিয়ে কী করছে।
+
+| Badge | অবস্থা | মানে কী |
+| --- | --- | --- |
+| **চালু হচ্ছে…** (Applying…) | `pending` | একটা পরিবর্তন server-এর দিকে যাচ্ছে। Server offline থাকলে page-এ লেখা থাকে যে এর agent আবার যুক্ত হলেই settings চালু হবে। |
+| **চালু** (Live) | `active` | Server সর্বশেষ settings চালু করেছে। |
+| **সমস্যা** (Problem) | `error` | Server settings চালু করতে পারেনি। Site-এর page-এ কারণ দেখায়। |
+| **মোছা হচ্ছে…** (Deleting…) | `deleting` | Site টা মুছে ফেলা হচ্ছে। |
+
+Panel প্রতিটা server-কে সবসময় তার যা থাকার কথা তার সাথে মিলিয়ে রাখে। প্রতিটা পরিবর্তনে, agent আবার যুক্ত
+হলে, আর প্রতি ১০ মিনিটে এটা site-এর পুরো list পাঠায়, তাই হাতে মুছে ফেলা configuration আবার ফিরে আসে। দেখুন
+[Desired state](/concepts/desired-state/)।
+
+### Site-এ সমস্যা দেখালে
+
+<Steps>
+
+1. Site খুলুন। লাল বক্স "সার্ভার এই ওয়েবসাইটের সেটিংস চালু করতে পারেনি" (The server could not apply this
+   website's settings)-এ server-এর দেওয়া কারণ দেখায়।
+
+2. পারলে কারণটা ঠিক করুন। যেমন: server-এ disk-এর জায়গা খালি করুন, বা offline server আবার চালু করুন।
+
+3. **আবার চেষ্টা করুন** (Try again)-এ click করুন। এতে site-এর settings আবার save হয় আর server-এ পাঠানো হয়।
+
+</Steps>
+
+কোনো site-এ সমস্যা শুরু হলে মালিক একটা **ওয়েবসাইটে সমস্যা** (Website problem) notification-ও পান।
+
+## Website মুছে ফেলুন
+
+<Aside type="danger">
+Website মুছলে `/home/<account>`-এর সবকিছু চিরতরে মুছে যায়, upload করা file, log আর trash সহ। এখান থেকে কিছু
+লাগলে আগে একটা [backup](/guides/data/backups/) নিন।
+</Aside>
+
+<Steps>
+
+1. Site খুলে **ওয়েবসাইট মুছুন** (Delete website) card-এ **ওয়েবসাইট মুছুন**-এ click করুন।
+
+2. নিশ্চিত করতে domain টা লিখুন আর **ওয়েবসাইট মুছুন**-এ click করুন।
+
+</Steps>
+
+Server নিশ্চিত না করা পর্যন্ত site-এ **মোছা হচ্ছে…** দেখায়, তারপর list থেকে চলে যায়। Server শেষ করতে না
+পারলে page-এ সেটা বলা থাকে আর ekPanel চেষ্টা চালিয়ে যায়।
+
+Website-এর সাথে কী যায়, আর কী থেকে যায়:
+
+- **মুছে যায়:** web server configuration, PHP-FPM pool, Linux account আর তার home folder, SFTP আর FTP access,
+  site-এর [cron job](/guides/websites/cron/) আর এর traffic-এর ইতিহাস।
+- **থেকে যায়:** database। WordPress, PHP app বা staging copy-র জন্য বানানো database আলাদা একটা database।
+  দরকার না থাকলে [ডাটাবেস](/guides/data/databases/) page থেকে মুছে ফেলুন।
+- **থেকে যায়:** মুছে ফেলা live site-এর [staging copy](/guides/websites/wordpress/#staging-copies)। এটা একটা
+  সাধারণ website হয়ে যায়।
+
+## Package-এর সীমা
+
+কোনো website customer-এর হলে তাঁর [package](/guides/admin/customers/) ঠিক করে:
+
+| Package setting | Website-এর ওপর প্রভাব |
+| --- | --- |
+| Website-এর সংখ্যা | আরও যোগ করতে চাইলে ফিরিয়ে দেওয়া হয়: "the package allows no more of these"। WordPress-এর staging copy-ও একটা website হিসেবে গোনা হয়। |
+| Server | Website শুধু package-এ নাম দেওয়া server-এ যোগ করা যায় (যদি কোনো নাম দেওয়া থাকে)। |
+| PHP version | শুধু এই version-গুলোই দেখানো আর গ্রহণ করা হয় (যদি package-এ কোনো নাম দেওয়া থাকে)। |
+| Disk space | শেষ হয়ে গেলে নতুন website, file manager-এর upload আর অন্যান্য জায়গা বাড়ানো কাজ বন্ধ হয়ে যায়। |
+| Database-এর সংখ্যা | WordPress, PHP app আর staging copy প্রত্যেকের একটা করে database লাগে। |
+| SFTP, FTP | Site [SFTP বা FTP](/guides/websites/files/) চালু করতে পারবে কি না। |
+| Cron job | Customer কতগুলো [cron job](/guides/websites/cron/) রাখতে পারবেন। |
+| Memory আর CPU | Customer-এর সব PHP process আর container মিলে ভাগ করে নেয়। |
+
+Administrator-দের নিজের website-এর কোনো package নেই, কোনো সীমাও নেই।
+
+## সমস্যা সমাধান
+
+**Site "চালু হচ্ছে…"-তেই আটকে থাকে।** Server offline বা ব্যস্ত। **সার্ভার** (Servers) page-এ server টা check
+করুন। এর agent আবার যুক্ত হলেই settings চালু হবে।
+
+**Browser certificate warning দেখায়।** **স্বয়ংক্রিয়, ফ্রি** হলে check করুন domain-এর DNS এই server-এর দিকে
+point করা কি না আর port 80 ও 443 খোলা কি না। **সেলফ-সাইনড** হলে warning আসাটাই স্বাভাবিক। নিজের certificate
+হলে check করুন যে address খুলেছেন সেটা certificate cover করে কি না।
+
+**"… is already used by another site or app"।** অন্য কোনো website বা app-এর ওই host name আছে, হয়তো extra
+domain হিসেবে। আগে সেখান থেকে সরিয়ে ফেলুন।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="PHP" href="/guides/websites/php/" description="Version, settings আর extension।" />
+	<LinkCard title="রিডাইরেক্ট আর hotlink protection" href="/guides/websites/redirects/" />
+	<LinkCard title="File, SFTP আর FTP" href="/guides/websites/files/" />
+	<LinkCard title="Log আর traffic" href="/guides/websites/logs-traffic/" />
+</CardGrid>

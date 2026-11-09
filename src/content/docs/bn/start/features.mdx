@@ -1,0 +1,269 @@
+---
+title: ফিচার
+description: আজ ekPanel যা যা করতে পারে, বিষয় অনুযায়ী সাজানো, আর যা plan করা আছে কিন্তু এখনো আসেনি।
+sidebar:
+  order: 2
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+এই page-এ আছে আজ ekPanel-এ কী কী কাজ করে। প্রতিটা ভাগ থেকে তার guide-এর link আছে। এখানে যা
+আছে সব একটা Ubuntu 24.04 test server-এ পরীক্ষা করা; কোনো কিছু যদি বাইরের আসল কোনো service-এর
+সাথে এখনো চালিয়ে দেখা না হয়ে থাকে, তালিকায় সেটা বলা আছে।
+
+<Aside type="note">
+ekPanel-এর এখনো কোনো release নেই। "আজ কাজ করে" মানে, আপনি যখন
+[source থেকে build করে install করেন](/start/install/), তখন কাজ করে।
+</Aside>
+
+## Website
+
+[Website guide](/guides/websites/websites/) · [PHP](/guides/websites/php/) · [Redirect](/guides/websites/redirects/)
+
+- Static site আর PHP site। PHP 7.4, 8.1, 8.2, 8.3, 8.4 আর 8.5 পাশাপাশি চলে; কোনো site-এর
+  প্রথমবার যে version দরকার হয়, সেটা তখনই install হয়।
+- কোনো downtime ছাড়াই একটা site-এর PHP version বদলানো।
+- Let's Encrypt থেকে free, automatic HTTPS, testing-এর জন্য self-signed certificate, অথবা আপনার
+  নিজের certificate (এর key আর domain-এর সাথে মিলিয়ে দেখা হয়, আর মেয়াদ শেষ হওয়ার দুই সপ্তাহ আগে
+  একটা notice আসে)।
+- প্রতিটা site-এ বাড়তি domain, default হিসেবে `www.` দেওয়া থাকে, আর যেকোনো লিপিতে domain নাম।
+- প্রতিটা site নিজের Linux account আর নিজের PHP-FPM pool দিয়ে চলে, তাই এক site আরেক site-এর
+  file পড়তে পারে না।
+- নির্দিষ্ট path বা prefix-এর redirect (301, 302, 307, 308), আর এমন বাড়তি domain যা মূল domain-এ
+  redirect করে।
+- বাছাই করা file type-এর জন্য hotlink protection, সাথে যেসব site তবুও সেগুলো embed করতে পারবে।
+- প্রতিটা site-এর জন্য PHP setting (memory limit, upload size, execution time, time zone আর আরও
+  কিছু), আর প্রতিটা server-এ 17টা ঐচ্ছিক PHP extension (redis, imagick, apcu, xdebug আর অন্যান্য)।
+- যেসব app একটা `public/` বা `web/` folder serve করে, তাদের জন্য document root setting।
+- `.env` আর `.git`-এর মতো file কখনো serve করা হয় না।
+
+## WordPress
+
+[WordPress guide](/guides/websites/wordpress/)
+
+- এক click-এ WordPress, নিজস্ব MariaDB database-সহ, 14টা ভাষায়। Admin password একবারই দেখানো
+  হয়, কোথাও রাখা হয় না।
+- সব WordPress site এক তালিকায়, হাতে install করাগুলোও।
+- Core, plugin আর theme update, আর update-এর পরে site error দেখালে সেটা নিজে থেকেই আগের অবস্থায়
+  ফিরে যায়; প্রতিটা site-এর জন্য নিয়ম ধরে automatic update।
+- Maintenance mode, plugin চালু-বন্ধ, আর debug mode চালু থাকলে একটা সতর্কবার্তা।
+- Hardening: dashboard থেকে code edit করা বন্ধ, `xmlrpc.php` আর uploads-এর ভেতরে PHP block, file
+  permission ঠিক করা।
+- `staging.<domain>`-এ একটা staging copy, যেটা আপনি live site-এ push করতে পারেন বা live site থেকে
+  refresh করতে পারেন।
+
+## PHP app
+
+[PHP app guide](/guides/websites/php-apps/)
+
+- এক click-এ Joomla, Drupal, Moodle আর Laravel, প্রতিটার নিজস্ব database আর (Laravel ছাড়া)
+  একবারের admin password-সহ। Moodle তার cron job নিজে থেকেই পেয়ে যায়।
+
+## File, SFTP আর FTP
+
+[File guide](/guides/websites/files/)
+
+- Browser-এ একটা file manager: upload (drag and drop), download, একটা code editor, নতুন file আর
+  folder, rename, permission, zip আর unzip, আর একটা trash, যেখান থেকে ফিরিয়ে আনা যায়।
+- প্রতিটা site-এর জন্য SFTP, password বা SSH key দিয়ে, site-এর folder-এর মধ্যে আটকানো আর shell
+  ছাড়া।
+- যেসব tool-এর FTP লাগে তাদের জন্য FTP: শুধু encrypted (FTPS), প্রতিটা site-এর জন্য একটা login,
+  তার folder-এর মধ্যে আটকানো। কোনো site যতক্ষণ FTP ব্যবহার করে, firewall শুধু ততক্ষণ FTP port
+  খোলা রাখে।
+
+## Cron job
+
+[Cron guide](/guides/websites/cron/)
+
+- Website-এর জন্য job (site-এর account হিসেবে চলে) আর app-এর জন্য job (container-এর ভেতরে চলে)।
+- Preset বা যেকোনো cron expression, আপনার time zone-এ, সাথে পরের পাঁচবার কখন চলবে তা দেখানো হয়।
+- সময়সীমা, শেষ ফলাফল আর output, **এখনই চালান** (Run now) আর pause।
+
+## Log আর traffic
+
+[Log আর traffic guide](/guides/websites/logs-traffic/)
+
+- প্রতিটা website আর app-এর request log, status filter, search আর live mode-সহ।
+- প্রতিটা website-এর PHP error log।
+- 24 ঘণ্টা, 7 দিন আর 30 দিনের traffic chart (request, data, status code, সবচেয়ে বেশি চাওয়া path)।
+  History 90 দিন রাখা হয়।
+
+## Docker app
+
+[Docker app guide](/guides/apps/docker-apps/)
+
+- যেকোনো Docker image বা Compose file চালান, domain আর free HTTPS, variable, স্থায়ীভাবে রাখা
+  folder, আর memory ও CPU limit-সহ।
+- Container log, restart, stop আর start, আর এক click-এ **ইমেজ আপডেট** (Update image)।
+- App-এর port `127.0.0.1`-এ থাকে, তাই Docker firewall-এ ফুটো করতে পারে না। যেসব Compose file
+  public port খোলে, আপনি অনুমতি না দিলে সেগুলো নেওয়া হয় না।
+- একটা app delete করলে তার data থেকে যায়, যদি না আপনি সেটাও delete করতে বেছে নেন।
+
+## App catalogue
+
+[Catalogue guide](/guides/apps/catalog/)
+
+- এক click-এর 14টা service: Uptime Kuma, Grafana, n8n, Gitea, IT Tools, Vaultwarden, Umami,
+  Ghost, listmonk, Nextcloud, Memos, Excalidraw, ntfy আর Redis।
+- প্রতিটা install-এর জন্য password আর key তৈরি করা হয়। Customer-রাও নিজেদের package-এর মধ্যে
+  এগুলো install করতে পারেন।
+
+## Git deploy আর preview
+
+[Git deploy guide](/guides/apps/git-deploys/)
+
+- প্রতিটা push-এ আপনার server-এ একটা repository build হয়, GitHub, GitLab, Gitea, Forgejo আর
+  Gogs-এর webhook দিয়ে।
+- Build-এ repository-র Dockerfile ব্যবহার হয়, আর Dockerfile না থাকলে Railpack (এটা ভাষা আর
+  framework নিজে চিনে নেয়)।
+- Build log live দেখা যায়। Release হয় কোনো downtime ছাড়া; যে release চালু হয় না সেটা সরিয়ে
+  ফেলা হয়, আর পুরোনোটাই চলতে থাকে।
+- এক click-এ শেষ পাঁচটা build-এর যেকোনোটায় roll back।
+- প্রতিটা pull request-এর জন্য তার নিজের address-এ একটা preview app, pull request বন্ধ হলে সেটা
+  সরিয়ে ফেলা হয়। Fork থেকে আসা pull request-এর কখনো preview হয় না।
+- Private repository-র জন্য ekPanel-এর বানানো একটা deploy key ব্যবহার হয়।
+
+## Web terminal
+
+[Terminal guide](/guides/apps/terminal/)
+
+- Browser-এ, administrator-দের জন্য যেকোনো server-এ root shell, আর app-এর মালিকের জন্য app-এর
+  container-এর ভেতরে একটা shell।
+- Terminal খুলতে গেলে আবার আপনার password (আর two-factor code) চাওয়া হয়। কিছু না টাইপ করলে
+  30 মিনিট পরে, আর মোট 8 ঘণ্টা পরে session শেষ হয়ে যায়। খোলা আর বন্ধ করা audit log-এ থাকে।
+
+## Database
+
+[Database guide](/guides/data/databases/)
+
+- MariaDB আর PostgreSQL, প্রথমবার ব্যবহারের সময় install হয়, প্রতিটা database-এর জন্য একটা
+  account, যা শুধু সেই database-এই ঢুকতে পারে।
+- Password একবারই দেখানো হয়, কখনো রাখা হয় না; panel শুধু database-এর নিজের hash রাখে।
+- Connection-এর তথ্য, size আর password reset।
+
+## Backup
+
+[Backup guide](/guides/data/backups/)
+
+- একটা server-এর প্রতিটা website আর database-এর encrypted, deduplicated backup (restic দিয়ে),
+  server-এই অথবা S3-compatible storage-এ (Amazon S3, Backblaze B2, Cloudflare R2, Wasabi, MinIO
+  আর অন্যান্য)।
+- প্রতি ঘণ্টায়, প্রতিদিন, প্রতি সপ্তাহে বা হাতে, আর দৈনিক, সাপ্তাহিক ও মাসিক copy রেখে দেওয়া হয়।
+- Encryption key হলো একটা recovery key, যা একবারই দেখানো হয়। Panel এটা কখনো রাখে না।
+- একটা website নতুন folder-এ বা বর্তমান file-এর ওপরে restore করুন, আর database restore করুন
+  তার জায়গাতেই।
+
+## Cloudflare DNS
+
+[Cloudflare guide](/guides/dns/cloudflare/)
+
+- একটা API token দিয়ে Cloudflare account connect করুন; তারপর একটা domain-এর নিচের প্রতিটা
+  website, app আর preview তার DNS record পেয়ে যায়, আর সেগুলো sync-এ থাকে।
+- একটা zone editor, SSL mode check, cache purge, আর আপনার log-এ visitor-দের আসল address।
+- Customer-রা নিজেদের domain-এর জন্য নিজেদের account connect করতে পারেন।
+
+<Aside type="caution">
+Cloudflare support একটা নকল Cloudflare API-এর সাথে পরীক্ষা করা হয়েছে, আসলটার সাথে এখনো না।
+</Aside>
+
+## DNSSEC-সহ আপনার নিজের name server
+
+[Name server guide](/guides/dns/name-servers/)
+
+- ekPanel server-গুলোকে name server (PowerDNS) বানান: একটা primary আর যতগুলো খুশি secondary,
+  zone transfer দিয়ে sync-এ রাখা।
+- A, AAAA, CNAME, MX, TXT, SRV, CAA আর NS record-এর জন্য একটা zone editor, আর নতুন zone-এর
+  জন্য template।
+- Website, app আর email-এর record নিজে থেকেই তৈরি হয়।
+- প্রতিটা zone-এ DNSSEC, সাথে আপনার registrar-কে দেওয়ার DS record, আর glue record-এর জন্য
+  নির্দেশনা।
+
+## Email
+
+[Email guide](/guides/dns/email/)
+
+- Panel-এর set up করা একটা mail server (Stalwart), webmail-সহ (Roundcube)।
+- Size-সহ mailbox, forwarder, catch-all, forwarding আর auto-reply।
+- MX, SPF, DKIM আর DMARC record Cloudflare-এ বা আপনার নিজের name server-এ publish করা হয়, অথবা
+  অন্য কোথাও copy করার জন্য দেখানো হয়।
+- Reverse DNS, outgoing port 25 আর blocklist-এর জন্য একটা delivery check।
+
+<Aside type="caution">
+Email শুধু একটা test server-এর ভেতরেই পরীক্ষা করা হয়েছে। বাইরের আসল mail server-এ mail পাঠানো
+আর সেখান থেকে mail পাওয়া এখনো চালিয়ে দেখা হয়নি।
+</Aside>
+
+## নিরাপত্তা
+
+[নিরাপত্তার overview](/guides/security/overview/) · [Firewall](/guides/security/firewall/) · [CrowdSec](/guides/security/crowdsec/) · [Malware](/guides/security/malware/) · [দেশ](/guides/security/countries/) · [আপনার account](/guides/security/accounts/)
+
+- প্রতিটা server-এর **overview**: firewall, CrowdSec, SSH-এ root আর password দিয়ে sign-in, বাকি
+  থাকা update আর security update, restart দরকার কি না, আর two-factor sign-in ছাড়া
+  administrator।
+- **Firewall** (ufw): SSH, web আর agent port সবসময় খোলা থাকে; server page থেকে port খুলুন বা
+  address block করুন। যেসব rule আপনাকে বাইরে আটকে ফেলবে, panel সেগুলো নেয় না।
+- এক click-এ **CrowdSec**: SSH আর WordPress-এ password আন্দাজ করার চেষ্টা, scan আর exploit-এর
+  চেষ্টা firewall-এ ban হয়, আর panel-এ ban, attack আর একটা allowlist দেখা যায়।
+- ClamAV দিয়ে **malware scan**, প্রতিদিন, প্রতি সপ্তাহে বা যখন চান, quarantine-সহ। Website-এর
+  মালিকরা নিজেদের site-এ কী পাওয়া গেছে তা দেখতে পান।
+- **দেশ ধরে block**: কিছু দেশ block করুন, অথবা শুধু কিছু দেশকে অনুমতি দিন, DB-IP-এর free country
+  list দিয়ে।
+- **Account**: two-factor sign-in (TOTP), sign-in rate limiting, **অন্য সব ডিভাইস থেকে সাইন আউট**
+  (Sign out all other devices), আর নতুন address থেকে sign-in হলে একটা alert।
+- প্রতিটা পরিবর্তনের একটা append-only audit log (শুধু যোগ করা যায়, মোছা বা বদলানো যায় না)।
+
+## Customer আর package
+
+[Customer guide](/guides/admin/customers/)
+
+- Website, database, app, cron job, mail, disk space, memory আর CPU, PHP version, server, অনুমোদিত
+  Docker image, Git app, SFTP আর FTP-এর limit-সহ package।
+- Customer-রা একই panel-এ sign in করেন আর শুধু নিজেদের জিনিসই দেখেন।
+- একজন customer-এর সব PHP আর container-এর memory ও CPU limit Linux kernel (cgroups) মানতে বাধ্য
+  করে। Disk ব্যবহার প্রতি 30 মিনিটে মাপা হয়।
+- **তাঁর হয়ে ঢুকুন** (Sign in as): এক ঘণ্টার জন্য একজন customer হিসেবে panel-এ ঢোকা, যা audit
+  log-এ লেখা থাকে।
+
+## Notification
+
+[Notification guide](/guides/admin/notifications/)
+
+- Panel-এর ভেতরে (না-পড়া সংখ্যাসহ একটা ঘণ্টা) আর email, Telegram, Discord, Slack বা signed
+  webhook-এ।
+- যেমন: কোনো server offline, disk ভরে যাওয়া, backup ব্যর্থ হওয়া, কোনো website বা app apply না
+  হওয়া, কোনো package-এর disk limit প্রায় শেষ, ব্যর্থ task, আর নতুন address থেকে sign-in।
+- প্রতিটা message প্রাপকের নিজের ভাষায় লেখা হয়।
+
+## অনেক server
+
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/)
+
+- একটা command দিয়ে server যোগ করুন। Agent নিজে mutual TLS দিয়ে panel-এ connect করে, তাই NAT-এর
+  পেছনেও কাজ করে।
+- Live CPU, memory, disk, network, load আর uptime, 30 দিনের history-সহ।
+- প্রতিটা server-এর service (Caddy, PostgreSQL, cron আর অন্যান্য), restart-সহ।
+- Background task, panel-এ তাদের অগ্রগতি দেখা যায়।
+
+## ভাষা আর interface
+
+- English আর বাংলা, সম্পূর্ণ। তারিখ, সংখ্যা আর size আপনার ভাষা অনুযায়ী দেখায়।
+- ডান থেকে বামে লেখা ভাষার জন্য তৈরি।
+- Light আর dark theme, একটা `Ctrl+K` command palette, আর phone-এও চলে এমন layout।
+
+## এখনো নেই
+
+এগুলো [roadmap](/project/roadmap/)-এর phase 4-এ plan করা আছে। এর কোনোটাই আজ কাজ করে না।
+
+| বিষয় | যা plan করা আছে |
+| --- | --- |
+| Release <Badge text="পরের ধাপ" variant="note" /> | Signed release build, সেগুলো download করে এমন এক লাইনের installer, panel আর agent-এর self-update, শুধু agent-এর জন্য একটা installer, প্রতিটা server-এ version দেখানো |
+| API | Scope-সহ API token, একটা OpenAPI description, একটা `ekpanel` command-line tool, পরে একটা Terraform provider |
+| সরানো | একটা website, app বা database অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো |
+| Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
+| Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
+| Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
+| Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
+
+আরও কিছু ছোট জিনিসও এখনো নেই: database browser আর import/export, একটা single file restore করা বা
+backup download করা, customer suspend করা, bandwidth limit, ব্যর্থ cron job-এর alert, wildcard
+certificate (DNS-01), আর কোনো জিনিস অন্য মালিকের কাছে সরানো। এরপর phase 5-এ আসবে game server।

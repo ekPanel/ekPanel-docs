@@ -1,0 +1,176 @@
+---
+title: অবদান রাখুন
+description: Code, অনুবাদ, docs আর testing দিয়ে কীভাবে ekPanel-কে সাহায্য করবেন, আর একটা change কীভাবে একটা idea থেকে dev branch পর্যন্ত যায়।
+sidebar:
+  order: 1
+---
+
+import { Aside, Steps, Card, CardGrid } from '@astrojs/starlight/components';
+
+সাহায্য করতে চাওয়ার জন্য ধন্যবাদ। ekPanel যেকোনো আকারের contribution স্বাগত জানায়: code, অনুবাদ,
+documentation, bug report, আসল server-এ testing, আর design নিয়ে মতামত। এই page-এ বলা আছে project-টা
+কীভাবে চলে, আর একটা ভালো contribution দেখতে কেমন।
+
+<Aside type="note" title="Main repository আপাতত private">
+Code আছে [github.com/ekPanel/ekpanel](https://github.com/ekPanel/ekpanel)-এ। প্রথম release পর্যন্ত এটা
+private, তাই ওখানকার issue, discussion আর pull request এখনো সবার জন্য খোলা নয়। ততদিন
+**ekpanelbd@gmail.com**-এ লিখুন, অথবা [docs repository](https://github.com/ekPanel/ekPanel-docs)-তে
+সাহায্য করুন।
+</Aside>
+
+## কীভাবে সাহায্য করবেন
+
+<CardGrid>
+	<Card title="অনুবাদ করুন" icon="translate">
+		UI-এর প্রতিটা text একটা JSON file-এ আছে। একটা ভাষা যোগ করতে বা উন্নত করতে কোনো programming লাগে না।
+		দেখুন [অনুবাদ](/development/translating/)।
+	</Card>
+	<Card title="Docs লিখুন" icon="document">
+		কোনো page-এর **Edit page** link দিয়ে সেটা ঠিক করুন, অথবা যে guide নেই সেটা লিখুন। দেখুন
+		[Docs-এ কাজ করা](/development/docs/)।
+	</Card>
+	<Card title="আসল server-এ test করুন" icon="laptop">
+		একটা test server-এ ekPanel install করুন, আর কী ভাঙে তা step আর log-সহ জানান। দেখুন
+		[Support](/project/support/#writing-a-good-bug-report)।
+	</Card>
+	<Card title="Code লিখুন" icon="seti:go">
+		Panel আর agent Go-তে লেখা, UI React আর TypeScript-এ। শুরু করুন
+		[Development setup](/development/setup/) দিয়ে।
+	</Card>
+</CardGrid>
+
+### প্রথমবারের জন্য ভালো contribution
+
+Label দেওয়া starter issue-এর কোনো list এখনো নেই, কারণ issue tracker public নয়। শুরু করার জন্য এগুলো
+ভালো জায়গা:
+
+- **একটা অনুবাদ**, অথবা বাংলা অনুবাদে সংশোধন।
+- **Catalogue-এর জন্য একটা service**: একটা Compose file আর একটা entry, যার নিয়মগুলো একটা test আপনার
+  হয়ে check করে। Step-গুলো `CONTRIBUTING.md`-এ "Adding a service to the catalogue"-এর নিচে আছে।
+- **একটা docs page**, যেটা নেই বা পরিষ্কার নয়।
+- **একটা test report**, এমন কোনো server বা cloud provider থেকে যেটা আমরা এখনো চেষ্টা করিনি।
+
+## Branch
+
+| Branch | এতে কী থাকে |
+| --- | --- |
+| `dev` | সব কাজ এখানেই হয়। এটাই default branch। **Pull request `dev`-এর বিপরীতে খুলুন।** |
+| `prod` | Production-এর জন্য তৈরি code। এটা শুধু `dev` থেকে একটা pull request দিয়েই বদলায়। |
+
+কেউ সরাসরি `prod`-এ push করে না।
+
+## Idea থেকে merge হওয়া change পর্যন্ত
+
+<Steps>
+
+1. **বড় change-এর আগে আলোচনা করুন।** নতুন feature বা কোনো কিছু কীভাবে কাজ করে তার change-এর জন্য
+   একটা issue খুলুন (repository private থাকা পর্যন্ত email করুন) আর সমস্যাটা বর্ণনা করুন।
+   [Roadmap](/project/roadmap/) দেখে নিন: হয়তো এটা আগেই plan করা আছে, সিদ্ধান্তসহ।
+
+2. **আপনার machine set up করুন** [Development setup](/development/setup/)-এর মতো করে, আর `dev` থেকে একটা
+   branch বানান:
+
+   ```bash
+   git switch dev && git pull
+   git switch -c ftp-passive-ports
+   ```
+
+3. **Test আর অনুবাদসহ change-টা করুন।** নিচের guideline মেনে চলুন। যে feature panel, agent আর UI
+   সবগুলোতে হাত দেয়, তার জন্য [Feature যোগ করা](/development/adding-a-feature/) পড়ুন।
+
+4. **CI যে check-গুলো চালায়, সেগুলো চালান:**
+
+   ```bash
+   gofmt -l .     # must print nothing
+   make test
+   ```
+
+5. **আসল server-এ চেষ্টা করুন**, যদি change-টা agent একটা server-এ যা করে তা বদলায়।
+   [Test VM](/development/test-vm/) ব্যবহার করুন।
+
+6. **`dev`-এর বিপরীতে একটা pull request খুলুন।** Template জানতে চায় কী বদলেছে, কেন, আর আপনি কীভাবে
+   test করেছেন। যে issue-টা এটা ঠিক করে সেটা link করুন (`Fixes #123`)।
+
+7. **Review।** একজন maintainer change-টা পড়েন, হয়তো কিছু বদলাতে বলেন, আর তৈরি হলে merge করেন। ছোট,
+   একটা বিষয়ে focused pull request বড়গুলোর চেয়ে তাড়াতাড়ি review হয়।
+
+</Steps>
+
+## যে check-গুলো pass করতে হবে
+
+CI (`.github/workflows/ci.yml`) `dev` আর `prod`-এ প্রতিটা push-এ আর প্রতিটা pull request-এ চলে। এর দুটো
+job আছে:
+
+| Job | Step |
+| --- | --- |
+| `go` | `gofmt`-এর কিছুই বদলানোর থাকবে না; `go vet ./...`; `go test -race ./...` (একটা embedded PostgreSQL-সহ) |
+| `web` | `npm ci`; `npm run typecheck`; `npm run i18n:check`; `npm run build` (Node.js 22) |
+
+`make test` local-এ একই check-গুলো চালায়, শুধু `gofmt` আর web build বাদে। Pull request template আপনাকে
+এগুলোতেও tick দিতে বলে:
+
+- `make test` pass করে
+- নতুন UI text `en.json`-এ আছে (আর পারলে `bn.json`-এ)
+- আসল server-এ বা test VM-এ চেষ্টা করা হয়েছে, যদি এটা agent যা করে তা বদলায়
+- docs update করা হয়েছে, অথবা docs repository-তে একটা issue বলছে কী যোগ করতে হবে
+
+## Guideline
+
+এগুলো main repository-র `CONTRIBUTING.md` থেকে নেওয়া:
+
+- **UI-এর প্রতিটা string অনুবাদ করা থাকে।** User যে text দেখেন তা কখনো সরাসরি component-এ লিখবেন না।
+  `web/src/i18n/locales/en.json`-এ একটা key যোগ করুন আর `t("key")` ব্যবহার করুন। পারলে বাংলাটাও যোগ
+  করুন; না হলে `npm run i18n:check` অনুবাদকদের দেখায় কী বাকি আছে।
+- **`Intl` দিয়ে format করুন।** Number, size, rate আর date-এর জন্য `web/src/lib/format.ts`-এর helper ব্যবহার
+  করুন, যাতে সেগুলো user-এর ভাষা মেনে চলে।
+- **Right-to-left-এ নিরাপদ।** Left আর right-এর বদলে logical Tailwind class (`ms-`, `me-`, `ps-`, `pe-`,
+  `start-`, `end-`, `text-start`) ব্যবহার করুন। দিক-নির্দেশক icon `rtl:-scale-x-100` দিয়ে উল্টে দিন।
+- **API error-এর একটা stable `code` থাকে।** UI `errors.<code>` অনুবাদ করে দেখায়, তাই দুটোই যোগ করুন।
+- **Security সবার আগে।** সব input server-এ validate করুন (panel-এ, আর আবার agent-এ), কখনো secret log
+  করবেন না, token-এর শুধু hash store করুন, আর administrator বা customer-এর করা প্রতিটা change-এর জন্য
+  একটা audit entry যোগ করুন।
+- **Test।** নতুন behaviour-এর সাথে test আসে। API behaviour `internal/api/`-এ একটা আসল PostgreSQL-এর
+  বিপরীতে end to end test করা হয়।
+- **Agent শুধু typed operation করে।** Panel যাতে কোনো server-এ shell command পাঠাতে পারে, এমন কোনো
+  উপায় কখনো যোগ করবেন না।
+
+## Commit message
+
+Style দেখতে `git log` দেখুন। একটা commit message-এ থাকে:
+
+- একটা **ছোট subject**, imperative-এ, শেষে full stop ছাড়া: "Add FTP over TLS with a login per
+  website (3f)", "Fix a race in the cron API test"। Roadmap-এর part থাকলে সেটা শেষে bracket-এ যায়।
+- একটা **body**, যা বলে কী বদলেছে আর কেন, প্রায়ই একটা ছোট list হিসেবে, আর **কীভাবে test করা হয়েছে**
+  ("Tested in the VM: …")। Test করার সময় যা পাওয়া গেছে আর ঠিক করা হয়েছে, সেগুলোও এক লাইন লেখার মতো।
+
+```text
+Fix task recovery when a dedupe key is already queued
+
+Requeueing interrupted tasks failed as a whole when one shared its dedupe
+key with a queued task (or another interrupted one), so tasks stayed
+"running" for good. Only the newest of such tasks is queued again now; the
+others fail.
+```
+
+## Contribution-এর licence
+
+ekPanel [AGPL-3.0-only](/project/license/)-এর অধীনে licensed। একটা pull request খুলে আপনি মেনে নেন যে
+আপনার contribution একই licence-এ release হবে। Docs CC BY 4.0-এর অধীনে
+(দেখুন [Licence](/project/license/))।
+
+## Code of conduct
+
+অংশ নেওয়া সবাই [code of conduct](/project/code-of-conduct/) মেনে চলেন। সদয় থাকুন, বিশেষ করে যাঁরা নতুন,
+বা যাঁরা নিজের প্রথম ভাষা নয় এমন ভাষায় লিখছেন তাঁদের প্রতি।
+
+## Security সমস্যা
+
+কখনো public issue বা pull request-এ কোনো vulnerability report করবেন না।
+[Security policy](/project/security-policy/) মেনে চলুন।
+
+## সম্পর্কিত
+
+- [Development setup](/development/setup/)
+- [Repository-র গঠন](/development/repository/)
+- [Feature যোগ করা](/development/adding-a-feature/)
+- [Test VM](/development/test-vm/)

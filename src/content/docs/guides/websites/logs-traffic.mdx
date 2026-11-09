@@ -1,0 +1,139 @@
+---
+title: Logs and traffic
+description: Read a website's request log and PHP error log, follow them live, and see traffic charts for the last 24 hours, 7 days or 30 days.
+sidebar:
+  order: 8
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Every website page has a **Logs** card, to see each request and PHP error as it happens, and a
+**Traffic** card, with totals over time. Apps with a domain have the same request log and traffic
+charts.
+
+## Request log
+
+The request log (also called the *access log*) has one line per request the web server answered.
+
+<Steps>
+
+1. Open the website and find **Logs**.
+
+2. Under **Which log**, choose **Requests**.
+
+3. Read the newest requests: time, visitor's address, method, address requested, status, size and
+   how long the answer took.
+
+</Steps>
+
+To narrow it down:
+
+- **Show** filters by response: **All responses**, **Success (2xx)**, **Redirects (3xx)**,
+  **Client errors (4xx)** or **Server errors (5xx)**.
+- **Search** looks in the visitor's address, method, path, status and browser (user agent).
+- **Live** fetches new lines every 3 seconds, only those added since the last look. Click it again
+  to stop.
+
+The card loads the newest 300 requests and keeps up to 1,000 in the page while you follow it live.
+
+### Reading status codes
+
+| Status | Meaning | Look at |
+| --- | --- | --- |
+| 2xx | Answered normally | |
+| 3xx | Sent elsewhere | Your [redirects](/guides/websites/redirects/), and `http` to `https` |
+| 403 | Refused | Hotlink protection, blocked `xmlrpc.php` or uploads PHP |
+| 404 | Not found | Missing files, and hidden files such as `.env`, which are never served |
+| 5xx | Server error | The [PHP error log](#php-error-log) |
+
+### Visitors' real addresses
+
+The log shows the address of the visitor. If the site is behind Cloudflare's proxy, the web server
+takes the visitor's address from Cloudflare's `CF-Connecting-IP` header, but only for requests
+that really come from Cloudflare's published addresses. A request from anywhere else that sets that
+header is logged with its own address.
+
+## PHP error log
+
+For PHP websites, choose **PHP errors** under **Which log**. You see the newest lines of the site's
+PHP error log: warnings, notices, fatal errors and anything your code writes with `error_log()`.
+
+- The card shows up to the last 64 KB, at most 500 lines, and follows new lines with **Live**.
+- **Search** filters the lines.
+- "No PHP errors logged" means there is nothing yet.
+
+The file is `/home/<account>/logs/php-error.log`. You can also open or download it in the
+[file manager](/guides/websites/files/) (**Home folder**, then `logs`).
+
+<Aside type="tip">
+When a PHP site shows a blank page or "500", look here first. Keep `display_errors` **Off** on live
+sites (see [PHP settings](/guides/websites/php/#php-settings-per-site)): errors then go to this log,
+not to your visitors.
+</Aside>
+
+The log is read through the same locked-in worker as the file manager, as the site's account. If
+someone replaces the log with a link to another file, such as `/etc/shadow`, the panel shows
+nothing from it.
+
+## Web server error log
+
+There is no separate web server error log in the panel. PHP errors are in the PHP error log;
+problems setting up the website itself show on the site page as a **Problem** with its reason (see
+[Site states](/guides/websites/websites/#site-states)).
+
+## Traffic
+
+The **Traffic** card shows, for a **Time range** of **24 hours**, **7 days** or **30 days**:
+
+- **Requests**: how many requests the site answered;
+- **Bandwidth**: how much data it sent;
+- **Errors**: requests answered with 4xx or 5xx;
+- **Responses**: counts of 2xx, 3xx, 4xx and 5xx;
+- **Most requested**: the paths asked for most often.
+
+24 hours is shown per hour; 7 and 30 days per day. The card refreshes every minute.
+
+<Aside type="note">
+Traffic is counted from the web server's log **every 15 minutes**, so the newest requests appear
+in the charts up to 15 minutes later. The request log shows them right away.
+</Aside>
+
+Customers also see their **Traffic this month** next to their package usage.
+
+## What is kept, and for how long
+
+| What | Where | Kept |
+| --- | --- | --- |
+| Request log | On the server, `/var/log/caddy/site-<site id>.log` (JSON lines) | Rolled over at 20 MB; the 5 newest rolled files are kept |
+| PHP error log | On the server, `/home/<account>/logs/php-error.log` | Not rotated by ekPanel yet; it grows until you delete it |
+| Hourly traffic totals | On the server, kept by the agent | 3 days (72 hours), until the panel collects them |
+| Traffic charts | In the panel's database | 90 days |
+
+How traffic is counted: the agent reads new lines from each site's request log and adds them to
+hourly totals (requests, bytes, status classes and the most requested paths). It remembers where it
+stopped, follows the log when it rolls over, and never counts a line twice. The panel collects the
+totals from every server every 15 minutes and deletes totals older than 90 days.
+
+<Aside type="caution">
+The PHP error log is in the site's folder, so it counts toward a customer's disk space. If it grows
+large, delete it in the file manager and empty the trash. PHP creates it again with the next error.
+</Aside>
+
+When a website is deleted, its PHP error log goes with its home folder, and its traffic history is
+deleted from the panel. The request log files in `/var/log/caddy/` are not removed by ekPanel.
+
+## Limits and what is not there yet
+
+- Bandwidth is shown, but packages cannot limit it yet.
+- Logs cannot be downloaded from the **Logs** card; use the file manager for the PHP log.
+- The request log on the server is readable by administrators with the
+  [server terminal](/guides/apps/terminal/).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="PHP" href="/guides/websites/php/" description="display_errors and other PHP settings." />
+	<LinkCard title="Redirects and hotlink protection" href="/guides/websites/redirects/" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="Bans based on these logs." />
+	<LinkCard title="Notifications" href="/guides/admin/notifications/" />
+</CardGrid>

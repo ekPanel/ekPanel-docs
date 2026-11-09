@@ -1,0 +1,98 @@
+---
+title: Security policy
+description: How to report a vulnerability in ekPanel privately, what to include, what happens next, and which versions get fixes.
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ekPanel controls servers with root privileges, so security reports come first. This page says
+how to report a vulnerability privately and what happens after you do. It summarises
+[`SECURITY.md`](https://github.com/ekPanel/ekpanel/blob/dev/SECURITY.md) in the main repository
+and the [organisation's security policy](https://github.com/ekPanel/.github/blob/main/SECURITY.md).
+
+<Aside type="danger" title="Never report a vulnerability in public">
+Do not open a public issue, pull request or discussion about a security problem, and do not
+post it in a chat. Report it privately, as below.
+</Aside>
+
+## How to report
+
+Use one of these:
+
+- **GitHub's private vulnerability reporting** on the affected repository: the **Security** tab,
+  then **Report a vulnerability**, where it is available. (The main repository is private until
+  the first release, so this works there only for people with access.)
+- **Email** to **ekpanelbd@gmail.com**, with "Security" in the subject.
+
+## What to include
+
+<Steps>
+
+1. **What an attacker can do**, and what they need first: an account (administrator or
+   customer?), network access, a website on the same server…
+
+2. **How to reproduce it**: steps, or a proof of concept.
+
+3. **The versions**: the output of `ekpanel version` and `ekpanel-agent version`, or the commit
+   you tested.
+
+</Steps>
+
+Please remove real passwords, keys and personal data from what you send.
+
+## What happens next
+
+- We aim to **acknowledge** your report **within 3 days**.
+- We aim to **fix critical problems within 14 days**.
+- We **credit reporters** in the release notes, unless you prefer not to be named.
+
+## Supported versions
+
+ekPanel is in early development and has **no release yet**, so there are no supported versions
+in the usual sense. Fixes go into the `dev` branch. Once releases exist, this page will say which
+ones get security fixes.
+
+## What counts
+
+SECURITY.md lists the design principles ekPanel promises. A good rule: anything that breaks one
+of these promises is a vulnerability we want to hear about. Some examples:
+
+- a customer seeing or changing something that is not theirs
+- a website's files, PHP, cron job, FTP or SFTP login reaching outside its own folder or account
+- the agent doing something that is not one of its typed operations, or accepting unchecked
+  input from the panel
+- getting into the panel without the password (and two-factor code), or around the setup token
+- cross-site request forgery or script injection in the web UI
+- secrets showing up where they should not: in logs, API answers, the process list, or files
+  other accounts can read
+- a firewall, country blocking or CrowdSec rule that ekPanel says it never makes (for example,
+  one that blocks the administrator's own address)
+
+If you are unsure, report it anyway.
+
+## How ekPanel is built for security
+
+A short version of SECURITY.md's design principles:
+
+- The agent accepts only typed, validated operations from a fixed list. The only way to run an
+  arbitrary command is the web terminal, an interactive shell for a person, which asks for the
+  password again and is recorded in the audit log.
+- Panel and agents talk over mutual TLS with a private CA that agents pin at enrolment.
+  Certificates last 90 days and renew automatically.
+- Passwords are hashed with argon2id; session and enrolment tokens are stored only as hashes.
+  Database, FTP and mailbox passwords are stored only as the services' own hashes.
+- Every website runs as its own Linux account with its own PHP-FPM pool and `open_basedir`.
+- State-changing requests are protected against cross-site requests; session cookies are
+  `HttpOnly`, `SameSite=Lax` and `__Host-` prefixed; a strict Content-Security-Policy allows no
+  inline scripts.
+- Every change is written to an append-only audit log that the database refuses to modify.
+
+See [Security model](/concepts/security-model/) for how these fit together.
+
+## Related
+
+- [Security model](/concepts/security-model/)
+- [Security overview](/guides/security/overview/)
+- [Support](/project/support/)

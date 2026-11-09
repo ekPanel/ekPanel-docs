@@ -1,0 +1,137 @@
+---
+title: দেশ অনুযায়ী আটকানো
+description: একটা server-এর সবকিছুর জন্য কিছু দেশ থেকে আসা সংযোগ আটকান, অথবা শুধু কিছু দেশকে অনুমতি দিন, আর জেনে নিন কী কখনো আটকানো হয় না।
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+দেশ অনুযায়ী আটকানো একটা server-এ আসা সংযোগ ফেলে দেয়, প্রেরকের address কোন দেশের তা দেখে। এটা ওই server-এর
+সবকিছুতে খাটে: website, SSH, email আর FTP। আপনার ভিজিটররা যদি অল্প কয়েকটা জানা দেশ থেকে আসেন আর আক্রমণ আসে অন্য
+জায়গা থেকে, তখন এটা ব্যবহার করুন।
+
+## শুরু করার আগে
+
+- এটা শুধু administrator-রাই বসান, প্রতিটা server-এর জন্য আলাদা করে, **সার্ভার নিরাপত্তা** (Server security)
+  পাতা থেকে।
+- **আপনি নিজে** কোথা থেকে যুক্ত হন সেটা জেনে নিন। "শুধু অনুমতি" mode-এ যে দেশ বাদ পড়ে যায় সেটা বন্ধ হয়ে যায়,
+  বেড়াতে গেলে আপনিও। নিরাপদ থাকতে নিজের address allowlist-এ রাখুন।
+- দেশ খোঁজা হয় একটা free তালিকা থেকে, যেটা বেশিরভাগ address-এর জন্য ঠিক, কিন্তু সবগুলোর জন্য নয়। কিছু address
+  ভুল দেশে তালিকাভুক্ত থাকে, আর VPN ও proxy আসল দেশ লুকিয়ে রাখে।
+
+## দেশ বেছে নিন
+
+<Steps>
+
+1. **সার্ভার নিরাপত্তা** খুলুন, server বেছে নিন, তারপর **দেশ অনুযায়ী আটকানো** (Country blocking) card খুঁজুন।
+
+2. একটা mode বেছে নিন:
+
+   | Mode | কী করে |
+   | --- | --- |
+   | **বন্ধ** (Off) | দেশের কারণে কিছুই আটকানো হয় না। |
+   | **এই দেশগুলো আটকান** (Block these countries) | তালিকার দেশগুলো আটকানো হয়। বাকি সব দেশ থেকে সংযোগ করা যায়। |
+   | **শুধু এই দেশগুলোকে অনুমতি দিন** (Allow only these countries) | শুধু তালিকার দেশগুলো থেকে সংযোগ করা যায়। বাকি সব দেশ আটকানো, আর তালিকা যেসব address-কে কোনো দেশে ফেলে না, সেগুলোও। |
+
+3. **একটি দেশ যোগ করুন…** (Add a country…)-এ টাইপ করে তালিকা থেকে দেশ বেছে নিন। পাশের × দিয়ে কোনো দেশ সরান।
+
+4. **সংরক্ষণ** (Save) বেছে নিন।
+
+</Steps>
+
+প্রথমবার server দেশের তালিকা download করে, তারপর নিয়মগুলো load করে। এরপর card-এ লেখা থাকে, যেমন, "চালু, 6,412টি
+ঠিকানার পরিসর", আর কোন মাসের তালিকা ব্যবহার হচ্ছে।
+
+<Aside type="danger" title="শুধু-অনুমতি mode আর ভিজিটর">
+**শুধু এই দেশগুলোকে অনুমতি দিন** mode-এ বাকি সবাই আটকে যায়: অন্য দেশ থেকে আপনার site-এ আসা search engine-এর
+crawler, uptime monitor আর payment provider-ও। নিশ্চিত হয়ে নিন যে আপনি, আপনার ভিজিটর আর আপনার service-গুলো যেসব
+দেশ থেকে যুক্ত হয় সেগুলো তালিকায় আছে, অথবা ওই service-গুলোর address allowlist-এ রাখুন।
+</Aside>
+
+## নিজেকে আটকাতে পারবেন না
+
+সংরক্ষণ করার সময় panel দেখে নেয়, panel-এ পৌঁছাতে আপনি যে address ব্যবহার করছেন সেটা কোন দেশের। নতুন নিয়মে সেটা
+আটকে গেলে পরিবর্তনটা ফিরিয়ে দেওয়া হয়:
+
+> এতে আপনি নিজেই আটকে যাবেন: আপনার ঠিকানা 203.0.113.9 জার্মানির। আগে এটা অনুমোদিত তালিকায় যোগ করুন।
+
+আপনি private network বা server থেকেই panel-এ পৌঁছালে এই যাচাই বাদ যায়, কারণ সেগুলো এমনিতেও কখনো আটকানো হয় না;
+আর আপনার address allowlist-এ থাকলেও বাদ যায়।
+
+<Aside type="caution">
+এই যাচাই শুধু সেই address জানে, যেটা দিয়ে আপনার browser panel-এ যায়। Server-এর SSH-এ অন্য কোনো জায়গা থেকে যুক্ত
+হলে সেই জায়গার দেশও দেখে নিন, অথবা সেটা allowlist-এ রাখুন।
+</Aside>
+
+## যা কখনো আটকানো হয় না
+
+| কখনো আটকানো হয় না | কেন |
+| --- | --- |
+| আগে থেকে খোলা সংযোগ, আর server-এর নিজের সংযোগের উত্তর | শুধু বাইরে থেকে আসা **নতুন** সংযোগ ফেলে দেওয়া হয়, তাই server-এর বাইরে যাওয়া traffic (update, mail পাঠানো) সব mode-এ কাজ করে। |
+| **Port 80** (HTTP) | যাতে certificate renew হতে পারে। এটা শুধু HTTPS-এ redirect করে, তাই এখানে আর কিছুতে পৌঁছানো যায় না। |
+| **অনুমোদিত তালিকা** (Allowlist) | Allowlist card-এর address আর network, যেটা [CrowdSec](/guides/security/crowdsec/)-এর সাথে ভাগ করা। |
+| Server-এর নিজের address | যাতে এটা কখনো নিজেকে না আটকায়। |
+| [Cloudflare-এর প্রকাশিত address](https://www.cloudflare.com/ips/) | নিচে দেখুন। |
+| Private আর local network | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, loopback, link-local, multicast, আর এদের IPv6 সমতুল্য (`fc00::/7`, `fe80::/10`, …)। |
+| Loopback traffic, DHCP-র উত্তর আর IPv6 neighbour discovery | যাতে server-এর নিজের network চলতে থাকে। |
+
+### Cloudflare-এর পেছনের site
+
+Cloudflare-এর proxy দিয়ে আসা ভিজিটররা আপনার server-এ পৌঁছান Cloudflare-এর address থেকে, যেগুলো কখনো আটকানো হয়
+না। তাই দেশ অনুযায়ী আটকানো তাঁদের **থামায় না**। Cloudflare-এও দেশ আটকান, যেমন Cloudflare-এর firewall rule দিয়ে।
+
+## দেশের তালিকা
+
+ekPanel ব্যবহার করে **DB-IP-এর free "IP to Country Lite" তালিকা**, যেটা
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) license-এ প্রকাশিত। Panel card-এর
+নিচে "IP Geolocation by DB-IP" লিখে এর credit দেয়।
+
+- Server মাসে একবার DB-IP থেকে এটা download করে, আর `/var/lib/ekpanel/geo/`-এ রাখে।
+- DB-IP প্রতি মাসের তালিকা প্রকাশ করে মাসের প্রথম কয়েক দিনের মধ্যে। সেটা না আসা পর্যন্ত server গত মাসের তালিকা
+  রাখে, আর দিনে সর্বোচ্চ একবার আবার চেষ্টা করে।
+- ব্যবহারের আগে file যাচাই করা হয়: এটা address range-এর একটা ঠিকঠাক তালিকা হতে হবে, আর ভাঙা download-এ যত সারি
+  থাকত তার চেয়ে অনেক বেশি সারি থাকতে হবে।
+- এটা শুধু data; এর ভেতরের কিছুই চালানো হয় না।
+
+একেবারে প্রথম download ব্যর্থ হলে card-এ error দেখায় ("the country list could not be downloaded; trying again in a
+few minutes")।
+
+## কীভাবে কাজ করে
+
+দেশ অনুযায়ী আটকানো হলো নিজস্ব একটা nftables table, `inet ekpanel_countries`, যেটা লেখা হয়
+`/etc/ekpanel/countries.nft`-এ। এটা বাইরে থেকে আসা traffic-এ hook করে এমন অন্য সবকিছুর **আগে**, যা traffic
+filter করে: `ufw`, CrowdSec-এর ban আর Docker-এর forward করা port-এর আগে। তাই [firewall](/guides/security/firewall/)
+বন্ধ থাকলেও এটা খাটে।
+
+ক্রমানুসারে, table-টা:
+
+1. আগে থেকে খোলা সংযোগ, loopback traffic, port 80, DHCP আর IPv6 neighbour discovery মেনে নেয়;
+2. যেসব address কখনো আটকানো হয় না (উপরে দেখুন), সেগুলো মেনে নেয়;
+3. তালিকার দেশগুলো ফেলে দেয় (**আটকান** mode), অথবা তালিকার দেশগুলো মেনে নিয়ে বাকিগুলো ফেলে দেয় (**শুধু অনুমতি**
+   mode)।
+
+একটা ছোট service, `ekpanel-countries.service`, server boot হলে নিয়মগুলো আবার load করে। প্রতিবার apply করার সময়
+agent-ও এগুলো দেখে নেয়, আর হারিয়ে গেলে আবার load করে। **বন্ধ** করলে table, file আর service মুছে যায়।
+
+## সমস্যা সমাধান
+
+**নিজেকে আটকে ফেলেছি।** Provider-এর web console দিয়ে sign in করে table-টা সরান:
+
+```bash
+sudo nft delete table inet ekpanel_countries
+```
+
+তারপর panel-এ আপনার address allowlist-এ যোগ করুন বা দেশগুলো বদলান। পরের apply-তে agent আবার নিয়মগুলো load করে,
+তাই settings panel-এ ঠিক করুন, শুধু server-এ নয়।
+
+**একটা address কোন দেশের?** [CrowdSec](/guides/security/crowdsec/)-এর **সাম্প্রতিক আক্রমণ** (Recent attacks)
+card-এও দেশ দেখায়, তবে সেটা CrowdSec-এর নিজের খোঁজ থেকে, যেটা DB-IP-এরটা থেকে আলাদা হতে পারে।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="সার্ভার নিরাপত্তা" href="/guides/security/overview/" description="Allowlist আর অন্য সুরক্ষাগুলো।" />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="পুরো দেশের বদলে একেকজন আক্রমণকারীকে ban করুন।" />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Port খুলুন আর network আটকান।" />
+</CardGrid>

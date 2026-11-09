@@ -1,0 +1,212 @@
+---
+title: Database
+description: নিজস্ব user-সহ MariaDB আর PostgreSQL database তৈরি করুন, আপনার website বা app connect করুন, আর password reset করুন।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+বেশিরভাগ website আর app তাদের data একটা database-এ রাখে। ekPanel আপনার server-এ **MariaDB** আর
+**PostgreSQL** database তৈরি করে, প্রতিটার নিজস্ব একটা user-সহ, যে শুধু ওই একটা database-এই ঢুকতে
+পারে, আর কিছুতে না।
+
+| Engine | কীসের জন্য ব্যবহার করবেন |
+| --- | --- |
+| **MariaDB** | "MySQL-এর সাথে মানানসই। WordPress, Laravel, বেশিরভাগ PHP অ্যাপ।" |
+| **PostgreSQL** | "উন্নত SQL। Django, Rails, অনেক Node আর Go অ্যাপ।" |
+
+## শুরু করার আগে
+
+- একটা connected server। কিছু install করার দরকার নেই: কোনো server-এ একটা engine-এর প্রথম database
+  বানালে distribution-এর package থেকে engine-টা install হয়ে যায় (`mariadb-server` বা `postgresql`)।
+  এতে এক-দুই মিনিট লাগে।
+- Database চলে সেই **একই server-এ**, যেখানে এটা ব্যবহার করা website বা app চলে। ওই server-টাই বেছে
+  নিন।
+
+<Aside type="tip">
+Panel থেকে [WordPress](/guides/websites/wordpress/) বা একটা [PHP app](/guides/websites/php-apps/)
+install করলে তার MariaDB database আপনার জন্য তৈরি হয়ে যায়। এই পাতা শুধু আপনার নিজের code বা হাতে
+install করা app-এর জন্য দরকার।
+</Aside>
+
+## একটা database তৈরি করুন
+
+<Steps>
+
+1. **ডাটাবেস** (Databases) খুলে **ডাটাবেস যোগ করুন** (Add database)-এ click করুন।
+
+2. Server আর **ইঞ্জিন** (Engine) বেছে নিন।
+
+3. একটা **ডাটাবেসের নাম** (Database name) দিন: 1 থেকে 32টা ছোট হাতের অক্ষর, সংখ্যা আর `_`, শুরু হবে
+   অক্ষর দিয়ে, যেমন `shop`। System database আর account-এর নাম (`root`, `mysql`, `postgres`,
+   `ekpanel`, `pg_` দিয়ে শুরু হওয়া নাম …) নেওয়া হয় না।
+
+4. আপনি না বদলালে **ইউজার নাম** (User name) database-এর নামের মতোই থাকে। প্রতিটা database নিজস্ব একটা
+   user পায়।
+
+5. Admin-রা: কোনো customer-এর জন্য database তৈরি করতে **কার জন্য** (For) বেছে নিন।
+
+6. **ডাটাবেস তৈরি করুন** (Create database)-এ click করুন।
+
+7. **Password** এখনই copy করুন। "ekPanel এটা রাখে না, আর দেখাতেও পারবে না; শুধু রিসেট করা যাবে।"
+   তারপর **পাসওয়ার্ড সেভ করে রেখেছি** (I have saved the password) (বা **ডাটাবেস খুলুন**)-এ click
+   করুন।
+
+</Steps>
+
+Dialog-এ connection-এর তথ্যও দেখায়। Database-এর অবস্থা **চালু হচ্ছে…** (Applying…) থেকে **প্রস্তুত**
+(Ready) হলে database তৈরি।
+
+## Password: একবার দেখানো হয়, কখনো রাখা হয় না
+
+ekPanel প্রতিটা database-এর জন্য একটা শক্ত password বানায়: 24টা অক্ষর আর সংখ্যা, দেখতে একই রকম
+character ছাড়া, তাই যেকোনো config file-এ paste করা যায়।
+
+Panel এটা **রাখে না**। এটা শুধু সেই one-way hash রাখে, যা database engine নিজে ব্যবহার করে (MariaDB-র
+native password hash, বা PostgreSQL-এর SCRAM-SHA-256 verifier), আর server-ও শুধু ওই hash-টাই পায়।
+Panel-এর database বা agent কেউই কখনো আপনার password ধরে রাখে না, আর কেউ এটা আবার পড়তে পারে না,
+admin-রাও না।
+
+### Password reset করুন
+
+<Steps>
+
+1. Database খুলে **নতুন পাসওয়ার্ড তৈরি করুন** (Create a new password)-এ click করুন।
+
+2. Dialog থেকে নতুন password copy করুন।
+
+3. আপনার website বা app-এর settings-এ এটা বসিয়ে দিন। "সার্ভারে নতুন পাসওয়ার্ড চালু হওয়ার সাথে সাথে
+   পুরনোটা আর কাজ করবে না", সাধারণত কয়েক সেকেন্ডের মধ্যে।
+
+</Steps>
+
+## আপনার website বা app থেকে connect করুন
+
+**সংযোগ** (Connect)-এর নিচে তথ্য দেখতে database খুলুন:
+
+| | MariaDB | PostgreSQL |
+| --- | --- | --- |
+| **হোস্ট** (Host) | `localhost` | `127.0.0.1` |
+| **পোর্ট** (Port) | `3306` | `5432` |
+| **ডাটাবেসের নাম** আর **ইউজার নাম** | আপনি যা বেছে নিয়েছেন | আপনি যা বেছে নিয়েছেন |
+| **সংযোগ URL** (Connection URL) | `mysql://user:PASSWORD@localhost:3306/name` | `postgresql://user:PASSWORD@127.0.0.1:5432/name` |
+
+`PASSWORD`-এর জায়গায় আপনার রেখে দেওয়া password বসান। কয়েকটা উদাহরণ:
+
+<Tabs>
+  <TabItem label="WordPress">
+    ```php
+    // wp-config.php
+    define( 'DB_NAME', 'shop' );
+    define( 'DB_USER', 'shop' );
+    define( 'DB_PASSWORD', 'the password you saved' );
+    define( 'DB_HOST', 'localhost' );
+    ```
+  </TabItem>
+  <TabItem label="Laravel (.env)">
+    ```bash
+    DB_CONNECTION=mariadb
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=shop
+    DB_USERNAME=shop
+    DB_PASSWORD=the-password-you-saved
+    ```
+  </TabItem>
+  <TabItem label="Django / Node (URL)">
+    ```bash
+    DATABASE_URL=postgresql://shop:the-password-you-saved@127.0.0.1:5432/shop
+    ```
+  </TabItem>
+</Tabs>
+
+MariaDB-র জন্য user তৈরি হয় `localhost` (Unix socket) আর `127.0.0.1` (TCP) দুটোর জন্যই, তাই যেকোনোটা
+চলে। নতুন MariaDB database `utf8mb4` character set ব্যবহার করে; PostgreSQL database ব্যবহার করে UTF-8।
+
+<Aside type="note">
+Remote access বন্ধ। Database user তৈরি হয় শুধু server-এর নিজের থেকে আসা connection-এর জন্য, আর
+database port internet-এ খোলার কোনো setting ekPanel-এ নেই। নিজের computer থেকে database-এ কাজ করতে
+server-এ একটা SSH tunnel ব্যবহার করুন।
+</Aside>
+
+## Database-গুলো কীভাবে আলাদা রাখা হয়
+
+- প্রতিটা database-এর নিজস্ব user আছে, যার অধিকার **শুধু ওই database-এ** (MariaDB-তে grant;
+  PostgreSQL-এ user-ই database-এর owner আর `PUBLIC` access তুলে নেওয়া হয়, তাই server-এর অন্য user-রা
+  এতে connect-ও করতে পারে না)।
+- Panel একই server-এ চললে customer-দের PostgreSQL user panel-এর নিজের database-এ connect করতে পারে না।
+- SQL engine-এ পৌঁছায় standard input দিয়ে, কখনো process list দিয়ে নয়, আর নাম ও hash panel আর agent
+  দুজনেই check করে।
+- Agent তার তৈরি করা database আর user-এর একটা তালিকা রাখে
+  (`/var/lib/ekpanel-agent/databases.json`), আর এই তালিকায় নেই এমন কোনো database বা user বদলাতে বা
+  drop করতে রাজি হয় না। আপনার হাতে বানানো database কখনো ছোঁয়া হয় না।
+
+## Size আর package limit
+
+Database-এর পাতায় engine-এর জানানো **আকার** (Size) দেখায়। Server প্রতিবার তার database-গুলো apply
+করার সময় এটা update হয় (প্রতিটা পরিবর্তনে আর প্রতি 10 মিনিটে)।
+
+Customer-দের জন্য [package](/guides/admin/customers/#package-limits) ঠিক করে:
+
+- তাঁরা কয়টা database রাখতে পারবেন (limit-এ পৌঁছালে "আপনার প্যাকেজে আর ডেটাবেস যোগ করা যাবে না");
+- কোন কোন server-এ;
+- disk space: database-এর size এতে গোনা হয়, website file, app data আর mail-এর সাথে মিলিয়ে। Disk space
+  শেষ হয়ে গেলে নতুন database নেওয়া হয় না।
+
+## একটা database মুছে ফেলুন
+
+<Steps>
+
+1. Database খুলে **ডাটাবেস মুছুন** (Delete database)-এ click করুন।
+
+2. নিশ্চিত করতে database-এর নাম টাইপ করুন।
+
+3. **ডাটাবেস মুছুন**-এ click করুন। Database, এর **সব data** আর এর user server থেকে মুছে যায়। যে
+   application এটা ব্যবহার করে সেটা কাজ করা বন্ধ করে দেয়।
+
+</Steps>
+
+Data আবার লাগতে পারে মনে হলে আগে একটা [backup](/guides/data/backups/) নিন।
+
+## Backup
+
+একটা server-এর প্রতিটা database ওই server-এর [backup](/guides/data/backups/)-এ থাকে,
+`mariadb-dump --single-transaction` বা `pg_dump` দিয়ে dump করা, তাই backup চলার সময়ও database ব্যবহার
+করা যায়। **ব্যাকআপ** (Backups) পাতা থেকে একটা database restore করতে পারেন।
+
+## Limit আর যা এখনো নেই
+
+- Panel-এ এখনো **কোনো database browser নেই** (phpMyAdmin বা Adminer-এর মতো)।
+- Panel থেকে এখনো **import বা export নেই**। আপাতত SSH-এ command line বা
+  [server terminal](/guides/apps/terminal/) ব্যবহার করুন, যেমন:
+
+  ```bash
+  # import a MariaDB dump
+  sudo mariadb shop < shop.sql
+  # export a PostgreSQL database
+  sudo -u postgres pg_dump -Fc shop > shop.pgdump
+  ```
+
+- কোনো remote access নেই, আর প্রতি database-এ একজন user।
+- শুধু MariaDB আর PostgreSQL, আপনার distribution যে version দেয় সেটাই। Redis-এর জন্য দেখুন
+  [app catalogue](/guides/apps/catalog/)।
+- একটা database অন্য server-এ বা অন্য মালিকের কাছে সরানো: এখনো নেই। দেখুন [roadmap](/project/roadmap/)।
+
+## সমস্যা সমাধান
+
+**Database-এ "সমস্যা" (Problem) দেখাচ্ছে।** "সার্ভার এই ডাটাবেস চালু করতে পারেনি"-র নিচের message-টা
+server থেকে আসে। প্রথম database engine-ও install করে; package install fail করে থাকলে server-এর internet
+access আর disk space check করুন।
+
+**আমার app থেকে "Access denied" আসছে।** Host (`localhost` বা `127.0.0.1`, server-এর public address
+নয়), user name আর password check করুন। Password হারিয়ে ফেললে reset করুন।
+
+**আমার Docker app database-এ পৌঁছাতে পারছে না।** Container-এর ভেতরে `localhost` মানে container নিজে,
+server নয়, আর database user শুধু server-এর নিজের থেকে করা connection নেয়। বরং app-এর দরকারি
+database app-এর ভেতরেই চালান, যেমন catalogue service-গুলো করে।
+
+## সম্পর্কিত
+
+- [Backup](/guides/data/backups/): Backup থেকে একটা database restore করুন।
+- [WordPress](/guides/websites/wordpress/): এক click-এর WordPress আপনার জন্য database তৈরি করে।

@@ -1,0 +1,368 @@
+---
+title: ekPanel's own name servers
+description: Run your own DNS on your ekPanel servers with PowerDNS, keep zones in the panel, use templates, and sign domains with DNSSEC.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Instead of [Cloudflare](/guides/dns/cloudflare/), your own servers can answer DNS for your
+domains. You pick which ekPanel servers are name servers, add your domains, and ekPanel
+keeps every zone in the panel and sends it to the name servers. Records for websites, apps
+and email are made automatically, as with Cloudflare.
+
+A **name server** is a server that answers DNS questions such as "what is the address of
+`www.example.com`?". A **zone** is all the DNS records of one domain.
+
+## Before you start
+
+- Only administrators set up the name servers. Customers can then add zones for their own
+  domains.
+- Use at least **two** servers if you can, ideally at different providers or locations. DNS
+  keeps working while one of them is down. One server works too, but then DNS stops when it
+  stops, and many registrars ask for at least two name servers.
+- Each name server needs a public address. Other servers on the internet must reach it on
+  port 53.
+- Choose host names for the name servers, such as `ns1.example.com` and `ns2.example.com`. The
+  domain they are under (here `example.com`) must itself resolve; see
+  [Set the name servers at the registrar](#set-the-name-servers-at-the-registrar).
+- If your provider has a firewall of its own in front of the server (often called a security
+  group), open port 53, TCP and UDP, there too. ekPanel only manages the firewall on the
+  server itself.
+
+## How it fits together
+
+| Role | What it does |
+| --- | --- |
+| **Primary** (one) | Gets every zone from the panel, signs the ones with DNSSEC on, answers questions, and sends the zones to the secondaries. |
+| **Secondary** (any number) | Copies each zone from the primary by zone transfer and answers questions too. |
+
+The panel is the source of truth. It sends the primary each zone whole; the primary writes
+only what changed, so the zone's **serial** (its version number) moves only when something
+really changed. The primary then tells the secondaries (a DNS `NOTIFY`), and they fetch the
+new copy (a zone transfer, `AXFR`). If a `NOTIFY` is lost, the secondaries check again on
+their own.
+
+## Set up the name servers
+
+<Steps>
+
+1. Open **DNS**. In the **ekPanel name servers** section, find the **Name servers** card and
+   choose **Set up name servers** (later: **Change**).
+
+2. For each name server, fill in a row:
+   - **Server**: one of your connected servers.
+   - **Host name**: its name, such as `ns1.example.com`.
+   - **Address for zone transfers**: leave it empty to use the server's public address, or
+     enter another one (see below).
+   - **Primary**: select it for exactly one server (the first row starts as the primary).
+
+   Choose **Add a server** for each further name server.
+
+3. Choose **Save**. ekPanel installs and configures PowerDNS on each server as a task.
+
+</Steps>
+
+Each server then shows its addresses and its state: **PowerDNS** with its version once it
+runs, **Setting up** while it is being prepared, or **Sync failed** with the error underneath.
+
+The panel refuses a list where:
+
+- no server, or more than one, is the primary ("choose one primary name server"),
+- a server or host name appears twice,
+- a host name is missing ("enter a host name such as ns1.example.com"),
+- with two or more servers, one has no address for zone transfers ("… has no public address
+  for zone transfers; enter one").
+
+### Address for zone transfers
+
+Zone transfers and `NOTIFY` messages between the primary and secondaries use each server's
+public address. If your servers share a private network, you can enter a private address
+instead, so the transfers stay on that network. The primary allows transfers **only** to the
+secondaries' addresses, and secondaries accept `NOTIFY` **only** from the primary's.
+
+### What gets installed
+
+On each name server, the agent:
+
+- installs PowerDNS from the distribution's packages (`pdns-server`, `pdns-backend-sqlite3`,
+  `sqlite3`), with its zones in a SQLite file (`/var/lib/powerdns/pdns.sqlite3`), so no
+  database server is needed;
+- writes `/etc/powerdns/pdns.conf` (managed by ekPanel; changes there are overwritten) and
+  removes the package's example files from `/etc/powerdns/pdns.d`;
+- turns on PowerDNS's API on `127.0.0.1:18920` only, with a random key in
+  `/etc/powerdns/ekpanel-api.key` that only root and PowerDNS can read;
+- makes PowerDNS listen on port 53 of the server's own addresses (not on Docker's bridges).
+  It does not listen on every address because `systemd-resolved` already uses
+  `127.0.0.53:53`;
+- opens port 53 (TCP and UDP) in the [managed firewall](/guides/security/firewall/), if
+  ekPanel manages the firewall.
+
+PowerDNS does not tell who it is: its version answer is `anonymous`.
+
+When you remove a server from the list, PowerDNS is stopped and disabled there. Its zones
+stay in its database, for when you add it back.
+
+## Add a domain
+
+<Steps>
+
+1. On the **DNS** page, in the **ekPanel name servers** section, choose **Add a domain**.
+
+2. Type the **Domain**, such as `example.com`.
+
+3. If there are templates, pick one under **Template**, or leave **No template**.
+
+4. Choose **Add a domain**. The domain's page opens and shows **Setting up** until the primary
+   has it, then <Badge text="Served" variant="success" />.
+
+5. Set the domain's name servers at its registrar (see below).
+
+</Steps>
+
+The panel refuses a domain:
+
+- before the name servers are set up ("Set up ekPanel's name servers first (DNS page)"),
+- that is not a domain, or is a public suffix such as `com` or `co.uk` ("Enter a domain such as
+  example.com"),
+- that is already in ekPanel, here or at Cloudflare ("This domain is already managed in
+  ekPanel").
+
+### Rules for customers
+
+Customers may add a zone only:
+
+- for a domain of **their own** websites or apps: the site's domain itself, or a domain it is
+  under (a customer with `shop.example.com` may add `example.com` or `shop.example.com`).
+  Otherwise: "Add a website or app on this domain first";
+- that is not inside, and does not contain, a zone of another account ("This domain is
+  inside, or contains, another account's domain").
+
+A customer's zone only gets records for that customer's own websites, apps and email.
+
+## The zone editor
+
+The domain's page has a **Records** table. Your records come first and can be edited (pencil)
+or deleted (bin). Below them, in grey with a **By ekPanel** badge, are the records ekPanel
+makes; those change by themselves.
+
+To add one, choose **Add a record** and fill in **Name**, **Type**, **Value**, a **Priority**
+for `MX` and `SRV`, and **TTL**.
+
+### Names
+
+| You write          | In zone `example.com` it means |
+| ------------------ | ------------------------------ |
+| `@` (or nothing)   | `example.com`                  |
+| `www`              | `www.example.com`              |
+| `_dmarc`           | `_dmarc.example.com`           |
+| `*`                | `*.example.com` (a wildcard)   |
+| `www.example.com`  | `www.example.com` (already in the zone, kept as it is) |
+| `www.example.com.` | `www.example.com` (a final dot means "this is the full name") |
+
+A name may start with `_` (as for DKIM and SRV), and `*` may only be the first part.
+
+### Record types
+
+| Type    | Value                                               | Example                         |
+| ------- | --------------------------------------------------- | ------------------------------- |
+| `A`     | An IPv4 address                                     | `203.0.113.10`                  |
+| `AAAA`  | An IPv6 address                                     | `2001:db8::10`                  |
+| `CNAME` | Another host name                                   | `example.net`                   |
+| `MX`    | The mail server's host name; set **Priority** too   | `mail.example.net`, priority `10` |
+| `TXT`   | Text **without quotes**, printable ASCII, up to 4000 characters | `v=spf1 include:_spf.example.net ~all` |
+| `SRV`   | Weight, port and target; set **Priority** too. The name must start with `_` | `5 5060 sip.example.com` at `_sip._tcp` |
+| `CAA`   | Flags (`0` or `128`), tag (`issue`, `issuewild` or `iodef`) and a quoted value | `0 issue "letsencrypt.org"` |
+| `NS`    | A name server for a **subdomain**                   | `ns1.other.net` at `dev`        |
+
+Host names in values are written without the final dot; ekPanel adds it. Long TXT text is split
+into 255-character strings for you.
+
+The rules, checked by both the panel and the agent:
+
+- **TTL** (how many seconds other servers may keep the answer) is from 60 to 604800; the
+  default is 3600.
+- **Priority** is from 0 to 65535, and only `MX` and `SRV` have one.
+- A `CNAME` must be alone at its name, and the domain itself (`@`) cannot be a `CNAME`; use
+  `A` and `AAAA` records there.
+- `NS` records for the domain itself are set by ekPanel; you can add `NS` only for subdomains
+  (to hand a subdomain to other name servers).
+- A zone may have up to 2000 records, and the same record cannot be added twice ("This record
+  already exists").
+
+## Records made automatically
+
+Like with Cloudflare, ekPanel adds these records to the zone by itself and keeps them current:
+
+| Record | For | TTL |
+| --- | --- | --- |
+| `A` / `AAAA` | Every website (and its extra domains) and app under the domain, and the mail host name if it is in this domain | 300 |
+| `MX`, SPF, DKIM, DMARC, TLS reporting | Every [mail domain](/guides/dns/email/) of this domain | 3600 |
+| `NS` | The domain itself, one per name server | 3600 |
+| `A` / `AAAA` (glue) | Name servers whose host names are inside this domain | 3600 |
+
+The short TTL of 300 seconds on addresses lets a site move to another server quickly.
+
+The zone's `SOA` record names the primary name server and `hostmaster.<domain>` as the contact,
+with refresh 10800, retry 3600, expire 604800 and a negative-answer TTL of 3600 seconds.
+
+### When your record is in the way
+
+If you keep a record with the **same name and type** as one ekPanel would make, **yours is
+used**. For `TXT`, that counts only when both are for the same purpose (two `v=spf1`
+records, say); a site-verification TXT record lives happily beside ekPanel's SPF. A `CNAME` at
+the name always blocks ekPanel's record.
+
+Each blocked record is listed under **Records ekPanel could not add**, for example:
+
+> A www.example.com: your record (A 198.51.100.7) is used instead of 203.0.113.10. Delete yours to use ekPanel's.
+
+Delete your record to let ekPanel's take its place. A line such as "the server *name* has no
+public address" means ekPanel has no address to point at: set one under **Public addresses for
+DNS** on the server's page.
+
+## Templates
+
+Templates are records added to every new domain made with them, such as mail at another
+provider or a verification record. Only administrators make them; everyone who adds a domain
+can pick one.
+
+<Steps>
+
+1. In the **Templates** card on the **DNS** page, choose **New template**.
+
+2. Give it a **Template name** (up to 60 characters).
+
+3. Add records. Names are relative to the domain: `@` for the domain itself, `www` for
+   `www.<domain>`. Write `{domain}` in a value where the domain's name should go.
+
+4. Choose **Save**. Every record is checked as if the domain were `example.com`.
+
+</Steps>
+
+For example, a template for mail hosted elsewhere:
+
+| Name     | Type  | Value                                     | Priority |
+| -------- | ----- | ----------------------------------------- | -------- |
+| `@`      | `MX`  | `mx1.mailhost.example`                    | `10`     |
+| `@`      | `TXT` | `v=spf1 include:_spf.mailhost.example ~all` |        |
+| `_dmarc` | `TXT` | `v=DMARC1; p=none; rua=mailto:postmaster@{domain}` |  |
+
+Added to `shop.example.org`, the last record becomes `_dmarc.shop.example.org` with
+`rua=mailto:postmaster@shop.example.org`.
+
+A template may have up to 100 records. Its records become ordinary records of the new zone,
+which you can edit like any other. Deleting a template does not change domains made with it.
+
+## Set the name servers at the registrar
+
+A domain only uses ekPanel's name servers once its **registrar** (the company you bought the
+domain from) points to them. The domain's page shows exactly what to enter under **Name servers
+for the registrar**.
+
+<Steps>
+
+1. Sign in at your registrar and open the domain's DNS or name server settings.
+
+2. Replace the current name servers with the ones listed, such as `ns1.example.com` and
+   `ns2.example.com`.
+
+3. If the page also shows **glue records**, add them (see below).
+
+4. Wait. Changes at the registrar can take from minutes to a day or two to reach everyone.
+
+</Steps>
+
+### Glue records
+
+If the name servers are named **inside the domain itself** (`ns1.example.com` for
+`example.com`), nobody could find `ns1.example.com` without already knowing `example.com`'s
+name servers. The registrar breaks this circle with **glue records**: the name servers'
+addresses, kept at the registry. Registrars call them glue records, child name servers, host
+records or "register name server".
+
+The page then says which addresses to enter, for example:
+
+```text
+ns1.example.com → 203.0.113.10, 2001:db8::10
+ns2.example.com → 198.51.100.20
+```
+
+Add these at `example.com`'s registrar **before** you switch its name servers. ekPanel also
+puts the same addresses into the zone itself.
+
+Other domains that use `ns1.example.com` need no glue, only the name server names. If
+`example.com` is kept somewhere else (not on ekPanel's name servers), add `A` (and `AAAA`)
+records for `ns1` and `ns2` there yourself.
+
+### Check that it works
+
+```bash
+dig @203.0.113.10 example.com SOA +short   # ask your primary directly
+dig example.com NS +short                  # what the world sees, once the registrar changed
+```
+
+The **Zone serial** on the domain's page should match the serial in the `SOA` answer.
+
+## DNSSEC
+
+DNSSEC signs your domain's answers, so nobody between a visitor and your name servers can
+forge them. It needs two parts: your name servers sign the zone, and the registrar publishes a
+**DS record** that vouches for your signing key.
+
+### Turn it on
+
+<Steps>
+
+1. On the domain's page, in the **DNSSEC** card, choose **Turn on DNSSEC**.
+
+2. Wait while it says **Signing the zone…**. The primary signs the zone (ECDSA P-256, with
+   NSEC records), then the secondaries copy the signed zone.
+
+3. The card shows **Enter this DS record at the registrar:** with four fields. Enter them at
+   the registrar's DNSSEC settings:
+
+   | Field           | Example                     | Meaning                               |
+   | --------------- | --------------------------- | ------------------------------------- |
+   | **Key tag**     | `18326`                     | A number that identifies the key      |
+   | **Algorithm**   | `13` (ECDSAP256SHA256)      | How the zone is signed                |
+   | **Digest type** | `2` (SHA-256)               | How the key's fingerprint is made     |
+   | **Digest**      | a long hexadecimal string   | The key's fingerprint; use the copy button |
+
+4. Once the registrar has published the DS record, the domain is protected.
+
+</Steps>
+
+Some registrars ask for the DNSKEY (public key) instead of a DS record. ekPanel shows only the
+DS record; if your registrar needs the DNSKEY, it cannot be copied from the panel yet.
+
+<Aside type="danger" title="Turn DNSSEC off in the right order">
+If the registrar still publishes a DS record while your zone is no longer signed, resolvers
+that check DNSSEC treat your domain as forged, and it **stops resolving** for many visitors.
+
+1. Remove the DS record at the registrar first.
+2. Wait a day or two, until resolvers have forgotten it.
+3. Then choose **Turn off DNSSEC**. The panel asks you to confirm exactly this.
+</Aside>
+
+## Remove a domain
+
+**Remove domain** at the top of the domain's page takes the zone off ekPanel's name servers;
+its records stop being answered there. Point the domain somewhere else at the registrar first.
+If DNSSEC is on, remove the DS record first, as above.
+
+## Limits and what is not there yet
+
+- Record types: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `CAA` and `NS` (for subdomains).
+- No import of existing zone files yet; [importers](/project/roadmap/) are planned.
+- No wildcard certificates through DNS (DNS-01) yet.
+- DNSSEC shows the DS record only (SHA-256), not the DNSKEY.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" description="Keep a domain at Cloudflare instead, managed from ekPanel." />
+	<LinkCard title="Email" href="/guides/dns/email/" description="Mail records that ekPanel adds to your zones." />
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Port 53 is opened for you on name servers." />
+</CardGrid>

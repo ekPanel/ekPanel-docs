@@ -1,0 +1,201 @@
+---
+title: Test VM
+description: Use scripts/test-vm.sh to run a disposable Ubuntu 24.04 server on your computer, install ekPanel in it, and test changes on a real system.
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Anything that changes a server, such as the installer or a hosting feature, must be tested on a
+real Ubuntu machine. `scripts/test-vm.sh` makes a throwaway Ubuntu 24.04 virtual machine on
+your computer with QEMU and KVM, without needing root. This page shows how to use it.
+
+## Before you start
+
+You need, on a Linux computer with an x86_64 (amd64) processor:
+
+- **KVM**: `/dev/kvm` must exist and be writable by you. If it is missing, turn on
+  virtualization in the computer's BIOS or UEFI settings. On many systems your user must be in
+  the `kvm` group.
+- **QEMU**: `qemu-system-x86_64` and `qemu-img` (on Ubuntu or Debian, the `qemu-system-x86` and
+  `qemu-utils` packages).
+- `curl`, `ssh`, `scp`, `ssh-keygen` and `python3` (a tiny web server hands the VM its first-boot
+  settings).
+- About 600 MB for the Ubuntu image, plus the VM's disk.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `scripts/test-vm.sh create` | Downloads the Ubuntu 24.04 cloud image (once, checked against Ubuntu's SHA256SUMS), creates the VM's disk and SSH key, and boots it. |
+| `scripts/test-vm.sh start` | Boots an existing VM. |
+| `scripts/test-vm.sh ssh [command]` | Opens a shell in the VM as the `ubuntu` user (who can use `sudo`), or runs one command. |
+| `scripts/test-vm.sh copy FILE…` | Copies files into the `ubuntu` user's home folder in the VM. |
+| `scripts/test-vm.sh status` | Says whether the VM is running. |
+| `scripts/test-vm.sh stop` | Shuts the VM down. Its disk stays. |
+| `scripts/test-vm.sh destroy` | Stops the VM and deletes its disk. The downloaded image stays, so the next `create` is fast. |
+
+The VM's disk is a copy-on-write layer on top of the downloaded image, so `destroy` followed by
+`create` gives you a clean server without downloading Ubuntu again.
+
+## Ports on your computer
+
+The VM's ports are forwarded to `127.0.0.1` on your computer only:
+
+| On your computer | In the VM | What for |
+| --- | --- | --- |
+| `127.0.0.1:2222` | 22 | SSH (the script uses it for `ssh` and `copy`) |
+| `127.0.0.1:8443` | 443 | HTTPS: the panel, websites, webmail |
+| `127.0.0.1:17443` | 7443 | The panel's agent port, to test agents from your computer |
+
+## Settings
+
+Set these as environment variables in front of the command.
+
+| Variable | Default | What it sets |
+| --- | --- | --- |
+| `VM_DIR` | `~/vms/panel-test` | Folder for the image, disk, key and console log |
+| `VM_NAME` | `panel-test` | The VM's name and host name |
+| `VM_RAM_MB` | `2048` | Memory in MB |
+| `VM_CPUS` | `2` | Number of CPUs |
+| `VM_DISK` | `12G` | Disk size |
+| `VM_PORT_OFFSET` | `0` | Added to the forwarded ports (2222, 8443, 17443), for a second VM |
+| `VM_LINK` | (none) | `listen` or `connect`: a private network between two VMs (see below) |
+
+For example, a VM with more memory for malware scans:
+
+```bash
+VM_RAM_MB=4096 scripts/test-vm.sh create
+```
+
+## Install the panel in the VM
+
+<Steps>
+
+1. Create the VM (the first time) or start it:
+
+   ```bash
+   scripts/test-vm.sh create
+   ```
+
+2. Build the UI and both programs on your computer:
+
+   ```bash
+   make build
+   ```
+
+3. Copy the programs and the installer into the VM:
+
+   ```bash
+   scripts/test-vm.sh copy bin/ekpanel bin/ekpanel-agent deploy/install.sh
+   ```
+
+4. Run the installer in the VM, using the copied programs:
+
+   ```bash
+   scripts/test-vm.sh ssh 'sudo ./install.sh --local-dir .'
+   ```
+
+   It prints a setup token at the end.
+
+5. Open https://127.0.0.1:8443 on your computer. The certificate is self-signed, so accept the
+   browser's warning. Paste the setup token and create your administrator.
+
+</Steps>
+
+## The test loop
+
+After you change code, build, copy and install again. The installer upgrades the programs,
+keeps all data and restarts the panel and the agent:
+
+```bash
+make panel agent        # add `make ui` first if you changed the UI
+scripts/test-vm.sh copy bin/ekpanel bin/ekpanel-agent deploy/install.sh
+scripts/test-vm.sh ssh 'sudo ./install.sh --local-dir .'
+```
+
+Then try the change in the panel, and look on the server:
+
+```bash
+scripts/test-vm.sh ssh 'sudo journalctl -u ekpanel-agent -n 50 --no-pager'
+scripts/test-vm.sh ssh 'sudo ls /etc/ekpanel/caddy/sites'
+```
+
+Websites in the VM need a domain. Because the VM is not on the internet, use made-up names and
+the self-signed certificate option, then reach them with `curl`'s `--resolve` from inside the VM:
+
+```bash
+scripts/test-vm.sh ssh 'curl -k --resolve php.test:443:127.0.0.1 https://php.test/'
+```
+
+<Aside type="tip">
+Test what can go wrong, not only the happy path: a failing apply, a restart of the agent in the
+middle of a task, a reboot of the VM (`scripts/test-vm.sh ssh 'sudo reboot'`). Commit messages
+in the project say what was tested in the VM.
+</Aside>
+
+## A second VM for tests between servers
+
+Some features need two servers, such as a primary and a secondary name server. The script can
+run a second VM with its own folder, name and ports, joined to the first by a private network.
+
+<Steps>
+
+1. Start the first VM with the link listening. If it is already running, stop it first:
+
+   ```bash
+   scripts/test-vm.sh stop
+   VM_LINK=listen scripts/test-vm.sh start
+   ```
+
+2. Create the second VM with its own folder, name and port offset, connecting to the link:
+
+   ```bash
+   VM_DIR=~/vms/panel-test2 VM_NAME=panel-test2 VM_PORT_OFFSET=10 VM_LINK=connect scripts/test-vm.sh create
+   ```
+
+   Its ports are 2232 (SSH), 8453 (HTTPS) and 17453 (agent). Use the same variables for every
+   later command on this VM, such as `ssh` and `copy`.
+
+3. Give the link an address in each VM. The link is a second network card; find its name with
+   `ip link`, then, for example:
+
+   ```bash
+   # in the first VM
+   sudo ip link set <link card> up && sudo ip addr add 192.168.77.1/24 dev <link card>
+   # in the second VM
+   sudo ip link set <link card> up && sudo ip addr add 192.168.77.2/24 dev <link card>
+   ```
+
+4. Put the agent on the second VM and connect it to the panel in the first VM over the link:
+   copy `bin/ekpanel-agent` into it, install it to `/usr/local/bin`, click **Add server** in the
+   panel, and run the `enroll` command with `--panel 192.168.77.1:7443` instead of the address
+   the dialog shows. Then start the agent with `sudo ekpanel-agent run`. It runs in the
+   foreground, so keep that SSH session open (or run it in `tmux`).
+
+</Steps>
+
+Addresses set with `ip addr` are lost when the VM restarts; set them again after each start.
+
+<Aside type="note">
+The agent does not install Caddy by itself; the installer does that on the panel's server. So a
+second VM with only an agent suits tests that need no web server there, such as a secondary
+name server. An installer for an agent alone is planned for [phase 4a](/project/roadmap/).
+</Aside>
+
+## Troubleshooting
+
+- **"/dev/kvm is not available"**: turn on virtualization in the BIOS or UEFI, and check that
+  you may write to `/dev/kvm`.
+- **"the VM did not become reachable"**: read the VM's console log, `~/vms/panel-test/console.log`
+  (or the one in your `VM_DIR`).
+- **"a VM already exists"**: use `start`, or `destroy` first for a fresh one.
+- **Port already in use**: another VM (or program) uses 2222, 8443 or 17443. Use a different
+  `VM_PORT_OFFSET`.
+
+## Related
+
+- [Development setup](/development/setup/)
+- [Adding a feature](/development/adding-a-feature/)
+- [Install](/start/install/)

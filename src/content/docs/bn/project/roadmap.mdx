@@ -1,0 +1,139 @@
+---
+title: Roadmap
+description: আজ ekPanel ধাপে ধাপে কী কী করতে পারে, আর এরপর কী আসছে - release, API, server-এর মধ্যে সরানো, importer, reseller, একটা WAF, billing আর game server।
+sidebar:
+  order: 1
+---
+
+import { Aside, Badge } from '@astrojs/starlight/components';
+
+ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
+install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**; এরপর phase 4, আর এটা শুরু হয় release
+দিয়ে। প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
+[`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/dev/PLAN.md)-এ।
+
+<Aside type="caution" title="এখনো কোনো release নেই">
+নিচে "শেষ" মানে একটা test server-এ (একটা local VM) বানানো আর test করা, production-এ ব্যবহার করা নয়।
+এখনো কোনো release নেই; phase 4 প্রথমেই এটা দেবে।
+</Aside>
+
+## শেষ হয়েছে
+
+### Phase 0: ভিত্তি <Badge text="শেষ" variant="success" />
+
+যে ভিত্তির ওপর বাকি সবকিছু বসে: panel আর agent, mutual TLS দিয়ে যুক্ত (agent বাইরের দিকে connect করে,
+তাই NAT-এর পেছনের server কাজ করে); setup token দিয়ে sign in, argon2id password, two-factor
+authentication আর rate limit; role; একটা append-only audit log; PostgreSQL-এ একটা task queue; ৩০ দিনের
+history-সহ live server statistics; English আর বাংলায় web UI, ডান-থেকে-বাম ভাষার জন্য তৈরি; আর test VM
+script-সহ `install.sh`।
+
+### Phase 1: "আমি আসল site host করতে পারি" <Badge text="শেষ" variant="success" />
+
+| অংশ | কী যোগ হয়েছে |
+| --- | --- |
+| 1a | Website (static আর পাশাপাশি PHP 7.4 থেকে 8.5) desired-state engine-সহ, প্রতি site-এ একটা Linux account আর PHP pool, free HTTPS |
+| 1b | MariaDB আর PostgreSQL database; password একবার দেখানো হয় আর কখনো রাখা হয় না |
+| 1c | File manager আর SFTP, প্রতিটা site-এর folder-এ আটকানো |
+| 1d | ১৪টা ভাষায় এক-click WordPress |
+| 1e | Server বা S3-এ encrypted, deduplicated backup (restic), restore-সহ; একটা সাধারণ firewall (ufw) |
+| 1f | Image বা Compose file থেকে Docker app |
+
+### Phase 2: "Coolify-এর মান" <Badge text="শেষ" variant="success" />
+
+| অংশ | কী যোগ হয়েছে |
+| --- | --- |
+| 2a | Customer আর package, kernel-এর (cgroups) মানতে বাধ্য করা memory আর CPU সীমা-সহ |
+| 2b | Website আর app-এর জন্য cron job |
+| 2c | Request log, traffic chart আর notification (email, Telegram, Discord, Slack, webhook) |
+| 2d | Server আর app container-এর জন্য একটা web terminal |
+| 2e | App catalogue (১৪টা এক-click service) |
+| 2f | Zero-downtime release আর rollback-সহ Git deploy |
+| 2g | Dockerfile ছাড়া build (Railpack), pull request preview, customer-দের জন্য Git app |
+
+### Phase 3: "cPanel-এর মান" <Badge text="শেষ" variant="success" />
+
+| অংশ | কী যোগ হয়েছে |
+| --- | --- |
+| 3a | Redirect, hotlink protection, PHP setting আর extension, আপনার নিজের certificate |
+| 3b | Cloudflare DNS, website আর app-এর সাথে sync-এ রাখা |
+| 3c | Email: Stalwart mail server, mailbox, forwarder, auto-reply আর Roundcube webmail |
+| 3d | WordPress toolkit: নিরাপদ update, update rule, hardening, staging |
+| 3d-2 | PHP app installer: Joomla, Drupal, Moodle আর Laravel |
+| 3e | Server security: CrowdSec ban, allowlist আর একটা checklist |
+| 3e-2 | ClamAV দিয়ে malware scan আর country blocking |
+| 3f | প্রতি website-এ একটা login-সহ TLS-এর ওপর FTP |
+| 3g | আপনার নিজের name server: DNSSEC-সহ PowerDNS |
+
+## এরপর: phase 4, "আরও এগিয়ে"
+
+৯ নভেম্বর ২০২৬ তারিখে ঠিক করা হয়েছে। অংশগুলো এই ক্রমে আসবে, প্রতিটা phase 3-এর মতো VM-এ test করা হবে।
+Billing আসবে সবার শেষে, কারণ এটা API token (4b) আর reseller-এর (4e) ওপর নির্ভর করে।
+
+### 4a. Release আর update <Badge text="পরের ধাপ" variant="note" />
+
+- CI-তে release build (Linux amd64 আর arm64), checksum আর signature-সহ, একটা tag থেকে হুবহু আবার বানানো
+  যায় (reproducible)
+- এক লাইনের একটা installer, যা একটা release download করে আর এর signature check করে; দ্বিতীয় server-এর
+  জন্য এটা শুধু একটা agent-ও install করতে পারে
+- Self-update: panel নতুন release দেখায়, নিজেকে update করে (ফিরে যাওয়ার জন্য পুরোনো binary রেখে দিয়ে),
+  তারপর প্রতিটা agent update করে, একবারে একটা server
+- Release notes, একটা changelog, আর প্রতি server-এ version দেখানো
+- প্রথম public release-এর আগে একটা web translation platform (Weblate বা এমন কিছু)
+
+### 4b. API, CLI, Terraform
+
+- প্রতি user-এর API token, scope আর মেয়াদ-সহ, একবার দেখানো, revoke করা যায়, audit log-এ থাকে
+- API-এর একটা OpenAPI description, CI-তে check করা, আর একটা docs site
+- একই API-এর জন্য `ekpanel` command line tool
+- একটা Terraform provider, phase 4-এর পরের দিকে, API stable হলে
+
+### 4c. Server-এর মধ্যে সরানো
+
+- একটা website, app বা database অন্য ekPanel server-এ সরানো, DNS আর certificate-সহ বদলে দিয়ে
+- অন্য server-এ backup restore করা; পুরো একজন customer সরানো
+- Copy যায় agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
+
+### 4d. Importer
+
+- cPanel backup (account, file, database, mail, DNS, cron job, certificate)
+- aaPanel-এর site আর database; অন্য host থেকে সাধারণ WordPress
+- Coolify-এর application আর service
+- কী import হয়েছে আর কী হয়নি, তার একটা report
+
+### 4e. Reseller আর white-label
+
+- নিজস্ব package আর customer-সহ reseller, administrator-এর দেওয়া সীমার মধ্যে
+- White-label: নাম, logo, রং আর panel-এর domain
+- বাছাই করা permission-সহ sub-user
+- Passkey, আর active session-এর একটা তালিকা
+
+### 4f. Security center
+
+- প্রতি site-এ একটা WAF (OWASP Core Rule Set-সহ Coraza), প্রথমে শুধু detect করবে
+- প্রতি site-এ আর panel-এর sign in-এর জন্য rate limiting; CrowdSec পড়ে না এমন service-এর জন্য blocking
+
+### 4g. Billing integration
+
+- WHMCS, Blesta আর Paymenter-এর জন্য provisioning module, panel-এ single sign-on-সহ
+- এরপর built-in billing (Stripe, bKash, SSLCommerz), তখনো চাওয়া হলে
+
+### আগের phase থেকে বাকি থাকা ছোট জিনিস
+
+যেখানে মানায় সেখানে এগুলো সাথে নেওয়া হবে:
+
+- একটা database browser, আর database import ও export
+- আলাদা আলাদা file restore করা, আর একটা backup download করা
+- Customer suspend করা, package-এ bandwidth-এর সীমা, ব্যর্থ cron job-এর alert
+- Cloudflare বা built-in DNS দিয়ে wildcard certificate (DNS-01)
+- একটা website, database বা app অন্য মালিকের কাছে সরানো
+- Cloudflare API আর বাইরের mail delivery আসলভাবে চেষ্টা করে দেখা
+
+## পরে: phase 5, game server
+
+Container-এ Minecraft আর অন্য game server, console, file আর startup variable-সহ, Pterodactyl-এর মতো।
+এগুলো একটা আলাদা module, আর hosting-এর অংশ release হয়ে ব্যবহার শুরু না হওয়া পর্যন্ত অপেক্ষা করবে।
+
+## অন্য কিছু চান?
+
+Repository public হলে একটা feature request খুলুন, অথবা ekpanelbd@gmail.com-এ লিখুন। কী করতে চান আর
+আজ সেটা কেন কঠিন, তা বলুন। দেখুন [Contributing](/development/contributing/)।

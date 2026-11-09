@@ -1,0 +1,213 @@
+---
+title: Databases
+description: Create MariaDB and PostgreSQL databases with their own user, connect your website or app, and reset passwords.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Most websites and apps keep their data in a database. ekPanel creates **MariaDB** and
+**PostgreSQL** databases on your servers, each with its own user that can reach that one database
+and nothing else.
+
+| Engine | Use it for |
+| --- | --- |
+| **MariaDB** | "Compatible with MySQL. WordPress, Laravel, most PHP apps." |
+| **PostgreSQL** | "Advanced SQL. Django, Rails, many Node and Go apps." |
+
+## Before you start
+
+- A connected server. You do not need to install anything: the first database of an engine on a
+  server installs it from the distribution's packages (`mariadb-server` or `postgresql`). This
+  takes a minute or two.
+- The database runs on the **same server** as the website or app that uses it. Pick that server.
+
+<Aside type="tip">
+Installing [WordPress](/guides/websites/wordpress/) or a [PHP app](/guides/websites/php-apps/)
+from the panel creates its MariaDB database for you. You only need this page for your own code
+or for apps installed by hand.
+</Aside>
+
+## Create a database
+
+<Steps>
+
+1. Open **Databases** and click **Add database**.
+
+2. Choose the server and the **Engine**.
+
+3. Enter a **Database name**: 1 to 32 lowercase letters, digits and `_`, starting with a letter,
+   for example `shop`. Names of system databases and accounts (`root`, `mysql`, `postgres`,
+   `ekpanel`, names starting with `pg_` …) are refused.
+
+4. The **User name** is the same as the database name unless you change it. Each database gets
+   its own user.
+
+5. Administrators: choose **For** to create the database for a customer.
+
+6. Click **Create database**.
+
+7. Copy the **password** now. "ekPanel does not keep it and cannot show it again; you can only
+   reset it." Then click **I have saved the password** (or **Open database**).
+
+</Steps>
+
+The dialog also shows the connection details. The database is ready when its state changes from
+**Applying…** to **Ready**.
+
+## Passwords: shown once, never stored
+
+ekPanel makes a strong password for every database: 24 letters and digits, without look-alike
+characters, so it can be pasted into any config file.
+
+The panel does **not** keep it. It stores only the one-way hash that the database engine itself
+uses (MariaDB's native password hash, or PostgreSQL's SCRAM-SHA-256 verifier), and the server
+receives only that hash. Neither the panel's database nor the agent ever holds your password, and
+nobody can read it back, including administrators.
+
+### Reset a password
+
+<Steps>
+
+1. Open the database and click **Create a new password**.
+
+2. Copy the new password from the dialog.
+
+3. Update your website's or app's settings with it. "The current password stops working as soon
+   as the server applies the new one", usually within seconds.
+
+</Steps>
+
+## Connect from your website or app
+
+Open the database to see its details under **Connect**:
+
+| | MariaDB | PostgreSQL |
+| --- | --- | --- |
+| **Host** | `localhost` | `127.0.0.1` |
+| **Port** | `3306` | `5432` |
+| **Database name** and **User name** | as you chose | as you chose |
+| **Connection URL** | `mysql://user:PASSWORD@localhost:3306/name` | `postgresql://user:PASSWORD@127.0.0.1:5432/name` |
+
+Replace `PASSWORD` with the password you saved. Some examples:
+
+<Tabs>
+  <TabItem label="WordPress">
+    ```php
+    // wp-config.php
+    define( 'DB_NAME', 'shop' );
+    define( 'DB_USER', 'shop' );
+    define( 'DB_PASSWORD', 'the password you saved' );
+    define( 'DB_HOST', 'localhost' );
+    ```
+  </TabItem>
+  <TabItem label="Laravel (.env)">
+    ```bash
+    DB_CONNECTION=mariadb
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=shop
+    DB_USERNAME=shop
+    DB_PASSWORD=the-password-you-saved
+    ```
+  </TabItem>
+  <TabItem label="Django / Node (URL)">
+    ```bash
+    DATABASE_URL=postgresql://shop:the-password-you-saved@127.0.0.1:5432/shop
+    ```
+  </TabItem>
+</Tabs>
+
+For MariaDB, the user is created for both `localhost` (the Unix socket) and `127.0.0.1` (TCP), so
+either works. New MariaDB databases use the `utf8mb4` character set; PostgreSQL databases use
+UTF-8.
+
+<Aside type="note">
+Remote access is off. Database users are made for connections from the server itself only, and
+ekPanel has no setting to open the database port to the internet. To work on a database from your
+own computer, use an SSH tunnel to the server.
+</Aside>
+
+## How databases are kept apart
+
+- Each database has its own user with rights on **that database only** (MariaDB grants; on
+  PostgreSQL the user owns the database and `PUBLIC` access is revoked, so other users on the
+  server cannot even connect to it).
+- Customers' PostgreSQL users cannot connect to the panel's own database, when the panel runs on
+  the same server.
+- SQL reaches the engine through standard input, never the process list, and names and hashes
+  are checked by both the panel and the agent.
+- The agent keeps a list of the databases and users it created
+  (`/var/lib/ekpanel-agent/databases.json`) and refuses to change or drop any database or user
+  that is not on it. A database you made by hand is never touched.
+
+## Size and package limits
+
+The database page shows its **Size**, as reported by the engine. It is updated each time the
+server applies its databases (on every change and every 10 minutes).
+
+For customers, the [package](/guides/admin/customers/#package-limits) decides:
+
+- how many databases they may have ("the package allows no more of these" when the limit is
+  reached);
+- on which servers;
+- the disk space: database sizes count toward it, together with website files, app data and
+  mail. When the disk space is used up, new databases are refused.
+
+## Delete a database
+
+<Steps>
+
+1. Open the database and click **Delete database**.
+
+2. Type the database's name to confirm.
+
+3. Click **Delete database**. The database, **all its data** and its user are removed from the
+   server. Applications using it stop working.
+
+</Steps>
+
+Make a [backup](/guides/data/backups/) first if you might need the data again.
+
+## Backups
+
+Every database on a server is included in that server's [backups](/guides/data/backups/), dumped
+with `mariadb-dump --single-transaction` or `pg_dump`, so the database stays usable during the
+backup. You can restore a database from the Backups page.
+
+## Limits and what is not there yet
+
+- **No database browser** in the panel yet (like phpMyAdmin or Adminer).
+- **No import or export** from the panel yet. For now, use the command line over SSH or the
+  [server terminal](/guides/apps/terminal/), for example:
+
+  ```bash
+  # import a MariaDB dump
+  sudo mariadb shop < shop.sql
+  # export a PostgreSQL database
+  sudo -u postgres pg_dump -Fc shop > shop.pgdump
+  ```
+
+- No remote access, and one user per database.
+- Only MariaDB and PostgreSQL, in the versions your distribution ships. For Redis, see the
+  [app catalogue](/guides/apps/catalog/).
+- Moving a database to another server or owner: not yet. See the [roadmap](/project/roadmap/).
+
+## Troubleshooting
+
+**The database shows "Problem".** The message under "The server could not apply this database"
+comes from the server. The first database also installs the engine; if the package installation
+failed, check the server's internet access and disk space.
+
+**"Access denied" from my app.** Check the host (`localhost` or `127.0.0.1`, not the server's
+public address), the user name and the password. If you lost the password, reset it.
+
+**My Docker app cannot reach the database.** Inside a container, `localhost` is the container
+itself, not the server, and database users only accept connections made on the server itself.
+Run the database the app needs inside the app instead, as the catalogue services do.
+
+## Related
+
+- [Backups](/guides/data/backups/): Restore a database from a backup.
+- [WordPress](/guides/websites/wordpress/): One-click WordPress creates its database for you.

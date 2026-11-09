@@ -1,0 +1,123 @@
+---
+title: Server security
+description: The Server security page, its checklist and what to do about each item, and how the firewall, CrowdSec, malware scans, country blocking and two-factor sign-in fit together.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+The **Server security** page gathers what protects one server: a checklist of things to
+tighten, CrowdSec (which bans attackers), malware scans, country blocking and the allowlist.
+Use it after you add a server, and look at it now and then.
+
+## Before you start
+
+- The page is for administrators. Customers do not see it.
+- Open **Server security** in the menu. If you have more than one server, pick it in the list
+  at the top right. Everything on the page is about that one server.
+- The firewall is not on this page: it lives on the server's own page (**Servers**, then the
+  server). See [Firewall](/guides/security/firewall/).
+
+## The checklist
+
+The **Checklist** card asks the server about its current state each time you open the page.
+A green tick means fine; an orange or red mark means something to look at.
+
+| Item | What it checks | What to do |
+| --- | --- | --- |
+| **The firewall is on.** | Whether `ufw` is active on the server. | If it says "The firewall is off", choose **Turn it on on the server's page** and turn on the [firewall](/guides/security/firewall/). |
+| **CrowdSec is running** | Whether CrowdSec runs, and how many addresses it bans now. | Choose **Turn on CrowdSec** in the CrowdSec card. See [CrowdSec](/guides/security/crowdsec/). |
+| **root cannot sign in over SSH with a password.** | sshd's `PermitRootLogin` setting. It is fine when it is `no` or `prohibit-password` (or its old name, `without-password`). | Use SSH keys for root and set `PermitRootLogin prohibit-password`. See below. |
+| **SSH accepts keys only.** | sshd's `PasswordAuthentication` setting. | Keys are safer than passwords. Set `PasswordAuthentication no` once your key works. CrowdSec bans password guessers meanwhile. |
+| **All packages are up to date.** | Waiting package updates, and how many are security updates. Also warns when the package lists are more than 48 hours old. | Install updates, for example with `sudo apt update && sudo apt upgrade`. |
+| **Security updates are installed automatically.** | Whether `unattended-upgrades` is installed and turned on. | Choose **Turn on automatic security updates**. |
+| **Updates wait for a restart of the server.** | Shown only when `/run/reboot-required` exists. | Restart the server at a quiet time. |
+| **Every administrator signs in with two-factor authentication.** | Administrators of the panel without two-factor sign-in, by email. | Each of them sets it up under **Your account → Security**. See [Account security](/guides/security/accounts/). |
+
+### Turn on automatic security updates
+
+**Turn on automatic security updates** installs the distribution's `unattended-upgrades`
+package and writes `/etc/apt/apt.conf.d/20auto-upgrades`, so the server refreshes its package
+lists and installs security updates by itself every day. ekPanel does not set up automatic
+restarts; the checklist tells you when an update waits for one.
+
+### Tighten SSH
+
+ekPanel reads the SSH settings with `sshd -T` but does not change them for you: a mistake there
+can lock you out of your server.
+
+<Steps>
+
+1. Make sure you can sign in **with an SSH key**, in a second terminal, before you change
+   anything. Keep that session open while you work.
+
+2. Edit `/etc/ssh/sshd_config` (and check files in `/etc/ssh/sshd_config.d/`, which can
+   override it) and set:
+
+   ```text
+   PermitRootLogin prohibit-password
+   PasswordAuthentication no
+   ```
+
+3. Check the settings and reload SSH:
+
+   ```bash
+   sudo sshd -t
+   sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication'
+   sudo systemctl reload ssh
+   ```
+
+4. Open a **new** terminal and sign in with your key again. Only then close the old session.
+
+5. Reload the **Server security** page; both items should be green.
+
+</Steps>
+
+<Aside type="caution">
+Some cloud images set `PasswordAuthentication` in a file under `/etc/ssh/sshd_config.d/`,
+which wins over `/etc/ssh/sshd_config`. The `sshd -T` line above shows what sshd really uses.
+</Aside>
+
+## How the pieces fit together
+
+Each tool covers a different kind of threat. They work side by side and do not replace each
+other.
+
+| Piece | Where | What it stops |
+| --- | --- | --- |
+| [Firewall](/guides/security/firewall/) (ufw) | Server's page | Connections to ports you did not mean to open, such as a database. Blocks addresses you name. |
+| [CrowdSec](/guides/security/crowdsec/) | Server security | Addresses that guess passwords, scan for weaknesses or try known exploits, on SSH and your websites, plus addresses its community reports. Bans them for a while. |
+| [Country blocking](/guides/security/countries/) | Server security | Every new connection from countries you choose (or from all others). |
+| [Malware scans](/guides/security/malware/) (ClamAV) | Server security | Finds web shells, viruses and other bad files in your websites, so you can remove them. |
+| **Allowlist** | Server security | Addresses and networks that CrowdSec never bans and country blocking never blocks, such as your office. |
+| [Two-factor sign-in](/guides/security/accounts/) | Your account → Security | Someone who has your panel password but not your phone. |
+
+A few rules tie them together:
+
+- **The allowlist** applies to CrowdSec and to country blocking. It holds up to 200 addresses or
+  networks, one per line, such as `203.0.113.10` or `198.51.100.0/24`. Choose **Save** after
+  editing.
+- **Always allowed as well**: the server's own addresses and
+  [Cloudflare's published addresses](https://www.cloudflare.com/ips/). The allowlist card lists
+  them under "Always allowed as well". They are never banned and never blocked by country, so
+  visitors who come through Cloudflare's proxy must be blocked at Cloudflare.
+- **The firewall** is separate: its "Block an address" rules apply to everything, allowlist or
+  not, and it always keeps SSH, HTTP, HTTPS and the agent port open.
+
+<Aside type="tip" title="A good starting point">
+Turn on the firewall, CrowdSec and automatic security updates on every server, set up
+two-factor sign-in for every administrator, and turn on weekly malware scans. Add country
+blocking only if you know where your visitors come from.
+</Aside>
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Firewall" href="/guides/security/firewall/" description="Turn on ufw and open or block ports." />
+	<LinkCard title="CrowdSec" href="/guides/security/crowdsec/" description="Detect and ban attackers." />
+	<LinkCard title="Malware scans" href="/guides/security/malware/" description="Scan websites with ClamAV." />
+	<LinkCard title="Country blocking" href="/guides/security/countries/" description="Block or allow whole countries." />
+	<LinkCard title="Account security" href="/guides/security/accounts/" description="Two-factor sign-in, sessions and passwords." />
+	<LinkCard title="Security model" href="/concepts/security-model/" description="How ekPanel itself is built to be safe." />
+</CardGrid>

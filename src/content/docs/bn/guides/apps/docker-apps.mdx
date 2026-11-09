@@ -1,0 +1,304 @@
+---
+title: Docker app
+description: আপনার server-এ যেকোনো Docker image বা Compose file চালান, domain, free HTTPS, variable, রেখে দেওয়া folder আর limit-সহ।
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+**App** হলো এমন একটা program, যা আপনার কোনো একটা server-এ Docker container-এ চলে। Docker Hub বা
+অন্য কোনো registry থেকে যেকোনো image চালাতে পারেন, অথবা একাধিক service-সহ একটা Compose file
+paste করতে পারেন। ekPanel app-এর port-গুলো private রাখে, সামনে free HTTPS-সহ একটা domain বসায়, আর
+container হারিয়ে গেলে app-টা আবার ফিরিয়ে আনে।
+
+App বানানোর চারটা উপায় আছে। এই পাতায় প্রথম দুটো নিয়ে কথা:
+
+| App-এর ধরন (panel-এ) | এটা কী | কে ব্যবহার করতে পারেন |
+| --- | --- | --- |
+| **Docker ইমেজ** | একটা image থেকে একটা container, variable আর রেখে দেওয়া folder-সহ | Admin, আর যেসব customer-এর package ওই image allow করে |
+| **Compose ফাইল** | একটা `docker-compose.yml`-এ লেখা একাধিক service | শুধু admin |
+| **Git রিপোজিটরি** | একটা branch থেকে build হয়, দেখুন [Git deploy](/guides/apps/git-deploys/) | Admin, আর যেসব customer-এর package-এ Git app আছে |
+| **ক্যাটালগ** থেকে | একটা তৈরি service, দেখুন [App catalogue](/guides/apps/catalog/) | Admin, আর যেসব customer-এর package এর image-গুলো allow করে |
+
+## শুরু করার আগে
+
+- একটা connected server লাগবে। দেখুন [Server যোগ করুন](/start/add-server/)।
+- Docker install করার দরকার **নেই**। কোনো server-এ প্রথম app বানালে distribution-এর নিজের package
+  থেকে Docker আর Compose v2 plugin install হয়ে যায় (`docker.io`, আর Ubuntu-তে `docker-compose-v2`
+  বা Debian-এ `docker-compose`)। এতে এক-দুই মিনিট লাগে।
+- Domain চাইলে আগে তার DNS (একটা `A` এবং/অথবা `AAAA` record) server-এর দিকে দিন, অথবা ekPanel-কে
+  দিয়ে [Cloudflare](/guides/dns/cloudflare/) বা [built-in name server](/guides/dns/name-servers/)-এর
+  মাধ্যমে করিয়ে নিন।
+
+<Aside type="note">
+Docker প্রথমবার চালু হওয়ার আগে ekPanel `/etc/docker/daemon.json` লিখে দেয়, যাতে প্রতিটা container-এর
+log 10 MB × 3 file-এ সীমিত থাকে। ফাইলটা আগে থেকেই থাকলে (আপনি নিজে Docker install করে থাকলে),
+ekPanel সেটা ছোঁয় না।
+</Aside>
+
+## একটা image চালান
+
+<Steps>
+
+1. **অ্যাপ** (Apps) খুলে **অ্যাপ যোগ করুন** (Add app)-এ click করুন।
+
+2. Server বেছে নিন, আর **অ্যাপের ধরন** (App type)-এ **Docker ইমেজ** বেছে নিন।
+
+3. একটা **নাম** (Name) দিন: 2 থেকে 32টা ছোট হাতের অক্ষর, সংখ্যা আর ড্যাশ, শুরু হবে অক্ষর দিয়ে,
+   যেমন `kuma`। এই নাম app-এর folder আর container-এর জন্য ব্যবহার হয়, আর server-এ এটা অনন্য হতে
+   হবে।
+
+4. **ইমেজ** (Image) দিন, যেমন `nginx:alpine`, `louislam/uptime-kuma:2` বা `ghcr.io/owner/app:1.2`।
+   Image-টা server-এ download হয়।
+
+5. App যদি কোনো web page বা API দেয়, তাহলে **কন্টেইনারের ভেতরের পোর্ট** (Port inside the container)
+   দিন: container-এর ভেতরে program যে port-এ শোনে (যেমন nginx-এর জন্য `80`, Uptime Kuma-র জন্য
+   `3001`)। যেসব app HTTP দিয়ে কিছু দেয় না, যেমন একটা worker, সেগুলোর জন্য খালি রাখুন।
+
+6. চাইলে একটা **ডোমেইন** (Domain) দিন, যেমন `status.example.com`, আর **SSL সার্টিফিকেট (HTTPS)**
+   বেছে নিন: **স্বয়ংক্রিয়, ফ্রি** (Let's Encrypt) অথবা **সেলফ-সাইনড** (পরীক্ষার জন্য)। Domain দিতে
+   হলে আগের ধাপের port লাগবে।
+
+7. App-এর দরকার হলে **এনভায়রনমেন্ট ভ্যারিয়েবল** আর **যে ফোল্ডারগুলো রাখা হবে** যোগ করুন (নিচে
+   দেখুন)।
+
+8. **অ্যাপ তৈরি করুন** (Create app)-এ click করুন। Server image pull করে container চালু না করা
+   পর্যন্ত panel "সার্ভারে অ্যাপ চালু করা হচ্ছে…" দেখায়।
+
+</Steps>
+
+## একটা Compose file চালান
+
+শুধু admin-রা নিজের Compose file চালাতে পারেন। একটা Compose file Docker-এর কাছে যা খুশি চাইতে পারে
+(host-এর file, তার network, root privilege), তাই customer-রা শুধু একক image আর
+[catalogue](/guides/apps/catalog/)-এর যাচাই করা service চালাতে পারেন।
+
+<Steps>
+
+1. **অ্যাপ যোগ করুন**-এ click করে **Compose ফাইল** বেছে নিন।
+
+2. File-টা paste করুন (সর্বোচ্চ 256 KB)। যেমন:
+
+   ```yaml
+   services:
+     web:
+       image: nginx:alpine
+       volumes:
+         - html:/usr/share/nginx/html
+     cache:
+       image: redis:8-alpine
+       command: [redis-server, --requirepass, "${REDIS_PASSWORD}"]
+
+   volumes:
+     html:
+   ```
+
+3. App-কে domain দিতে **ডোমেইনের সার্ভিস** (Service for the domain) দিন (এখানে `web`) আর সেই
+   service যে **কন্টেইনারের ভেতরের পোর্ট**-এ শোনে সেটা দিন (এখানে `80`)। এর জন্য `ports:` section
+   যোগ করবেন না: ekPanel নিজেই port-টা publish করে।
+
+4. Variable দিন, প্রতি লাইনে একটা `NAME=value`। Compose file এগুলো `${NAME}` হিসেবে পড়ে, যেমন
+   ওপরে `${REDIS_PASSWORD}`।
+
+5. **অ্যাপ তৈরি করুন**-এ click করুন।
+
+</Steps>
+
+যেকোনো ধরনের প্রতিটা app হলো `ekpanel-<name>` নামের একটা Compose project, যা server-এ
+`/srv/ekpanel/apps/<name>`-এ রাখা থাকে। ওই folder শুধু root পড়তে পারে, কারণ Compose file আর
+variable-এ প্রায়ই password থাকে।
+
+## Domain আর free HTTPS
+
+App-এর domain থাকলে ekPanel web server Caddy-তে তার জন্য একটা site লেখে, যা request-গুলো app-এ
+পাঠিয়ে দেয়। **স্বয়ংক্রিয়, ফ্রি** বাছলে Caddy একটা Let's Encrypt certificate নেয় আর renew করে; এর
+জন্য domain-এর DNS এই server-এর দিকে থাকতে হবে। Response compress করা হয়, আর প্রতিটা request
+app-এর নিজের log-এ লেখা হয়, যেখান থেকে [request log আর traffic chart](/guides/websites/logs-traffic/)
+তৈরি হয়।
+
+পুরো panel-এ একটা host name শুধু একটা website বা app-এর হতে পারে। আগেই ব্যবহার হচ্ছে এমন নাম দিলে
+panel তা নেয় না।
+
+পরে app-এর **সেটিং** (Settings)-এ domain বদলাতে পারেন; তারপর **সেভ করে প্রয়োগ করুন** (Save and
+apply)-এ click করুন।
+
+## Port private রাখা হয়
+
+Docker-এর একটা ঝামেলার অভ্যাস আছে: public address-এ publish করা port **firewall পেরিয়ে** খুলে
+যায়, কারণ Docker ufw-এর আগে নিজের packet rule লেখে। `5432:5432` হিসেবে publish করা একটা database
+পুরো internet-এর জন্য খোলা থাকে, যদিও [firewall](/guides/security/firewall/) অন্য কথা বলে।
+
+ekPanel এটা এড়ায়:
+
+- App-এর port শুধু `127.0.0.1`-এ publish হয়, 20000 থেকে 29999-এর মধ্যে ekPanel-এর বেছে নেওয়া একটা
+  খালি port-এ। App-এর পাতায় এটা দেখায়, যেমন `web:80 → 127.0.0.1:20003`। শুধু একই server-এর
+  program আর Caddy এতে পৌঁছাতে পারে।
+- Visitor-রা app-এ পৌঁছান তার domain দিয়ে, HTTPS-এ।
+- যে Compose file `127.0.0.1` বা `::1` ছাড়া অন্য কোনো address-এ port publish করে, বা
+  `network_mode: host` ব্যবহার করে, সেটা **নেওয়া হয় না**, এমন error দিয়ে: "service web publishes
+  port 8080 on every address, which skips the firewall"।
+
+### Public port allow করা
+
+কিছু service-এ সরাসরি পৌঁছাতে হয়, সামনে কোনো web server ছাড়া: game server, mail server, VPN।
+Compose app-এর জন্য **সীমা আর অন্যান্য সেটিং** (Limits and advanced settings) খুলে **পাবলিক ঠিকানায়
+পোর্ট খুলতে দিন** (Allow ports published on public addresses) চালু করুন। তখন ekPanel Compose file-এর
+নিজের `ports:` আর host networking মেনে নেয়।
+
+<Aside type="caution">
+এটা চালু থাকলে আপনার publish করা port-গুলো internet থেকে পৌঁছানো যায়, **firewall যা-ই বলুক**। শুধু
+সত্যিই দরকার এমন app-এর জন্য চালু করুন, আর নিশ্চিত হোন যে ওই port-এর program-এর নিজের password বা
+access control আছে। Image app আর Git app public port publish করতে পারে না।
+</Aside>
+
+## Environment variable
+
+Variable দিন একটা `.env` file-এর মতো করে: প্রতি লাইনে একটা `NAME=value`। খালি লাইন আর `#` দিয়ে শুরু
+হওয়া লাইন বাদ যায়।
+
+```bash
+# Uptime Kuma does not need any; this is an example
+TZ=Asia/Dhaka
+DATABASE_URL=postgresql://app:secret@db:5432/app
+```
+
+- নামে অক্ষর, সংখ্যা আর `_` থাকে, আর সংখ্যা দিয়ে শুরু হয় না। প্রতিটা নাম একবারই থাকতে পারে।
+- একটা app-এ সর্বোচ্চ 200টা variable থাকতে পারে; প্রতিটা value সর্বোচ্চ 32 KB।
+- Value কখনো command line-এ আসে না, যেখানে server-এর অন্য user-রা দেখতে পেত। Image app-এর
+  ক্ষেত্রে এগুলো app-এর তৈরি করা Compose file-এ লেখা হয় (JSON হিসেবে, তাই কোনো value file-এর গঠন
+  বদলাতে পারে না, আর `$` আক্ষরিক `$` হিসেবেই থাকে)। Compose app-এর ক্ষেত্রে এগুলো Compose-কে তার
+  environment-এ দেওয়া হয়, তাই file এগুলো `${NAME}` হিসেবে পড়ে।
+
+## যে folder-গুলো রাখা হবে
+
+Container নতুন করে তৈরি হলে, যেমন image update-এর পর, তার নিজের file-গুলো ফেলে দেওয়া হয়। যা কিছু
+টিকে থাকতে হবে, তা রাখুন একটা **রেখে দেওয়া folder**-এ (folder to keep)।
+
+Image app-এর জন্য container-এর ভেতরের path দিন, প্রতি লাইনে একটা, যেমন `/data` বা `/app/uploads`।
+প্রতিটা app-এর একটা Docker named volume হয়ে যায়। সর্বোচ্চ 20টা folder রাখতে পারেন।
+
+Compose app-এর জন্য volume Compose file-এই লিখুন, ওপরের উদাহরণের মতো।
+
+রেখে দেওয়া folder-এর ভেতরের জিনিস customer-এর disk space-এ গোনা হয় (দেখুন
+[Customer আর package](/guides/admin/customers/))।
+
+## Memory আর CPU limit
+
+**সীমা আর অন্যান্য সেটিং**-এর নিচে:
+
+- **মেমরির সীমা (MB)**: কমপক্ষে 16 MB। কোনো container এর বেশি চাইলে kernel তার ভেতরের একটা process
+  থামিয়ে দেয়। Image app-কে Docker আবার চালু করে (এগুলো `restart: unless-stopped` দিয়ে চলে); Compose
+  app-এর ক্ষেত্রে সেটা আপনার file-এর `restart:` setting-এর ওপর নির্ভর করে।
+- **CPU-র সীমা (কোর)**: যেমন আধা core-এর জন্য `0.5`, বা `2`।
+
+খালি মানে কোনো limit নেই। Compose app-এর ক্ষেত্রে এই limit শুধু **ডোমেইনের সার্ভিস**-এ খাটে; অন্য
+service-এর limit Compose file-এ দিন।
+
+Customer-দের জন্য একটা দ্বিতীয়, বাইরের limit আছে: একজন customer-এর প্রতিটা container চলে তাঁর
+নিজের systemd slice-এর ভেতরে, যেটা তাঁর সব website আর app মিলিয়ে package-এর memory আর CPU ধরে রাখে।
+দেখুন [Customer আর package](/guides/admin/customers/)।
+
+## চলমান app সামলানো
+
+App-এর পাতায় এই button আর section-গুলো আছে:
+
+| Button বা section | কী করে |
+| --- | --- |
+| **খুলুন** (Open) | App-এর domain খোলে |
+| **চালু করুন** / **বন্ধ করুন** (Start / Stop) | Container বন্ধ করে, বা আবার চালু করে। বন্ধ করা app বন্ধই থাকে: ekPanel নিয়মিত check-এর সময় এটা আবার চালু করে না |
+| **রিস্টার্ট** (Restart) | App-এর সব container restart করে। বন্ধ থাকা অবস্থায় পাওয়া যায় না |
+| **ইমেজ আপডেট** (Update image) | App-এর image-গুলোর নতুন version download করে, আর যেসব container-এর image বদলেছে সেগুলো নতুন করে তৈরি করে (নিচে দেখুন) |
+| **শেল** (Shell) | একটা container-এর ভেতরে shell খোলে, দেখুন [Web terminal](/guides/apps/terminal/) |
+| **কন্টেইনার** (Containers) | প্রতিটা container, তার service, image আর অবস্থা (running, exited, healthy …) |
+| **লগ** (Logs) | App-এর output-এর শেষ 100, 200, 1,000 বা 5,000 লাইন, timestamp-সহ, সব service থেকে |
+| **সেটিং** (Settings) | Image বা Compose file, domain, variable, রেখে দেওয়া folder আর limit বদলান; **সেভ করে প্রয়োগ করুন** |
+
+ekPanel website-এর মতোই প্রতিটা app নিয়মিত check করে (দেখুন
+[Desired state](/concepts/desired-state/))। চলমান কোনো app-এর container হাতে মুছে ফেলা হলে, সেটা
+আবার ফিরিয়ে আনা হয়।
+
+### Image update করা
+
+**ইমেজ আপডেট** server-এ একটা task হিসেবে চলে: Docker app-এর প্রতিটা image আবার pull করে, যেসব
+container-এর image বদলেছে সেগুলো নতুন করে তৈরি করে, তারপর সেগুলো চালু হওয়ার জন্য সর্বোচ্চ দুই মিনিট
+অপেক্ষা করে। এটা কাজে আসে শুধু তখন, যখন image tag সরে যায়, যেমন `latest`, `2` বা `stable`। একটা
+নির্দিষ্ট নতুন version-এ যেতে বরং **সেটিং**-এ image বদলান (যেমন `nginx:1.26` থেকে `nginx:1.27`)।
+
+App বন্ধ থাকলে নতুন image pull হয় আর container নতুন করে তৈরি হয়, কিন্তু চালু হয় না।
+
+## ekPanel একটা Compose file-এ কী check করে
+
+প্রতিবার app apply করার সময় agent `docker compose config` চালিয়ে ফলাফল পড়ে। App-টা নেওয়া হয় না
+(আর কারণটা app-এর পাতায় দেখানো হয়) যখন:
+
+- file-টা বৈধ Compose নয়, বা এতে কোনো service নেই;
+- **ডোমেইনের সার্ভিস** file-এ নেই;
+- কোনো port `127.0.0.1` বা `::1` ছাড়া অন্য address-এ publish করা হয়েছে, বা কোনো service host
+  network ব্যবহার করে, যদি না **পাবলিক ঠিকানায় পোর্ট খুলতে দিন** চালু থাকে।
+
+Customer-দের app (সবসময় catalogue service) অনেক বেশি কড়াভাবে check করা হয়। Agent এমন যেকোনো
+service-ও নেয় না, যা:
+
+- `privileged`, `cap_add`, `devices` বা `security_opt` চায়;
+- host বা অন্য container-এর সাথে namespace share করে (`network_mode`, `pid`, `ipc`, `userns_mode`,
+  `volumes_from`);
+- host-এর কোনো folder mount করে (শুধু named volume আর `tmpfs` চলে);
+- customer-এর slice-এ নেই;
+
+আর এমন যেকোনো file-ও নেয় না, যা driver, driver option বা `external`-সহ volume, অথবা `secrets` আর
+`configs` ব্যবহার করে, যেগুলো host-এর file পড়ে।
+
+<Aside type="danger">
+Admin-এর নিজের Compose file privilege-এর জন্য check করা **হয় না**। এটা `/` mount করতে পারে,
+privileged container চালাতে পারে বা Docker socket-এ পৌঁছাতে পারে, সবই root হিসেবে। শুধু সেই Compose
+file paste করুন, যা আপনি পড়েছেন আর যার ওপর ভরসা করেন।
+</Aside>
+
+## App মুছে ফেলা
+
+<Steps>
+
+1. App-এর পাতায় scroll করে **এই অ্যাপ মুছে ফেলুন** (Delete this app)-এ যান।
+
+2. **অ্যাপ মুছুন** (Delete app)-এ click করুন। Default-ভাবে container সরানো হয়, কিন্তু data থেকে যায়:
+   volume আর `/srv/ekpanel/apps/<name>` folder। একই server-এ পরে **একই নামে** বানানো app ওই data
+   আবার ব্যবহার করে।
+
+3. সবকিছু মুছতে **এর সব ডেটাও মুছে ফেলুন** (Also delete all its data)-এ tick দিন (button-টা হয়ে যায়
+   **অ্যাপ আর ডেটা মুছুন**)। এতে volume আর `/srv/ekpanel/apps/<name>` মুছে যায়, আর এটা ফেরানো যায় না।
+
+</Steps>
+
+App মুছলে তার web server site, তার [cron job](/guides/websites/cron/) আর, Git app-এর ক্ষেত্রে, তার সব
+[preview](/guides/apps/git-deploys/#pull-request-previews)-ও মুছে যায়।
+
+## Limit আর যা এখনো নেই
+
+- একটা app একটা server-এ চলে। App-কে অন্য server-এ, বা অন্য মালিকের কাছে সরানো এখনো নেই (দেখুন
+  [roadmap](/project/roadmap/))।
+- [Backup](/guides/data/backups/)-এ website আর database থাকে, app volume **থাকে না**। আপাতত app-এর
+  জরুরি data নিজে backup করুন।
+- একটা app একটা port-এ একটা domain পায়। যেসব app-এর একাধিক domain বা port লাগে, সেগুলোর জন্য public
+  port-সহ Compose file, বা একাধিক app লাগবে।
+- App-এর memory আর CPU limit Compose app-এর একটা service-এ খাটে।
+
+## সমস্যা সমাধান
+
+**App বানানোর পরপরই একটা সমস্যা দেখাচ্ছে।** App-এর পাতার message-টা Docker থেকে আসে। "pull access
+denied" বা "manifest unknown" মানে image-এর নাম বা tag ভুল, অথবা image-টা private। Crash হলে app-এর
+নিজের log-এর শেষ লাইনগুলো দেখায়; আরও দেখতে **লগ** খুলুন।
+
+**Domain-এ certificate error দেখাচ্ছে।** **স্বয়ংক্রিয়, ফ্রি**-র জন্য domain-এর DNS এই server-এর
+দিকে থাকতে হবে আর port 80 ও 443-এ পৌঁছানো যেতে হবে। `dig +short your.domain` দিয়ে check করুন।
+
+**"publishes port … on every address, which skips the firewall"।** `ports:` section সরিয়ে দিয়ে বরং
+**ডোমেইনের সার্ভিস** আর **কন্টেইনারের ভেতরের পোর্ট** ব্যবহার করুন, অথবা `127.0.0.1:8080:80` হিসেবে
+publish করুন। Visitor-দের সরাসরি ওই port-এ পৌঁছাতে হলে তবেই public port চালু করুন।
+
+## সম্পর্কিত
+
+- [App catalogue](/guides/apps/catalog/): Uptime Kuma, n8n আর Nextcloud-এর মতো এক click-এর service।
+- [Git deploy](/guides/apps/git-deploys/): Repository থেকে নিজের code build আর release করুন।
+- [Web terminal](/guides/apps/terminal/): চলমান container-এর ভেতরে একটা shell।
+- [Cron job](/guides/websites/cron/): নির্দিষ্ট সময়ে app-এর container-এর ভেতরে command চালান।

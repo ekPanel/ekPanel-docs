@@ -1,0 +1,119 @@
+---
+title: Web terminal
+description: Browser-এ একটা server-এর root shell, বা কোনো app-এর container-এর ভেতরে একটা shell খুলুন।
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+**Web terminal** আপনাকে browser-এই একটা command line দেয়, কোনো SSH client বা খোলা SSH port ছাড়া:
+আপনার যেকোনো server-এ একটা root shell, অথবা কোনো app-এর চলমান container-এর ভেতরে একটা shell। এতে
+রং আছে, window-র মাপের সাথে মানিয়ে নেয়, আর আবার connect করতে পারে।
+
+## কে কোন terminal খুলতে পারেন
+
+| Terminal | Button | কে | কোন user হিসেবে চলে |
+| --- | --- | --- | --- |
+| **Server** | Server-এর পাতায় **টার্মিনাল** (Terminal) | শুধু admin | `root`, `/root`-এ, একটা login `bash` দিয়ে (bash না থাকলে `sh`) |
+| **App** | App-এর পাতায় **শেল** (Shell) | App-এর মালিক যিনি: admin, অথবা যে customer-এর app | Container-এর নিজের user, image-এ `bash` থাকলে সেটা দিয়ে, না থাকলে `sh` |
+
+- **টার্মিনাল** button শুধু তখনই দেখায়, যখন server-এর agent connected থাকে।
+- **শেল** button শুধু তখনই দেখায়, যখন app চলছে (আর, Git app-এর ক্ষেত্রে, প্রথম deploy-এর পর)।
+  Compose app-এর জন্য কোন **সার্ভিস** (Service)-এ shell খুলবেন সেটা বেছে নিন।
+- **Customer হিসেবে sign in করা অবস্থায় পাওয়া যায় না।** "তাঁর হয়ে ঢুকুন" (Sign in as) ব্যবহার করা
+  একজন admin কোনো terminal খুলতে পারেন না, এমনকি customer-এর app shell-ও না। আগে নিজের account-এ
+  ফিরে যান।
+
+## একটা terminal খুলুন
+
+<Steps>
+
+1. Server-এর পাতায় **টার্মিনাল**-এ, অথবা app-এর পাতায় **শেল**-এ click করুন।
+
+2. Panel জিজ্ঞেস করে "আবার পাসওয়ার্ড দিন" (Enter your password again)। আপনার password দিন, আর
+   two-factor ব্যবহার করলে তার code-ও, তারপর **টার্মিনাল খুলুন** (Open terminal)-এ click করুন।
+
+   এই নিশ্চিতকরণ **15 মিনিট** থাকে, শুধু এই browser session-এর জন্য। ওই সময়ের মধ্যে আবার না লিখেই আরও
+   terminal খুলতে পারবেন।
+
+3. Terminal connect হয় ("সংযুক্ত")। যেকোনো terminal-এর মতোই লিখুন।
+
+4. শেষ করতে `exit` লিখুন বা tab বন্ধ করুন।
+
+</Steps>
+
+<Aside type="note">
+আবার password কেন? Server-এর একটা terminal সেখানে যা খুশি বদলাতে পারে। আবার জিজ্ঞেস করা মানে, চুরি
+হওয়া বা ভুলে খোলা রেখে যাওয়া একটা session cookie একাই root shell পাওয়ার জন্য যথেষ্ট নয়। 10 বার ভুল
+password দিলে panel 15 মিনিটের জন্য নতুন চেষ্টা নেওয়া বন্ধ করে দেয়।
+</Aside>
+
+## Terminal কখন বন্ধ হয়
+
+এসব ক্ষেত্রে terminal বন্ধ হয়, আর panel কারণটা জানায়:
+
+| Message | কারণ |
+| --- | --- |
+| "৩০ মিনিট অলস থাকায় বন্ধ" | 30 মিনিট কিছু লেখা হয়নি (আর window-র মাপও বদলানো হয়নি) |
+| "৮ ঘণ্টা পর বন্ধ" | প্রতিটা terminal 8 ঘণ্টা পর শেষ হয়, অলস থাকুক বা না থাকুক |
+| "শেল বন্ধ হয়েছে" | আপনি `exit` লিখেছেন, অথবা shell থেমে গেছে |
+| "সার্ভারের এজেন্ট অফলাইন" | Agent connected নেই |
+| "সংযোগ বিচ্ছিন্ন" | Panel-এর সাথে browser-এর connection কেটে গেছে |
+
+নতুন একটা shell খুলতে **আবার সংযোগ** (Reconnect)-এ click করুন। Reconnect মানে একটা **নতুন** shell:
+পুরোনোটায় যেসব program চালু করেছিলেন সেগুলো থেমে গেছে (নিচে দেখুন)।
+
+<Aside type="caution">
+একটা terminal তার browser tab-এর সাথে বাঁধা। Tab বন্ধ করলে, connection হারালে, বা agent disconnect
+হলে, ওই shell-এ যা কিছু চালু করেছিলেন সব hang up হয়ে যায়, তারপর 3 সেকেন্ড পর kill করা হয়। যা কিছু
+চলতেই থাকতে হবে, তার জন্য `tmux`, `screen`, `nohup` বা একটা [cron job](/guides/websites/cron/)
+ব্যবহার করুন।
+</Aside>
+
+## কীভাবে কাজ করে
+
+- Agent server-এ একটা pseudo-terminal-এ shell চালু করে, আর panel-এর সাথে agent-এর আগে থেকে থাকা
+  encrypted connection (mutual TLS) দিয়ে সেটা stream করে। Panel সেটা আপনার browser-এ পাঠায়, panel-এর
+  নিজের HTTPS address-এ একটা WebSocket দিয়ে। Server-এ বাড়তি কোনো port খোলা হয় না।
+- App shell হলো বেছে নেওয়া service-এর প্রথম চলমান container-এ `docker exec`।
+- একটা server-এ একসাথে সর্বোচ্চ **10টা terminal** খোলা থাকতে পারে।
+- WebSocket শুধু panel-এর নিজের পাতা থেকে আসা connection নেয়, তাই অন্য কোনো website আপনার session দিয়ে
+  terminal খুলতে পারে না।
+
+## কী record করা হয়
+
+**অডিট লগ** (Audit log, **অ্যাডমিন** মেনুর নিচে) terminal কখন **খোলা** আর **বন্ধ** হলো তা record করে:
+কে, কোন server বা app (আর service), কতক্ষণ খোলা ছিল, আর কত byte ঢুকেছে ও বেরিয়েছে।
+
+কী লেখা হয়েছে বা কী দেখানো হয়েছে, তা record **করে না**। Session recording এখনো নেই।
+
+## Security নিয়ে কিছু কথা
+
+- Server terminal একটা পুরোদস্তুর **root** shell। SSH-এ root হিসেবে যা যা করতে পারেন, এখানেও পারেন,
+  server নষ্ট করে ফেলাসহ। এটাকে SSH-এর মতোই গুরুত্ব দিন।
+- প্রতিটা admin-এর জন্য two-factor authentication চালু করুন; তখন terminal-এর জন্যও code লাগে।
+- App shell container-এর ভেতরে, container-এর user হিসেবে চলে। এটা server-এর file দেখতে পারে না, যদি
+  না app সেগুলো mount করে (শুধু admin-এর নিজের Compose file এটা করতে পারে)।
+- Customer-রা কখনো server-এর নিজের shell পান না।
+
+## Limit আর যা এখনো নেই
+
+- Terminal session record করা: এখনো নেই।
+- কোনো **website**-এর নিজের Linux account হিসেবে shell (site হিসেবে Composer, WP-CLI বা Artisan
+  চালানোর জন্য): এখনো নেই। আপাতত [SFTP](/guides/websites/files/) বা একটা
+  [cron job](/guides/websites/cron/) ব্যবহার করুন।
+- দেখুন [roadmap](/project/roadmap/)।
+
+## সমস্যা সমাধান
+
+**"… of app … is not running"।** আপনার বেছে নেওয়া service-এর কোনো চলমান container নেই। App চালু
+করুন, অথবা এর **কন্টেইনার** (Containers) আর **লগ** (Logs) দেখুন।
+
+**"too many terminals are open on this server"।** কয়েকটা terminal tab বন্ধ করুন (বা অলসগুলো বন্ধ হওয়া
+পর্যন্ত অপেক্ষা করুন), তারপর আবার connect করুন।
+
+## সম্পর্কিত
+
+- [Docker app](/guides/apps/docker-apps/): Container, log আর restart।
+- [Account security](/guides/security/accounts/): Two-factor authentication আর session।

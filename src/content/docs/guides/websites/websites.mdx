@@ -1,0 +1,295 @@
+---
+title: Websites
+description: Add a static or PHP website, give it more domains, set up HTTPS, and understand its states, retries and deletion.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside, Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+A website in ekPanel is a domain served by the web server (Caddy) on one of your servers, with
+its own folder, its own Linux account and, for PHP sites, its own PHP processes. One site cannot
+read or change another site's files.
+
+## Before you start
+
+- You need at least one connected server. See [Add a server](/start/add-server/).
+- For free HTTPS, the domain's DNS must point at that server: an `A` record (and `AAAA` for IPv6)
+  with the server's address. If the domain is on [Cloudflare](/guides/dns/cloudflare/) or on
+  [your own name servers](/guides/dns/name-servers/) in ekPanel, the records are made for you.
+- Customers can only add websites their [package](/guides/admin/customers/) allows (see
+  [Limits from packages](#limits-from-packages)).
+
+## Kinds of website
+
+ekPanel has two kinds of website.
+
+| Kind | What it serves | Use it for |
+| --- | --- | --- |
+| **PHP** | Files, and `.php` files run by PHP-FPM | WordPress, Laravel, Joomla, Drupal, Moodle and any other PHP application |
+| **Static** | Files only (HTML, CSS, JavaScript, images) | Plain sites and sites built by a static site generator. The fastest option |
+
+<Aside type="note">
+There is no "proxy" website kind. To put a domain in front of a program that listens on a port
+(Node.js, Python, Go), run it as a [Docker app](/guides/apps/docker-apps/): an app gets its own
+domain with HTTPS, and its port stays private.
+</Aside>
+
+You can switch a site between PHP and static later in its **Settings**.
+
+## Add a website
+
+<Steps>
+
+1. Open **Websites** and click **Add website**.
+
+2. Type the **Domain**, for example `example.com`. Names in any language and script work (see
+   [International domain names](#international-domain-names)).
+
+3. Leave **Also answer on www.example.com** ticked if visitors may type `www.` in front. ekPanel
+   adds `www.example.com` as an extra domain.
+
+4. If you have more than one connected server, choose the **Server**. Administrators can also
+   choose who the website is **For**: themselves, or a customer.
+
+5. Choose the **Type of site**: **PHP** or **Static**. For PHP, choose the **PHP version**. The
+   recommended one is PHP 8.4. A version that is not on the server yet is installed
+   automatically, which can take a few minutes the first time. See [PHP](/guides/websites/php/).
+
+6. Choose the **SSL certificate (HTTPS)**:
+   - **Automatic, free**: a Let's Encrypt certificate, renewed automatically. The domain's DNS
+     must point to this server.
+   - **Self-signed**: for testing, or for domains that are not on the public internet. Browsers
+     show a warning.
+
+7. For a PHP site you can tick **Install WordPress**. ekPanel then creates a database and
+   installs WordPress as soon as the site is ready. See [WordPress](/guides/websites/wordpress/).
+
+8. To add more domains now, open **More domains for this site** and type one per line.
+
+9. Click **Create website**. The site page opens and shows **Applying…** while the server sets
+   it up. This usually takes a few seconds.
+
+</Steps>
+
+When the site is **Live**, open **Visit site**. A new site shows a page that says
+"example.com is ready". Replace it by uploading your own files into `public_html` with the
+[file manager, SFTP or FTP](/guides/websites/files/).
+
+### What ekPanel sets up
+
+For each website, the agent on the server:
+
+- creates a Linux account, named after the first part of the domain plus a random ending
+  (`my-shop.example.com` becomes something like `myshop_3fa9`);
+- creates the home folder `/home/<account>/` with `public_html` (the website), `logs`, `tmp`
+  and a hidden `.trash` folder;
+- writes a web server configuration for the site, checks it, and reloads Caddy without
+  dropping connections. If Caddy rejects it, the old configuration is put back and only this
+  site shows an error;
+- for PHP sites, creates a PHP-FPM pool that runs as the site's account (see
+  [How PHP-FPM pools work](/guides/websites/php/#how-php-fpm-pools-work)).
+
+The web server never serves hidden files and folders (names that start with a dot, such as
+`.env` or `.git`). They answer "404 Not Found". Only `/.well-known/` is served, because
+certificates and some services need it.
+
+The site page shows the **Linux account** and the **Website folder**
+(`/home/<account>/public_html`) under **Details**, with buttons to copy them.
+
+## Domains and extra domains
+
+Every website has one **main domain** and up to **20 extra domains** (aliases). Visitors to an
+extra domain see the same site.
+
+- To change the extra domains, open the site, edit **Extra domains** under **Settings** (one per
+  line) and click **Save changes**.
+- The main domain cannot be changed after the site is created. To move a site to another main
+  domain, add a new website.
+- Every host name can belong to only one website or app in the whole panel. If a name is taken,
+  you see "… is already used by another site or app".
+- Host names must be real domain names: no IP addresses, no wildcards (`*.example.com`), no ports.
+
+To send visitors of the extra domains to the main domain instead of showing the same site, turn
+on **Send the other domains to …** under [Redirects](/guides/websites/redirects/#send-extra-domains-to-the-main-domain).
+
+## International domain names
+
+You can type a domain in any script, for example `উদাহরণ.বাংলা` or `例子.测试`. ekPanel:
+
+1. checks it with the same rules browsers use;
+2. stores it in the ASCII form that DNS and certificates use (it starts with `xn--`, called
+   *punycode*);
+3. shows it back to you in the script you typed, in the websites list and on the site page.
+
+Use the ASCII (`xn--…`) form when another tool asks for the domain and does not accept the
+original script.
+
+## HTTPS
+
+Every website answers on HTTPS. Requests to `http://` are sent to `https://` by the web server.
+
+### Automatic certificates
+
+With **Automatic, free**, Caddy gets a certificate from Let's Encrypt for the main domain and
+every extra domain, and renews it on its own. For this to work:
+
+- each domain's DNS must point at the server;
+- ports 80 and 443 must be reachable from the internet. A [firewall](/guides/security/firewall/)
+  managed by ekPanel always keeps them open.
+
+If the DNS does not point at the server yet, the site still works over HTTPS once it does;
+Caddy keeps trying.
+
+### Your own certificate
+
+Use this only when you need a certificate you bought or were given.
+
+<Steps>
+
+1. Open the site and find **Own SSL certificate**. Click **Upload a certificate**.
+
+2. Paste or choose two PEM files:
+   - **Certificate (with the intermediate certificates)**: your certificate first, then the
+     intermediate certificates of the authority that issued it.
+   - **Private key**.
+
+3. Click **Use this certificate**.
+
+</Steps>
+
+ekPanel checks that the certificate and key belong together, that the certificate is valid now
+(not expired, not "not valid yet") and that it covers the main domain. If some extra domains are
+not covered, the panel lists them: those addresses will show a browser warning.
+
+The card then shows **Valid until …** with the names in the certificate, and **Expires soon**
+in the last two weeks.
+
+- The private key is encrypted in the panel's database and stored on the server where only
+  root and the web server can read it.
+- To change it, click **Replace**. To go back to free certificates, click **Use a free
+  certificate again**.
+- Choosing **Automatic, free** or **Self-signed** in **Settings** and saving also drops the
+  uploaded certificate.
+
+### Expiry alerts
+
+Uploaded certificates are not renewed by ekPanel. Two weeks before one expires, the site's owner
+gets a **certificate expiring** notification, once for each expiry date. Uploading a new
+certificate that also expires soon warns again. Set up where notifications go in
+[Notifications](/guides/admin/notifications/).
+
+## Document root
+
+By default the web server serves `public_html` itself. Some applications keep their public
+files in a folder inside it, and only that folder must be served. ekPanel supports one folder
+inside `public_html`, such as `public` or `web`.
+
+There is no field for it on the site page yet. The [PHP app installer](/guides/websites/php-apps/)
+sets it for you:
+
+| Application | Folder served |
+| --- | --- |
+| Drupal | `public_html/web` |
+| Moodle | `public_html/public` |
+| Laravel | `public_html/public` |
+| WordPress, Joomla | `public_html` |
+
+The site page shows "The website serves public_html/…" on the application's card.
+
+## Site states
+
+The badge next to a site shows what the server is doing with it.
+
+| Badge | State | What it means |
+| --- | --- | --- |
+| **Applying…** | `pending` | A change is on its way to the server. While the server is offline, the page says the settings are applied as soon as its agent reconnects. |
+| **Live** | `active` | The server applied the latest settings. |
+| **Problem** | `error` | The server could not apply the settings. The site page shows the reason. |
+| **Deleting…** | `deleting` | The site is being removed. |
+
+The panel keeps every server in line with what it should have. It sends the whole list of sites
+on every change, when an agent reconnects and every 10 minutes, so a configuration deleted by
+hand comes back. See [Desired state](/concepts/desired-state/).
+
+### When a site shows a problem
+
+<Steps>
+
+1. Open the site. The red box "The server could not apply this website's settings" shows the
+   reason the server gave.
+
+2. Fix the cause if you can. Examples: free disk space on the server, or bring an offline
+   server back.
+
+3. Click **Try again**. This saves the site's settings again and sends them to the server.
+
+</Steps>
+
+The owner also gets a **site error** notification when a site starts failing.
+
+## Delete a website
+
+<Aside type="danger">
+Deleting a website permanently deletes everything in `/home/<account>`, including uploaded files,
+logs and the trash. Make a [backup](/guides/data/backups/) first if you need anything from it.
+</Aside>
+
+<Steps>
+
+1. Open the site and click **Delete website** in the **Delete website** card.
+
+2. Type the domain to confirm and click **Delete website**.
+
+</Steps>
+
+The site shows **Deleting…** until the server confirms, then it disappears from the list. If the
+server cannot finish, the page says so and ekPanel keeps trying.
+
+What goes with the website, and what stays:
+
+- **Removed:** the web server configuration, the PHP-FPM pool, the Linux account and its home
+  folder, SFTP and FTP access, the site's [cron jobs](/guides/websites/cron/) and its traffic
+  history.
+- **Kept:** databases. A database made for WordPress, a PHP app or a staging copy is a separate
+  database. Delete it on the [Databases](/guides/data/databases/) page if you no longer need it.
+- **Kept:** a [staging copy](/guides/websites/wordpress/#staging-copies) of a deleted live site.
+  It becomes an ordinary website.
+
+## Limits from packages
+
+When a website belongs to a customer, their [package](/guides/admin/customers/) decides:
+
+| Package setting | Effect on websites |
+| --- | --- |
+| Number of websites | Adding more is refused: "the package allows no more of these". A WordPress staging copy counts as a website. |
+| Servers | Websites can only be added on the servers the package names (if it names any). |
+| PHP versions | Only these versions are offered and accepted (if the package names any). |
+| Disk space | When it is used up, new websites and the file manager's uploads and other growing actions stop. |
+| Number of databases | WordPress, PHP apps and staging copies each need one database. |
+| SFTP, FTP | Whether the site may turn on [SFTP or FTP](/guides/websites/files/). |
+| Cron jobs | How many [cron jobs](/guides/websites/cron/) the customer may have. |
+| Memory and CPU | Shared by all the customer's PHP processes and containers. |
+
+Administrators' own websites have no package and no limits.
+
+## Troubleshooting
+
+**The site stays on "Applying…".** The server is offline or busy. Check the server on the
+**Servers** page. Settings are applied as soon as its agent reconnects.
+
+**The browser shows a certificate warning.** With **Automatic, free**, check that the domain's
+DNS points at this server and that ports 80 and 443 are open. With **Self-signed**, the warning
+is expected. With your own certificate, check that it covers the address you opened.
+
+**"… is already used by another site or app".** Another website or app has that host name,
+maybe as an extra domain. Remove it there first.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="PHP" href="/guides/websites/php/" description="Versions, settings and extensions." />
+	<LinkCard title="Redirects and hotlink protection" href="/guides/websites/redirects/" />
+	<LinkCard title="Files, SFTP and FTP" href="/guides/websites/files/" />
+	<LinkCard title="Logs and traffic" href="/guides/websites/logs-traffic/" />
+</CardGrid>

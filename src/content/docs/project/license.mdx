@@ -1,0 +1,106 @@
+---
+title: Licence
+description: ekPanel's AGPL-3.0 licence in plain words - what you may do, what you must share when you run it as a service - plus the licences of dependencies, the country data, the docs and the logo.
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel is free software under the
+[GNU Affero General Public License, version 3](https://github.com/ekPanel/ekpanel/blob/dev/LICENSE)
+(`AGPL-3.0-only`). This page explains what that means in practice.
+
+<Aside type="note">
+This is a plain-language summary, not legal advice. The licence text itself is what counts.
+</Aside>
+
+## What you may do
+
+- **Use it** for any purpose, including commercial hosting for paying customers.
+- **Study** how it works: all the source code is there.
+- **Change** it to fit your needs.
+- **Share** it, changed or not, with anyone.
+
+You do not pay anything, and you do not need to ask anyone.
+
+## What you must do
+
+The AGPL adds duties only in two situations:
+
+| You… | Then you must |
+| --- | --- |
+| **give copies** of ekPanel to others (changed or not), for example as a download | Give them the source code too, under the same licence, with the licence and copyright notices kept. |
+| **run a changed version** as a service that other people use over a network, for example your customers sign in to your modified panel | Offer those users the source code of your changed version, under the same licence. |
+
+If you run ekPanel **unchanged**, even for thousands of customers, you have no extra duties.
+Changes you keep for yourself and do not let others use are your own business too.
+
+That second rule is what makes the AGPL different from the GPL. It is why the project chose it:
+companies that offer ekPanel as a hosted service must share their improvements, instead of
+keeping a closed fork. Licences such as MIT or Apache-2.0 would allow closed forks.
+
+### "Only"
+
+`AGPL-3.0-only` means version 3 of the AGPL, and not automatically any later version.
+
+### Your contributions
+
+By opening a pull request to the main repository, you agree that your contribution is released
+under the same licence, `AGPL-3.0-only`. See [Contributing](/development/contributing/).
+
+## Dependencies
+
+The panel and agent are built with libraries under licences that are compatible with the AGPL:
+
+- **Go libraries**: MIT (chi, pgx, embedded-postgres, pty), BSD (Go's `x/crypto` and `x/net`,
+  the crypt library), ISC (the WebSocket library) and Apache-2.0 (the TOTP library).
+- **Web UI**: React, Vite, Tailwind CSS, TanStack Query, i18next, CodeMirror, xterm.js and lucide
+  icons, under permissive licences such as MIT.
+- **Fonts**: Noto Sans, Noto Sans Bengali and JetBrains Mono, under the SIL Open Font License,
+  self-hosted inside the panel.
+
+### Programs ekPanel installs on your servers
+
+The agent installs separate programs on your servers when you use a feature: Caddy, PostgreSQL,
+MariaDB, PHP, Docker, Stalwart, Roundcube, PowerDNS, CrowdSec, ClamAV, Pure-FTPd, restic,
+WP-CLI, Railpack and others. They are not part of ekPanel's code; each comes from its own
+project, under its own licence. The same is true for the apps in the catalogue (Nextcloud, Ghost,
+Grafana…), whose container images come from their publishers.
+
+## Country data (DB-IP)
+
+Country blocking uses the free country list from
+[DB-IP](https://db-ip.com) ("IP to Country Lite"). It is licensed under the
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) licence, which
+requires credit. The panel shows **IP Geolocation by DB-IP** with a link where the data is used.
+The list is downloaded to each server that uses it, once a month; it is not shipped inside
+ekPanel. If you change the panel, keep that credit.
+
+## These docs
+
+The documentation (the files in `src/content/` of the
+[docs repository](https://github.com/ekPanel/ekPanel-docs)) is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): you may share and adapt it for any
+purpose, as long as you give appropriate credit. The site's code (configuration and styles) is
+under the MIT licence.
+
+## Name and logo
+
+The logo files are in the main repository under `assets/brand/`, with rules for using them in
+`assets/brand/README.md`. In short:
+
+- Write the name **ekPanel**: small e, capital P.
+- Do not stretch or squash the logo, and do not change the colour of the tile or the green
+  cursor.
+- Keep free space around it of at least half the icon's height.
+- On photos or patterns, use the one-colour or reversed version.
+
+There is no written trademark policy yet. If you want to use the name or logo for your own
+product, service or fork, please ask first at ekpanelbd@gmail.com.
+
+## Related
+
+- [FAQ: Is it free?](/reference/faq/#is-it-free-what-does-the-licence-allow)
+- [Contributing](/development/contributing/)
+- [The full licence text](https://www.gnu.org/licenses/agpl-3.0.html)

@@ -1,0 +1,191 @@
+---
+title: Security model
+description: ekPanel কীভাবে আপনার server, website আর customer-দের সুরক্ষা দেয় - প্রতিটা site আলাদা রাখা, agent-এর সাথে mutual TLS, typed operation, secret কীভাবে রাখা হয়, audit log, আর customer-রা কী করতে পারেন।
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+একটা hosting panel root হিসেবে server চালায়, তাই panel-এ একটা ফুটো মানে তার host করা প্রতিটা
+website-এ ফুটো। এই page সহজ ভাষায় বোঝায়, ekPanel কীভাবে বানানো হয়েছে যাতে একটা ভুল বা একজন
+attacker যতটা ক্ষতি করতে পারে তা সীমিত থাকে।
+
+<Aside type="caution">
+ekPanel-এর এখনো বাইরের কোনো security review হয়নি, আর এটা শুরুর দিকের development-এ আছে। এখনই এতে
+গুরুত্বপূর্ণ কিছু host করবেন না। কোনো vulnerability জানাতে [security policy](/project/security-policy/)
+মেনে চলুন; কখনো public issue খুলবেন না।
+</Aside>
+
+## মূলনীতি
+
+- Server-এর agent শুধু একটা নির্দিষ্ট তালিকার **typed, check করা operation** করে। "এই command
+  চালাও" ধরনের কোনো operation নেই।
+- প্রতিটা website চলে **নিজস্ব Linux user** হিসেবে, **নিজস্ব PHP-FPM pool**-সহ।
+- Customer-দের process চলে **cgroup**-এর ভেতরে, তাদের package-এর memory আর CPU limit-সহ।
+- Panel আর agent কথা বলে **mutual TLS** দিয়ে, যা set up হয় **একবার ব্যবহারযোগ্য, অল্প মেয়াদের
+  enrolment token** দিয়ে।
+- দরকার না হলে **secret রাখা হয় না**, আর দরকার হলে **seal করে** রাখা হয়। Password argon2id দিয়ে
+  hash করা হয়, আর two-factor sign-in সবার জন্য আছে।
+- প্রতিটা পরিবর্তন যায় একটা **append-only audit log**-এ।
+
+## Panel আর agent
+
+**Panel-এর নিজের server-এর ওপর কোনো ক্ষমতা নেই।** এটা একটা unprivileged user হিসেবে systemd
+sandbox-এ চলে, কোনো capability ছাড়া আর read-only system-সহ। এটা আপনার server-এ log in করতে পারে না।
+Server বদলায় এমন সবকিছু সেই server-এর agent-এর মাধ্যমে যায়।
+
+**Agent-রা প্রমাণ করে তারা কে, panel-ও করে।**
+
+- নতুন server এমন একটা token দিয়ে enrol করে যা **একবারই** কাজ করে আর **এক ঘণ্টা পরে মেয়াদ শেষ**
+  হয়। Panel এর শুধু একটা SHA-256 hash রাখে।
+- Agent panel-এর certificate মিলিয়ে দেখে **CA pin**-এর সাথে, যা panel থেকে আপনি copy করেন, তাই কেউ
+  ধোঁকা দিয়ে একে অন্য কারও কাছে enrol করাতে পারে না।
+- Agent নিজের private key নিজে বানায়, যা কখনো server ছেড়ে যায় না। এর certificate চলে 90 দিন আর
+  নিজে থেকেই renew হয়।
+- এরপর প্রতিটা connection mutual TLS ব্যবহার করে নিজস্ব port-এ (7443), web interface থেকে আলাদা।
+- **নতুন সংযোগ কমান্ড** (New connection command) বানালে বা একটা server delete করলে সাথে সাথে তার
+  certificate বাতিল হয় আর তার খোলা connection বন্ধ হয়ে যায়।
+
+**Agent শুধু typed operation নেয়।** প্রতিটা operation-এর একটা নাম আর type-সহ parameter আছে, আর
+panel আগেই check করলেও agent প্রতিটা value আবার check করে। যেমন, শুধু একটা ছোট allowlist-এর service
+restart করা যায়। নাম, domain, PHP setting, DNS record, mail address আর WordPress plugin-এর নাম দুই
+দিকেই check করা হয়, তাই কোনো input configuration file-এ লাইন যোগ করতে বা shell পর্যন্ত পৌঁছাতে
+পারে না।
+
+একমাত্র ব্যতিক্রম **web terminal**, যা একজন মানুষের জন্য shell, API দিয়ে script করার মতো কিছু না।
+এটা খুলতে গত 15 মিনিটের মধ্যে আবার আপনার password (আর two-factor code) দিতে হয়, administrator যখন
+customer হয়ে কাজ করছেন তখন এটা খোলা যায় না, আর কিছু না টাইপ করলে 30 মিনিট পরে ও মোট 8 ঘণ্টা পরে
+এটা বন্ধ হয়ে যায়। Audit log-এ লেখা থাকে কে এটা খুলেছে, কতক্ষণের জন্য আর দুই দিকে কত byte গেছে,
+কিন্তু কী টাইপ করা হয়েছে তা না।
+
+**Agent শুধু নিজের তৈরি জিনিসে হাত দেয়।** এটা শুধু নিজের group-এর Linux account, আর শুধু নিজের
+বানানো database ও app বদলায় বা delete করে। Data delete হয় শুধু তখনই, যখন আপনি স্পষ্টভাবে delete
+করেন।
+
+## Website-গুলো আলাদা রাখা হয়
+
+| স্তর | কী করে |
+| --- | --- |
+| প্রতিটা site-এর জন্য Linux user | প্রতিটা website-এর নিজস্ব account আর home folder আছে। অন্য account এটা পড়তে পারে না। |
+| প্রতিটা site-এর জন্য PHP-FPM pool | PHP চলে site-এর account হিসেবে, `open_basedir` তার folder-এ সীমাবদ্ধ। |
+| Web server-এর access | ACL দিয়ে শুধু Caddy একটা site-এর file পড়ার access পায়। |
+| File manager | প্রতিটা কাজ চলে আলাদা একটা process-এ, site-এর folder-এ আটকানো (chroot করা), site-এর account হিসেবে। অন্য file-এর link, `..` path আর "zip slip" archive নেওয়া হয় না। |
+| SFTP | Site-এর folder-এ আটকানো, shell নেই, forwarding নেই। SSH key এমন একটা file-এ থাকে যা site-এর account বদলাতে পারে না। |
+| FTP | শুধু TLS, প্রতিটা site-এর জন্য একটা login, তার folder-এ আটকানো, কোনো system account না। কোনো site FTP ব্যবহার করলে শুধু ততক্ষণই port খোলা থাকে। |
+| Web server-এর check | নতুন configuration load করার আগে check করা হয়; বাতিল হলে আগের অবস্থায় ফিরিয়ে নেওয়া হয়, তাই একটা site বাকিগুলোকে বসিয়ে দিতে পারে না। `.env` আর `.git`-এর মতো dotfile কখনো serve করা হয় না। |
+| WordPress আর PHP app | WP-CLI আর installer চলে site-এর account হিসেবে। Database password থাকা config file শুধু সেই account পড়তে পারে। |
+
+## Customer আর limit
+
+Customer-রা একই panel-এ sign in করেন। প্রতিটা request-এর জন্য মালিকানা একটা জায়গাতেই check করা হয়,
+আর customer-এর মালিকানায় নেই এমন যেকোনো কিছু "not found" উত্তর দেয়, যেন সেটার অস্তিত্বই নেই।
+
+প্রতিটা customer পান একটা **systemd slice** (একটা cgroup), তাদের package-এর memory আর CPU limit-সহ।
+তাদের সব PHP এর ভেতরে নিজস্ব একটা PHP-FPM process-এর অধীনে চলে, আর তাদের সব container আর build-ও
+এর ভেতরেই চলে। কোনো script memory limit ছাড়িয়ে গেলে শুধু সেটাই থেমে যায়; customer-এর বাকি site
+চলতে থাকে। Disk ব্যবহার প্রতি 30 মিনিটে মাপা হয়, আর package ভরে গেলে panel দিয়ে নতুন website,
+database, app আর file upload বন্ধ হয়ে যায়।
+
+| Customer-রা পারেন | Customer-রা পারেন না |
+| --- | --- |
+| নিজেদের package-এর মধ্যে নিজেদের website, database, app আর cron job চালাতে | Server, অন্য customer, package বা audit log দেখতে |
+| File manager ব্যবহার করতে, আর package-এ থাকলে SFTP ও FTP | কোনো server-এ root shell খুলতে |
+| যেসব catalogue service-এর image তাদের package-এ অনুমোদিত সেগুলো install করতে, আর package-এ থাকলে Git app | নিজেদের Compose file ব্যবহার করতে |
+| নিজেদের app-এর container-এর ভেতরে shell খুলতে | Privileged container চালাতে, capability বা device যোগ করতে, বা host-এর folder mount করতে |
+| নিজেদের website-এর domain-এর জন্য email যোগ করতে | Backup, firewall বা server security চালাতে |
+| নিজেদের domain-এর DNS zone host করতে, বা নিজেদের Cloudflare account connect করতে | অন্য account-এর zone-এর ভেতরে বা চারপাশে কোনো zone, বা একটা public suffix host করতে |
+| নিজেদের site-এ পাওয়া malware quarantine বা delete করতে | Quarantine করা file ফিরিয়ে আনতে বা নিরাপদ বলে চিহ্নিত করতে |
+| নিজেদের password আর two-factor setting বদলাতে | নিজেদের package-এর limit ছাড়িয়ে যেতে |
+
+Catalogue service-এর ক্ষেত্রে, agent প্রতিটা customer app-এর চূড়ান্ত Compose file check করে, আর
+privileged mode, যোগ করা capability, device, host folder আর namespace, driver option-সহ volume, আর
+host থেকে পড়া secret বা config বাতিল করে।
+
+একজন administrator সাহায্য করার জন্য এক ঘণ্টার জন্য customer হিসেবে **তাঁর হয়ে ঢুকুন** (Sign in
+as) ব্যবহার করতে পারেন। একটা banner সেটা দেখায়, customer-এর password আর two-factor setting নাগালের
+বাইরে থাকে, আর audit log-এ administrator-এর নাম থাকে।
+
+## Docker app
+
+App-এর port শুধু `127.0.0.1`-এ publish হয়, আর Caddy-র মাধ্যমে HTTPS দিয়ে internet-এ পৌঁছায়। Docker
+সাধারণত publish করা port firewall এড়িয়ে খুলে দেয়, তাই যেসব Compose file public address-এ port
+publish করে বা host network ব্যবহার করে, আপনি অনুমতি না দিলে সেগুলো নেওয়া হয় না।
+
+একটা Compose file তবুও Docker যা অনুমতি দেয় তার সবকিছু করতে পারে, তাই শুধু administrator-রাই
+Compose app যোগ করতে পারেন। Fork থেকে আসা pull request কখনো preview হিসেবে build হয় না, কারণ তাদের
+code আপনার server-এ চলত।
+
+## Secret কীভাবে রাখা হয়
+
+| Secret | ekPanel কীভাবে রাখে |
+| --- | --- |
+| আপনার panel password | argon2id দিয়ে hash করা |
+| Session আর enrolment token | শুধু একটা SHA-256 hash |
+| Database password | কখনো রাখা হয় না। একবার দেখানো হয়; panel শুধু database-এর নিজের hash রাখে (MariaDB-র native hash, PostgreSQL-এর SCRAM-SHA-256 verifier) |
+| WordPress আর PHP app-এর admin password | একবার দেখানো হয়, কখনো রাখা হয় না |
+| SFTP, FTP আর mailbox password | শুধু SHA-512 crypt hash |
+| Backup recovery key, S3 key | শুধু server-এ, root পড়তে পারে। Panel এগুলো কখনো রাখে না |
+| Cloudflare token, deploy key, webhook secret, certificate key, notification channel token, SMTP password | `/var/lib/ekpanel/secret.key`-এর একটা key দিয়ে AES-256-GCM-এ seal করা, কখনো browser-এ ফেরত পাঠানো হয় না |
+| Agent-এর private key | শুধু তার server-এ, `/etc/ekpanel/agent.json`-এ (শুধু root) |
+
+Database আর installer-এর password program-এর কাছে যায় standard input বা environment দিয়ে, কখনো
+command-line argument হিসেবে না, যা অন্য user process list-এ দেখতে পেত।
+
+<Aside type="danger" title="/var/lib/ekpanel সুরক্ষিত রাখুন">
+`/var/lib/ekpanel`-এ আছে সেই key, যা seal করা secret খোলে, আর সেই certificate authority, যাকে আপনার
+agent-রা বিশ্বাস করে। এর backup কোনো গোপন জায়গায় রাখুন, আর কখনো কাউকে দেবেন না।
+</Aside>
+
+## Sign in করা
+
+- নতুন install দখল করা যায় শুধু installer-এর দেখানো **setup token** দিয়ে, তাই আপনার আগে কেউ প্রথম
+  administrator তৈরি করতে পারে না।
+- Password argon2id দিয়ে hash করা হয়। ব্যর্থ sign-in-এ rate limit আছে।
+- **Two-factor authentication** (TOTP) প্রত্যেক user-এর জন্য আছে। Server security page-এ সেইসব
+  administrator-এর তালিকা থাকে, যাঁরা এটা চালু করেননি।
+- **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বাকি সব session শেষ করে। কেউ নতুন
+  address থেকে sign in করলে user notification পান।
+- Session cookie `HttpOnly`, `SameSite=Lax`, আর `__Host-` prefix ব্যবহার করে। কিছু বদলায় এমন request
+  cross-site request forgery থেকে সুরক্ষিত, আর একটা কড়া Content Security Policy কোনো inline script
+  চলতে দেয় না।
+
+## Audit log
+
+Administrator বা customer-এর করা প্রতিটা পরিবর্তন audit log-এ লেখা হয়: কে করেছে, কী, আর কখন।
+Database নিজেই audit row edit বা delete করতে দেয় না, তাই কেউ, এমনকি panel-ও, ইতিহাস নতুন করে লিখতে
+পারে না। Administrator-রা এটা পড়েন **অডিট লগ** (Audit log)-এ।
+
+## Network-এর নিরাপত্তা
+
+- [Firewall](/guides/security/firewall/) যখন ekPanel চালায়, তখন SSH (sshd আসলে যে port ব্যবহার করে
+  সেগুলোতে), HTTP, HTTPS আর agent port সবসময় খোলা থাকে, আর যে rule যোগ করছেন সেই মানুষের address
+  block করবে এমন rule panel নেয় না। [দেশ ধরে block](/guides/security/countries/)-এর ক্ষেত্রেও একই কথা।
+- ekPanel নিজের জন্য যেসব service set up করে, যেমন mail server আর PowerDNS-এর management API,
+  সেগুলো শুধু loopback-এ শোনে।
+- Customer-দের notification webhook private, local বা link-local address-এ পৌঁছাতে পারে না, যেমন
+  cloud provider-এর metadata service।
+- Cloudflare যে visitor address পাঠায়, Caddy সেটা বিশ্বাস করে শুধু Cloudflare-এর publish করা address
+  range থেকে এলে।
+
+## Download
+
+যেসব software signed package repository থেকে আসে না (WP-CLI, Composer, Railpack, Stalwart,
+Roundcube, Joomla, Moodle), সেগুলো নির্দিষ্ট (pinned) version, আর ব্যবহারের আগে তার publisher-এর
+দেওয়া checksum-এর সাথে মিলিয়ে দেখা হয়।
+
+## এখনো নেই
+
+- **Signed release** আর signature check-সহ self-update (phase 4a)। আজকের দিনে আপনি নিজেই source থেকে
+  build করেন।
+- একটা **web application firewall** আর প্রতিটা site-এর rate limiting (phase 4)।
+- **Passkey** আর active session-এর তালিকা (phase 4)।
+
+বিস্তারিত আছে [roadmap](/project/roadmap/)-এ।
+
+## আরও দেখুন
+
+- [নিরাপত্তার overview guide](/guides/security/overview/): আপনার server-এ কী কী শক্ত করবেন।
+- [আপনার account](/guides/security/accounts/): two-factor sign-in আর session।
+- [Security policy](/project/security-policy/): কীভাবে vulnerability জানাবেন।
+- [Architecture](/concepts/architecture/)

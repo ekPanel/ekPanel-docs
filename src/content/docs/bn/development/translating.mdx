@@ -1,0 +1,147 @@
+---
+title: অনুবাদ
+description: ekPanel-এর UI আর notification কীভাবে অনুবাদ করা হয়, কীভাবে একটা নতুন ভাষা যোগ করবেন, আর এই docs কীভাবে বাংলা বা অন্য ভাষায় অনুবাদ করবেন।
+sidebar:
+  order: 6
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel প্রতিটা ভাষাতেই নিজের ভাষার মতো লাগা উচিত, শুধু English-এ নয়। Panel-এর text-গুলো সাধারণ JSON
+file, তাই অনুবাদ করতে programming জানার দরকার নেই। **আপনার ভাষা যোগ করা সবচেয়ে মূল্যবান contribution-গুলোর
+একটা।**
+
+আজকের দিনে panel **English** (source ভাষা) আর **বাংলা (Bangla)**-তে সম্পূর্ণ।
+
+## অনুবাদ কীভাবে কাজ করে
+
+- Web UI [i18next](https://www.i18next.com/) ব্যবহার করে। UI যে text দেখায় তার প্রতিটা
+  `web/src/i18n/locales/en.json`-এ একটা **key**, যেমন `ftp.turn_on`, আর code সেটা চায় `t("ftp.turn_on")`
+  দিয়ে। User যে text দেখেন তার কোনোটাই সরাসরি code-এ লেখা নয়।
+- প্রতিটা ভাষা এর পাশে একই key-সহ একটা file: বাংলার জন্য `bn.json`।
+- **Notification**-এর (email, Telegram ইত্যাদি) নিজস্ব, ছোট file আছে `internal/notify/locales/`-এ। এগুলো
+  প্রতিটা প্রাপকের নিজের ভাষায় পাঠানো হয়।
+- **API error** একটা stable `code` বহন করে; UI `errors.<code>`-এর নিচের text দেখায়।
+- **Number, date, size আর unit** ("3 minutes ago", "1.2 GB", বাংলায় বাংলা অঙ্ক) browser `Intl` দিয়ে আপনার
+  ভাষা অনুযায়ী format করে। অনুবাদে কখনো হাতে number বা unit লিখবেন না।
+- **Right-to-left ভাষা** (Arabic, Persian, Urdu, Hebrew…) layout নিজে থেকেই উল্টে দেয়: UI left আর right-এর
+  বদলে start আর end ব্যবহার করে।
+- Panel বেছে নেয় user-এর save করা ভাষা, না থাকলে browser-এর ভাষা, না থাকলে English। যে key নেই সেগুলো
+  English-এ ফিরে যায়।
+
+একটা value দেখতে এমন। `{{double braces}}`-এর ভেতরের সবকিছু ঠিক যেমন আছে তেমনই রাখুন:
+
+```json
+"applying": "Applying your settings on {{server}}. This usually takes a few seconds.",
+```
+
+### Plural
+
+`_one` আর `_other` দিয়ে শেষ হওয়া key-গুলো plural form:
+
+```json
+"in_progress_one": "{{count, number}} task in progress",
+"in_progress_other": "{{count, number}} tasks in progress"
+```
+
+আপনার ভাষায় অন্য form লাগতে পারে (`_zero`, `_two`, `_few`, `_many`); দেখুন
+[CLDR plural rules](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html)।
+আপনার ভাষা যে form-গুলো ব্যবহার করে সেগুলো দিন। Checker যেকোনো set মেনে নেয়।
+
+### আরও যা জানা দরকার
+
+- কোনো value-তে `<code>` tag (যেমন `setup.token_hint`-এ) একই text-এর চারপাশেই থাকতে হবে।
+- **ভঙ্গি:** একজন সাহায্যকারী মানুষ যেভাবে কথা বলেন সেভাবে লিখুন: ছোট, পরিষ্কার বাক্য, user-কে ভদ্রভাবে
+  সম্বোধন করে (আপনার ভাষায় formal "you" থাকলে সেটা)। দৈনন্দিন শব্দ বেছে নিন, কিন্তু CPU, SSL, DNS আর IP-র
+  মতো standard technical term আপনার user-রা যেভাবে চেনেন সেভাবেই রাখুন।
+- Error message বলে কী হয়েছে আর এরপর কী করতে হবে।
+- Right-to-left ভাষায় কিছু ভুল দেখালে একটা screenshot-সহ issue খুলুন।
+
+## অনুবাদ check করুন
+
+```bash
+cd web
+npm run i18n:check
+```
+
+এটা দেখায় প্রতিটা file-এর কতটা অনুবাদ হয়েছে, যে key-গুলো **missing** সেগুলোর list দেয় (check fail করে,
+CI-তেও), আর যেগুলো **unused** (আপনার file-এ আছে কিন্তু English-এ আর নেই)। Code এমন কোনো key চাইলে যা
+`en.json`-এ নেই, তখনও এটা fail করে।
+
+```text
+ui bn.json: 100% translated
+notifications bn.json: 100% translated
+```
+
+## নতুন ভাষা যোগ করুন
+
+<Steps>
+
+1. `web/src/i18n/locales/en.json`-কে `web/src/i18n/locales/<code>.json`-এ copy করুন, যেখানে `<code>` হলো
+   আপনার ভাষার [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes)
+   (`es`, `ar`, `hi`, `id`, `tr`…)।
+
+2. Value-গুলো অনুবাদ করুন। Key আর `{{double braces}}`-এর ভেতরের সবকিছু অপরিবর্তিত রাখুন।
+
+3. `web/src/i18n/index.ts`-এ ভাষাটা register করুন: `languages` list-এ এটা যোগ করুন, ভাষাটা নিজেকে যে নামে
+   ডাকে সেই নামসহ (`{ code: "es", name: "Español" }`), আর `resources`-এ যোগ করুন।
+
+4. `internal/api/auth.go`-এ `supportedLocales`-এ code-টা যোগ করুন, যাতে panel এটাকে user-এর পছন্দ হিসেবে
+   মনে রাখে।
+
+5. Notification-এর জন্য: `internal/notify/locales/en.json`-কে `<code>.json`-এ copy করুন, অনুবাদ করুন, আর
+   `internal/notify/notify.go`-এ load হওয়া ভাষার list-এ code-টা যোগ করুন। (যতক্ষণ না করছেন, ওই ভাষার
+   user-দের notification English-এ ফিরে যায়।)
+
+6. `web/`-এ `npm run i18n:check` চালান, তারপর একটা pull request খুলুন।
+
+</Steps>
+
+<Aside type="tip" title="Git নেই? সমস্যা নেই">
+আপনি অনুবাদ করা file email-এও পাঠাতে পারেন (ekpanelbd@gmail.com), অথবা repository public হলে "Translation"
+issue template দিয়ে একটা ভুল text report করতে পারেন। প্রথম public release-এর আগে একটা web translation
+platform (Weblate বা এরকম কিছু) plan করা আছে, যাতে অনুবাদকরা browser-এ কাজ করতে পারেন।
+</Aside>
+
+## এই docs অনুবাদ করুন
+
+Docs site English আর বাংলায়। বাংলা page থাকে `src/content/docs/bn/`-এ, English page-এর মতো **একই file
+name আর folder**-এ। যে page এখনো অনুবাদ হয়নি সেটা একটা notice-সহ English page দেখায়, তাই আপনি এক এক করে
+page অনুবাদ করতে পারেন।
+
+<Steps>
+
+1. English page-টা `bn/`-এর নিচে একই path-এ copy করুন, যেমন `src/content/docs/reference/faq.mdx` থেকে
+   `src/content/docs/bn/reference/faq.mdx`-এ।
+
+2. Title, description আর text অনুবাদ করুন। Command, path, code রাখুন যেমন আছে, আর panel-এর label রাখুন
+   বাংলা UI-তে যেমন দেখায়।
+
+3. Link-গুলো যেমন আছে তেমনই রাখুন (`/reference/glossary/`): বাংলা page-এ site নিজেই এগুলোকে বাংলা
+   page-এর দিকে নিয়ে যায়। এখনো অনুবাদ না হওয়া page-এর জন্যও এগুলো কাজ করে, সেগুলো একটা notice-সহ
+   English text দেখায়।
+
+4. `npm run dev` চালান, site-এর ভাষা বাংলায় বদলান, আর pull request খোলার আগে আপনার page পড়ে দেখুন।
+
+</Steps>
+
+### বাংলা style
+
+[`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/main/WRITING.md) থেকে:
+
+- স্বাভাবিক বাংলায় লিখুন, বাংলাদেশের মানুষ computer নিয়ে যেভাবে কথা বলেন সেভাবে।
+- Technical শব্দ English-এই থাকে: website, server, database, backup, DNS, firewall, PHP। এর চারপাশের বাক্য
+  বাংলা।
+- Command, path, code-এর মধ্যের label আর UI-এর নাম ঠিক যেমন আছে তেমনই রাখুন।
+
+### Docs-এর জন্য আরেকটা ভাষা
+
+Docs-এর নতুন ভাষার জন্য লাগে `astro.config.mjs`-এ `locales`-এ একটা entry, `src/content/docs/`-এর নিচে এর
+code-এর নামে একটা folder, আর অনুবাদ করা sidebar group label (একই file-এ প্রতিটা group-এর `translations`)।
+আগে একটা issue খুলুন, যাতে আমরা একসাথে plan করতে পারি। দেখুন [Docs-এ কাজ করা](/development/docs/)।
+
+## সম্পর্কিত
+
+- [অবদান রাখুন](/development/contributing/)
+- [Docs-এ কাজ করা](/development/docs/)
+- Main repository-তে [`docs/TRANSLATING.md`](https://github.com/ekPanel/ekpanel/blob/dev/docs/TRANSLATING.md)

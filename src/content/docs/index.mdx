@@ -1,0 +1,42 @@
+---
+title: ekPanel
+description: Open-source hosting control panel for websites, databases, Docker apps, email and DNS, in English and বাংলা.
+template: splash
+hero:
+  title: One panel. Your whole hosting.
+  tagline: ekPanel is an open-source control panel for your own servers. Host PHP and WordPress websites, run Docker apps from Git, keep databases, email and DNS, back everything up, and give customers their own accounts, in a panel that speaks English and বাংলা.
+  image:
+    light: ../../assets/logo-light.svg
+    dark: ../../assets/logo-dark.svg
+  actions:
+    - text: What is ekPanel?
+      link: start/introduction/
+      icon: right-arrow
+    - text: Install it
+      link: start/install/
+      icon: rocket
+      variant: secondary
+    - text: Contribute
+      link: development/contributing/
+      icon: github
+      variant: minimal
+---
+
+import ProjectStatus from '~/components/ProjectStatus.astro';
+import HomeCards from '~/components/HomeCards.astro';
+
+<ProjectStatus />
+
+## What you can do with it
+
+<HomeCards show="features" />
+
+## Pick your path
+
+<HomeCards show="paths" />
+
+## Free, open and in your language
+
+ekPanel is free software under the [AGPL-3.0 licence](/project/license/). **ek** (এক) is Bangla
+for "one": one panel for your whole hosting. Every screen is in English and বাংলা from day one,
+and the panel is built so more languages can follow. [Help translate](/development/translating/).

@@ -1,0 +1,210 @@
+---
+title: Architecture
+description: How ekPanel is built - the panel, the agents on every server, the mutual TLS link between them, typed operations, the task queue and the services they manage.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel is split into a **panel** that remembers what should exist and an **agent** on every
+server that makes it so. This page explains the parts and how they talk. You do not need it
+to use ekPanel, but it helps when something goes wrong.
+
+## The big picture
+
+```text
+                 ┌────────────────────────── Panel (control plane) ───────────────────────┐
+ Browser ──────► │  Web UI (React)  ──►  Panel API (Go)  ──►  PostgreSQL                   │
+   HTTPS via     │                         │   tasks, metric history, audit log          │
+   Caddy         └─────────────────────────┼───────────────────────────────────────────────┘
+                                           │ mutual TLS WebSocket on TCP 7443
+                                           │ (opened by each agent: works behind NAT)
+              ┌────────────────────────────┼────────────────────────────┐
+              ▼                            ▼                            ▼
+        ┌──────────┐                 ┌──────────┐                 ┌──────────┐
+        │  Agent   │  server 1       │  Agent   │  server 2       │  Agent   │  server N
+        │ (Go,root)│                 │          │                 │          │
+        └────┬─────┘                 └──────────┘                 └──────────┘
+             │ manages
+   Caddy (web server, HTTPS) · PHP-FPM · MariaDB / PostgreSQL · Docker · restic
+   Stalwart mail · PowerDNS · ufw / nftables · CrowdSec · ClamAV · systemd and cgroups
+```
+
+On a single-server install, the panel and an agent run on the same machine. The panel talks
+to that local agent exactly as it talks to agents on other servers, so adding a second
+server changes nothing in how the first one works.
+
+## The panel
+
+The panel is one Go program, `ekpanel`, with the React web interface built into it. It runs
+as the unprivileged `ekpanel` user in a strict systemd sandbox, and listens on two
+addresses:
+
+| Address | What |
+| --- | --- |
+| `127.0.0.1:8080` | Web interface and API. Caddy passes HTTPS requests here. |
+| `:7443` | The agents' endpoint, with mutual TLS. |
+
+The panel:
+
+- stores everything in PostgreSQL: users, servers, websites, databases, apps, settings,
+  background tasks, metric history and the audit log;
+- serves the web interface and the API the interface uses;
+- runs a private certificate authority (CA) for agents, in `/var/lib/ekpanel/agent-ca`;
+- seals secrets it must reuse (Cloudflare tokens, deploy keys, notification channels) with a
+  key in `/var/lib/ekpanel/secret.key`;
+- runs background tasks and routine checks (see [below](#the-task-queue));
+- sends notifications.
+
+The panel never changes a server itself. It has no root rights and no SSH access to your
+servers. Everything that touches a server goes through that server's agent.
+
+## The agent
+
+The agent is one Go program, `ekpanel-agent`, on every managed server. It runs as root
+(`ekpanel-agent.service`), because it creates Linux accounts, writes web server
+configuration and installs packages. It:
+
+- sends live metrics (CPU, memory, disk, network, load, uptime) every 2 seconds;
+- tells the panel facts about the server when it connects: host name, OS, kernel, CPU,
+  agent version and IP addresses;
+- performs the **typed operations** the panel asks for, and nothing else;
+- brings the server in line with the **desired state** the panel sends (see
+  [desired state](/concepts/desired-state/));
+- streams terminal sessions, build output and logs back to the panel.
+
+The agent checks everything it receives again, even though the panel already checked it.
+It only touches Linux accounts, databases and apps that it created itself.
+
+## How panel and agent talk
+
+The agent always opens the connection:
+
+1. **Enrolment, once.** The agent connects to the panel on port 7443, checks the panel's CA
+   by the fingerprint (CA pin) you gave it, and trades a one-time token for a client
+   certificate. Its private key never leaves the server. See
+   [add a server](/start/add-server/#how-enrolment-works).
+2. **The connection.** The agent keeps a WebSocket open to the panel over **mutual TLS**:
+   the panel proves itself with a certificate from its own CA, and the agent with its client
+   certificate. Certificates last 90 days and renew automatically. If the connection drops,
+   the agent reconnects with a growing delay of up to about 30 seconds.
+3. **Messages.** Both sides send small JSON messages over that one connection: the agent
+   sends a hello, metrics and answers; the panel sends requests. Long-running streams, such
+   as a web terminal, share the same connection.
+
+Because the agent dials out, a server behind NAT or a home router works without any open
+incoming port. Only the panel's server must accept connections on TCP 7443.
+
+Revoking a server (deleting it, or making a **New connection command**) revokes its
+certificate and closes the connection it has open.
+
+## Typed operations
+
+The panel can only ask an agent for operations from a fixed list. Each has a name and typed,
+checked parameters, defined in `internal/agentproto` in the source code. Some examples:
+
+| Operation | What it does |
+| --- | --- |
+| `state.apply` | Bring the server in line with its full desired state: websites, databases, apps, cron jobs, customer limits, firewall, security, mail, name server. |
+| `services.status` | Report the state of the services ekPanel shows. |
+| `services.restart` | Restart one service from a fixed allowlist (Caddy, PostgreSQL, cron, the mail server, CrowdSec). |
+| `php.info`, `php.extension` | List PHP versions and extensions, add or remove one extension. |
+| `mail.check` | Test what decides whether other mail servers accept this server's mail. |
+
+An agent answers anything else with "unknown operation". **There is no operation that runs a
+shell command.** The one way to run any command is the [web terminal](/guides/apps/terminal/),
+which is an interactive shell for a person who signed in again, not something the API can
+script.
+
+## The task queue
+
+Anything slow, or anything that asks an agent to change a server, runs as a **task**: a row
+in PostgreSQL that you can see in the panel with its status (**Waiting**, **Running**,
+**Done**, **Failed**). Examples: applying server settings, installing WordPress, a backup, a
+deploy, a malware scan.
+
+- Four workers in the panel pick up tasks. Each worker locks one task at a time
+  (`FOR UPDATE SKIP LOCKED`), so a task never runs twice at once.
+- A running task holds a **lease** of 30 minutes that it renews while it works, so a backup
+  of several hours is not mistaken for a crash.
+- If the panel stops in the middle, the task's lease runs out and it is picked up again.
+- A failed task is retried after a growing pause, up to its maximum number of attempts. When
+  it finally fails, administrators (and the owner, for a customer's task) get a
+  notification.
+- Repeated requests for the same work, such as applying one server's settings, collapse into
+  one task.
+- Finished tasks are deleted after 30 days.
+
+Besides tasks, the panel runs routine loops: re-applying every online server every 10
+minutes, the offline check (an alert after 3 minutes), traffic collection every 15 minutes,
+disk use every 30 minutes, scheduled backups, scheduled malware scans, the daily WordPress
+check and DNS sync. These are not shown as tasks, so they do not flood the list; their
+results show on the items themselves.
+
+There is no Redis or other queue service: PostgreSQL holds the queue too.
+
+## Caddy, the web server
+
+On every server, [Caddy](https://caddyserver.com/) owns ports 80 and 443. It gets and renews
+Let's Encrypt certificates by itself and routes each domain to the right place: a static
+folder, a website's PHP-FPM pool, a Docker app's private port, or the panel.
+
+The agent writes one Caddy file per website and app into `/etc/ekpanel/caddy/sites/`, which
+the main `/etc/caddy/Caddyfile` imports. Before any change goes live, Caddy checks the new
+configuration (as the `caddy` user) and then reloads gracefully, without dropping
+connections. If Caddy rejects a change, the agent puts the previous file back and reports the
+error on that one website only, so one broken site cannot take the others down.
+
+## What ekPanel installs and manages
+
+The installer sets up only what the panel needs. Everything else is installed by the agent
+the first time a feature needs it.
+
+| Service | Installed | Used for |
+| --- | --- | --- |
+| PostgreSQL | By the installer | The panel's database; also customers' PostgreSQL databases |
+| Caddy | By the installer (official package repository) | Web server and HTTPS for the panel, websites and apps |
+| PHP-FPM | With the first PHP site (Ondřej Surý's packages) | PHP 7.4 and 8.1 to 8.5, a pool per site |
+| MariaDB | With the first MariaDB database or WordPress | Databases |
+| OpenSSH `internal-sftp` | Already on the server | SFTP per website |
+| Pure-FTPd | When the first site turns FTP on | FTPS |
+| Docker and Compose | With the first app (distribution packages) | Docker apps, catalogue services |
+| Docker Buildx, Railpack | With the first Git build (Railpack only for a repository without a Dockerfile) | Building Git apps |
+| restic | With the first backup location | Encrypted backups |
+| ufw | When the firewall is turned on | Firewall rules |
+| CrowdSec and its nftables bouncer | When turned on (CrowdSec's package repository) | Banning attackers |
+| ClamAV | When malware scans are turned on | Malware scans |
+| nftables | With country blocking | Country rules |
+| Stalwart and Roundcube | When email is turned on | Mail server and webmail |
+| PowerDNS (SQLite backend) | When the server becomes a name server | Your own name servers |
+| WP-CLI, Composer | With WordPress and PHP apps | Installing and updating them |
+| systemd timers and slices | Already on the server | Cron jobs, and customers' memory and CPU limits |
+
+Downloads that do not come from a package repository (WP-CLI, Railpack, Composer, Stalwart,
+Roundcube, Joomla, Moodle) are pinned versions, checked against their published checksums.
+
+## Where things live
+
+| Path | What |
+| --- | --- |
+| `/usr/local/bin/ekpanel`, `/usr/local/bin/ekpanel-agent` | The two programs |
+| `/etc/ekpanel/panel.env` | The panel's settings |
+| `/etc/ekpanel/agent.json` | The agent's credential (root only) |
+| `/var/lib/ekpanel/` | The panel's data: agent CA, secret key, setup token |
+| `/etc/ekpanel/caddy/sites/` | One Caddy file per website and app |
+| `/home/<site account>/public_html` | A website's files |
+| `/srv/ekpanel/apps/<name>` | A Docker app's Compose project (root only) |
+
+The [ports and paths reference](/reference/ports-and-paths/) has the full list.
+
+<Aside type="tip">
+The panel's logs and the local agent's logs are in the systemd journal:
+`sudo journalctl -u ekpanel -u ekpanel-agent -f`.
+</Aside>
+
+## Related
+
+- [Desired state](/concepts/desired-state/): how changes reach a server and stay there.
+- [Security model](/concepts/security-model/)
+- [Add a server](/start/add-server/)

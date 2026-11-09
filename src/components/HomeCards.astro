@@ -1,0 +1,36 @@
+---
+/**
+ * The home page's feature cards or "pick your path" links, from src/data/home.ts, in the
+ * reader's language and with the site's base path.
+ */
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { features, paths } from '~/data/home';
+
+interface Props {
+	show: 'features' | 'paths';
+}
+const { show } = Astro.props;
+const lang = Astro.currentLocale === 'bn' ? 'bn' : 'en';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (link: string) => `${base}${lang === 'en' ? '' : '/' + lang}${link}`;
+---
+
+{
+	show === 'features' ? (
+		<CardGrid>
+			{features.map((f) => (
+				<a class="ek-card-link" href={href(f.link)}>
+					<Card title={f[lang].title} icon={f.icon as any}>
+						{f[lang].text}
+					</Card>
+				</a>
+			))}
+		</CardGrid>
+	) : (
+		<CardGrid>
+			{paths.map((p) => (
+				<LinkCard title={p[lang].title} href={href(p.link)} description={p[lang].text} />
+			))}
+		</CardGrid>
+	)
+}

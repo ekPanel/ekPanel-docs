@@ -1,0 +1,193 @@
+---
+title: Security model
+description: How ekPanel protects your servers, websites and customers - isolation per site, mutual TLS to agents, typed operations, how secrets are kept, the audit log, and what customers can do.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A hosting panel controls servers as root, so a hole in the panel is a hole in every website
+it hosts. This page explains, in plain terms, how ekPanel is built to limit the damage any
+one mistake or attacker can do.
+
+<Aside type="caution">
+ekPanel has not had an outside security review yet, and it is in early development. Do not
+host anything important on it yet. To report a vulnerability, follow the
+[security policy](/project/security-policy/); never open a public issue.
+</Aside>
+
+## The principles
+
+- The agent on a server does only **typed, checked operations** from a fixed list. There is
+  no "run this command" operation.
+- Every website runs as **its own Linux user** with **its own PHP-FPM pool**.
+- Customers' processes run inside **cgroups** with their package's memory and CPU limits.
+- Panel and agents talk over **mutual TLS**, set up with **single-use, short-lived enrolment
+  tokens**.
+- **Secrets are not stored** when they do not have to be, and **sealed** when they do.
+  Passwords are hashed with argon2id, and two-factor sign-in is available to everyone.
+- Every change goes into an **append-only audit log**.
+
+## Panel and agents
+
+**The panel has no power over servers by itself.** It runs as an unprivileged user in a
+systemd sandbox with no capabilities and a read-only system. It cannot log in to your
+servers. Everything that changes a server goes through that server's agent.
+
+**Agents prove who they are, and so does the panel.**
+
+- A new server enrols with a token that works **once** and **expires after one hour**. The
+  panel stores only a SHA-256 hash of it.
+- The agent checks the panel's certificate against the **CA pin**, a fingerprint you copy
+  from the panel, so it cannot be tricked into enrolling with someone else.
+- The agent makes its own private key, which never leaves the server. Its certificate lasts
+  90 days and renews automatically.
+- After that, every connection uses mutual TLS on its own port (7443), separate from the web
+  interface.
+- Making a **New connection command** or deleting a server revokes its certificate at once
+  and closes the connection it has open.
+
+**Agents accept only typed operations.** Each operation has a name and typed parameters,
+and the agent checks every value again even though the panel already did. For example, only
+services on a short allowlist can be restarted. Names, domains, PHP settings, DNS records,
+mail addresses and WordPress plugin names are checked on both sides, so no input can add
+lines to a configuration file or reach a shell.
+
+The one exception is the **web terminal**, a shell for a person, not something the API can
+script. Opening one needs your password (and two-factor code) again within the last 15
+minutes, it is refused while an administrator acts as a customer, and it closes after 30
+minutes without typing and after 8 hours. The audit log records who opened it, for how long
+and how many bytes went each way, not what was typed.
+
+**The agent only touches what it created.** It changes or deletes only Linux accounts in
+its own group, and only databases and apps it made itself. Data is deleted only when you
+delete it explicitly.
+
+## Websites are kept apart
+
+| Layer | What it does |
+| --- | --- |
+| Linux user per site | Each website has its own account and home folder. Other accounts cannot read it. |
+| PHP-FPM pool per site | PHP runs as the site's account, with `open_basedir` limited to its folder. |
+| Web server access | Only Caddy gets read access to a site's files, through ACLs. |
+| File manager | Every action runs in a separate process locked (chrooted) into the site's folder, as the site's account. Links to other files, `..` paths and "zip slip" archives are refused. |
+| SFTP | Locked into the site's folder, no shell, no forwarding. SSH keys live in a file the site's account cannot change. |
+| FTP | TLS only, a login per site, locked into its folder, no system accounts. The ports are open only while a site uses FTP. |
+| Web server checks | A new configuration is checked before it is loaded; a rejected one is rolled back, so one site cannot take down the others. Dotfiles such as `.env` and `.git` are never served. |
+| WordPress and PHP apps | WP-CLI and installers run as the site's account. Config files with database passwords are readable by that account only. |
+
+## Customers and limits
+
+Customers sign in to the same panel. Ownership is checked in one place for every request,
+and anything a customer does not own answers "not found", as if it did not exist.
+
+Each customer gets a **systemd slice** (a cgroup) with their package's memory and CPU
+limits. All their PHP runs under a PHP-FPM process of their own inside it, and all their
+containers and builds run inside it too. A script that goes over the memory limit stops
+alone; the customer's other sites keep working. Disk use is measured every 30 minutes, and
+a full package stops new websites, databases, apps and file uploads through the panel.
+
+| Customers can | Customers cannot |
+| --- | --- |
+| Manage their own websites, databases, apps and cron jobs, within their package | See servers, other customers, packages or the audit log |
+| Use the file manager, and SFTP and FTP when their package allows it | Open a root shell on a server |
+| Install catalogue services whose images their package allows, and Git apps if it includes them | Use their own Compose files |
+| Open a shell inside their own apps' containers | Run privileged containers, add capabilities or devices, or mount host folders |
+| Add email for the domains of their own websites | Manage backups, the firewall or server security |
+| Host DNS zones for their own domains, or connect their own Cloudflare account | Host a zone inside or around another account's zone, or a public suffix |
+| Quarantine or delete malware found on their sites | Put back a quarantined file or mark it safe |
+| Change their own password and two-factor settings | Go over their package's limits |
+
+For catalogue services, the agent checks the final Compose file of every customer app and
+refuses privileged mode, added capabilities, devices, host folders and namespaces, volumes
+with driver options, and secrets or configs read from the host.
+
+An administrator can **sign in as** a customer for one hour to help them. A banner shows it,
+the customer's password and two-factor settings stay out of reach, and the audit log names
+the administrator.
+
+## Docker apps
+
+App ports are published on `127.0.0.1` only, and reach the internet through Caddy with
+HTTPS. Docker normally opens published ports past the firewall, so Compose files that publish
+ports on public addresses or use the host network are refused unless you allow it.
+
+A Compose file can still do anything Docker allows, so only administrators can add Compose
+apps. Pull requests from forks are never built as previews, because their code would run on
+your server.
+
+## How secrets are kept
+
+| Secret | How ekPanel keeps it |
+| --- | --- |
+| Your panel password | Hashed with argon2id |
+| Session and enrolment tokens | Only a SHA-256 hash |
+| Database passwords | Never stored. Shown once; the panel keeps only the database's own hash (MariaDB's native hash, PostgreSQL's SCRAM-SHA-256 verifier) |
+| WordPress and PHP app admin passwords | Shown once, never stored |
+| SFTP, FTP and mailbox passwords | SHA-512 crypt hashes only |
+| Backup recovery key, S3 keys | Only on the server, readable by root. The panel never stores them |
+| Cloudflare tokens, deploy keys, webhook secrets, certificate keys, notification channel tokens, the SMTP password | Sealed with AES-256-GCM under a key in `/var/lib/ekpanel/secret.key`, never sent back to the browser |
+| The agent's private key | Only on its server, in `/etc/ekpanel/agent.json` (root only) |
+
+Passwords for databases and installers travel to programs through standard input or the
+environment, never as command-line arguments that other users could see in the process list.
+
+<Aside type="danger" title="Protect /var/lib/ekpanel">
+`/var/lib/ekpanel` holds the key that opens sealed secrets and the certificate authority your
+agents trust. Back it up somewhere private, and never share it.
+</Aside>
+
+## Signing in
+
+- A fresh install can only be claimed with the **setup token** the installer prints, so
+  nobody can create the first administrator before you.
+- Passwords are hashed with argon2id. Failed sign-ins are rate limited.
+- **Two-factor authentication** (TOTP) is available to every user. The server security page
+  lists administrators who have not turned it on.
+- **Sign out all other devices** ends every other session. Users get a notification when
+  someone signs in from a new address.
+- Session cookies are `HttpOnly`, `SameSite=Lax` and use the `__Host-` prefix. Requests that
+  change something are protected against cross-site request forgery, and a strict Content
+  Security Policy allows no inline scripts.
+
+## The audit log
+
+Every change made by an administrator or a customer is written to the audit log: who did it,
+what, and when. The database itself refuses to edit or delete audit rows, so nobody, not even
+the panel, can rewrite history. Administrators read it under **Audit log**.
+
+## Network safety
+
+- When ekPanel manages the [firewall](/guides/security/firewall/), SSH (on the ports sshd
+  really uses), HTTP, HTTPS and the agent port always stay open, and the panel refuses rules
+  that would block the address of the person adding them. The same applies to
+  [country blocking](/guides/security/countries/).
+- Services ekPanel sets up for itself, such as the mail server's and PowerDNS's management
+  APIs, listen on loopback only.
+- Customers' notification webhooks cannot reach private, local or link-local addresses, such
+  as a cloud provider's metadata service.
+- Caddy trusts the visitor address that Cloudflare sends only from Cloudflare's published
+  address ranges.
+
+## Downloads
+
+Software that does not come from a signed package repository (WP-CLI, Composer, Railpack,
+Stalwart, Roundcube, Joomla, Moodle) is a pinned version, checked against the checksum its
+publisher lists before it is used.
+
+## Not there yet
+
+- **Signed releases** and self-update with signature checks (phase 4a). Today you build from
+  source yourself.
+- A **web application firewall** and rate limiting per site (phase 4).
+- **Passkeys** and a list of active sessions (phase 4).
+
+The [roadmap](/project/roadmap/) has the details.
+
+## Related
+
+- [Security overview guide](/guides/security/overview/): what to tighten on your servers.
+- [Your account](/guides/security/accounts/): two-factor sign-in and sessions.
+- [Security policy](/project/security-policy/): how to report a vulnerability.
+- [Architecture](/concepts/architecture/)

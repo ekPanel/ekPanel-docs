@@ -1,0 +1,178 @@
+---
+title: Contributing
+description: How to help ekPanel with code, translations, docs and testing, and how a change goes from an idea to the dev branch.
+sidebar:
+  order: 1
+---
+
+import { Aside, Steps, Card, CardGrid } from '@astrojs/starlight/components';
+
+Thank you for wanting to help. ekPanel welcomes contributions of every size: code,
+translations, documentation, bug reports, testing on real servers, and design feedback. This
+page explains how the project works and what a good contribution looks like.
+
+<Aside type="note" title="The main repository is private for now">
+The code lives at [github.com/ekPanel/ekpanel](https://github.com/ekPanel/ekpanel). It is
+private until the first release, so issues, discussions and pull requests there are not open to
+everyone yet. Until then, write to **ekpanelbd@gmail.com**, or help with the
+[docs repository](https://github.com/ekPanel/ekPanel-docs).
+</Aside>
+
+## Ways to help
+
+<CardGrid>
+	<Card title="Translate" icon="translate">
+		Every UI text is in a JSON file. Adding or improving a language needs no programming. See
+		[Translating](/development/translating/).
+	</Card>
+	<Card title="Write docs" icon="document">
+		Fix a page with its **Edit page** link, or write a missing guide. See
+		[Working on the docs](/development/docs/).
+	</Card>
+	<Card title="Test on real servers" icon="laptop">
+		Install ekPanel on a test server and report what breaks, with steps and logs. See
+		[Support](/project/support/#writing-a-good-bug-report).
+	</Card>
+	<Card title="Write code" icon="seti:go">
+		The panel and agent are Go, the UI is React and TypeScript. Start with
+		[Development setup](/development/setup/).
+	</Card>
+</CardGrid>
+
+### Good first contributions
+
+There is no list of labelled starter issues yet, because the issue tracker is not public. These
+are good places to start:
+
+- **A translation**, or fixes to the Bangla one.
+- **A service for the catalogue**: one Compose file and one entry, with rules that a test checks
+  for you. The steps are in `CONTRIBUTING.md` under "Adding a service to the catalogue".
+- **A docs page** that is missing or unclear.
+- **A test report** from a server or cloud provider we have not tried.
+
+## Branches
+
+| Branch | What it holds |
+| --- | --- |
+| `dev` | All work happens here. It is the default branch. **Open pull requests against `dev`.** |
+| `prod` | Production-ready code. It changes only through a pull request from `dev`. |
+
+Nobody pushes to `prod` directly.
+
+## From idea to merged change
+
+<Steps>
+
+1. **Talk first about bigger changes.** For a new feature or a change to how something works,
+   open an issue (or email, while the repository is private) and describe the problem. Check the
+   [roadmap](/project/roadmap/): it may be planned already, with decisions made.
+
+2. **Set up your machine** as in [Development setup](/development/setup/), and create a branch
+   from `dev`:
+
+   ```bash
+   git switch dev && git pull
+   git switch -c ftp-passive-ports
+   ```
+
+3. **Make the change, with tests and translations.** Follow the guidelines below. For a feature
+   that touches the panel, the agent and the UI, read
+   [Adding a feature](/development/adding-a-feature/).
+
+4. **Run the checks** that CI runs:
+
+   ```bash
+   gofmt -l .     # must print nothing
+   make test
+   ```
+
+5. **Try it on a real server** if it changes what the agent does on a server. Use the
+   [test VM](/development/test-vm/).
+
+6. **Open a pull request against `dev`.** The template asks what changed, why, and how you
+   tested it. Link the issue it fixes (`Fixes #123`).
+
+7. **Review.** A maintainer reads the change, may ask for changes, and merges it when it is
+   ready. Small, focused pull requests are reviewed faster than big ones.
+
+</Steps>
+
+## Checks that must pass
+
+CI (`.github/workflows/ci.yml`) runs on every push to `dev` and `prod` and on every pull request.
+It has two jobs:
+
+| Job | Steps |
+| --- | --- |
+| `go` | `gofmt` must find nothing to change; `go vet ./...`; `go test -race ./...` (with an embedded PostgreSQL) |
+| `web` | `npm ci`; `npm run typecheck`; `npm run i18n:check`; `npm run build` (Node.js 22) |
+
+`make test` runs the same checks locally, except `gofmt` and the web build. The pull request
+template also asks you to tick:
+
+- `make test` passes
+- new UI text is in `en.json` (and `bn.json` if you can)
+- tried on a real server or the test VM, if it changes what the agent does
+- the docs are updated, or an issue on the docs repository says what to add
+
+## Guidelines
+
+These come from `CONTRIBUTING.md` in the main repository:
+
+- **Every UI string is translated.** Never write user-facing text directly in a component. Add a
+  key to `web/src/i18n/locales/en.json` and use `t("key")`. Add the Bangla too if you can;
+  otherwise `npm run i18n:check` shows translators what is missing.
+- **Format with `Intl`.** Use the helpers in `web/src/lib/format.ts` for numbers, sizes, rates
+  and dates, so they follow the user's language.
+- **Right-to-left safe.** Use logical Tailwind classes (`ms-`, `me-`, `ps-`, `pe-`, `start-`,
+  `end-`, `text-start`) instead of left and right. Flip directional icons with
+  `rtl:-scale-x-100`.
+- **API errors carry a stable `code`.** The UI translates `errors.<code>`, so add both.
+- **Security first.** Validate all input on the server (in the panel, and again in the agent),
+  never log secrets, store only hashes of tokens, and add an audit entry for every change an
+  administrator or customer makes.
+- **Tests.** New behaviour comes with tests. API behaviour is tested end to end against a real
+  PostgreSQL in `internal/api/`.
+- **The agent only does typed operations.** Never add a way for the panel to send a shell
+  command to a server.
+
+## Commit messages
+
+Look at `git log` for the style. A commit message has:
+
+- a **short subject** in the imperative, without a full stop: "Add FTP over TLS with a login per
+  website (3f)", "Fix a race in the cron API test". A roadmap part goes in brackets at the end.
+- a **body** that says what changed and why, often as a short list, and **how it was tested**
+  ("Tested in the VM: …"). Things found and fixed while testing are worth a line too.
+
+```text
+Fix task recovery when a dedupe key is already queued
+
+Requeueing interrupted tasks failed as a whole when one shared its dedupe
+key with a queued task (or another interrupted one), so tasks stayed
+"running" for good. Only the newest of such tasks is queued again now; the
+others fail.
+```
+
+## Licence of contributions
+
+ekPanel is licensed under [AGPL-3.0-only](/project/license/). By opening a pull request, you
+agree that your contribution is released under the same licence. The docs are under CC BY 4.0
+(see [Licence](/project/license/)).
+
+## Code of conduct
+
+Everyone taking part follows the [code of conduct](/project/code-of-conduct/). Be kind,
+especially to people who are new or writing in a language that is not their first.
+
+## Security problems
+
+Never report a vulnerability in a public issue or pull request. Follow the
+[security policy](/project/security-policy/).
+
+## Related
+
+- [Development setup](/development/setup/)
+- [Repository layout](/development/repository/)
+- [Adding a feature](/development/adding-a-feature/)
+- [Test VM](/development/test-vm/)

@@ -1,0 +1,118 @@
+---
+title: Web terminal
+description: Open a root shell on a server, or a shell inside an app's container, in your browser.
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The **web terminal** gives you a command line in the browser, without an SSH client or an open SSH
+port: a root shell on any of your servers, or a shell inside a running container of an app. It
+has colours, follows the size of the window, and can reconnect.
+
+## Who can open which terminal
+
+| Terminal | Button | Who | Runs as |
+| --- | --- | --- | --- |
+| **Server** | **Terminal** on the server page | Administrators only | `root`, in `/root`, with a login `bash` (or `sh` if bash is missing) |
+| **App** | **Shell** on the app page | Whoever owns the app: administrators, or the customer who owns it | The container's own user, with `bash` if the image has it, otherwise `sh` |
+
+- The **Terminal** button shows only while the server's agent is connected.
+- The **Shell** button shows only while the app is running (and, for a Git app, after its first
+  deploy). For a Compose app, choose the **Service** to open the shell in.
+- **Not available while signed in as a customer.** An administrator using "Sign in as" cannot
+  open any terminal, not even the customer's app shell. Go back to your own account first.
+
+## Open a terminal
+
+<Steps>
+
+1. On the server page click **Terminal**, or on the app page click **Shell**.
+
+2. The panel asks "Enter your password again". Type your password, and your two-factor code if
+   you use one, then click **Open terminal**.
+
+   This confirmation lasts **15 minutes**, for this browser session only. During that time you can
+   open more terminals without typing it again.
+
+3. The terminal connects ("Connected"). Type as in any terminal.
+
+4. To end it, type `exit` or close the tab.
+
+</Steps>
+
+<Aside type="note">
+Why the password again? A terminal on a server can change anything on it. Asking again means a
+stolen or forgotten-open session cookie alone is not enough to get a root shell. After 10 wrong
+passwords the panel stops accepting new attempts for 15 minutes.
+</Aside>
+
+## When a terminal closes
+
+A terminal closes, and the panel tells you why, when:
+
+| Message | Reason |
+| --- | --- |
+| "Closed after 30 idle minutes" | Nothing was typed (and the window was not resized) for 30 minutes |
+| "Closed after 8 hours" | Every terminal ends after 8 hours, idle or not |
+| "The shell ended" | You typed `exit`, or the shell stopped |
+| "The server's agent is offline" | The agent is not connected |
+| "Connection lost" | The browser's connection to the panel dropped |
+
+Click **Reconnect** to open a new shell. A reconnect is a **new** shell: programs you started in
+the old one were stopped (see below).
+
+<Aside type="caution">
+A terminal belongs to its browser tab. When you close the tab, lose the connection, or the agent
+disconnects, everything you started in that shell is hung up, then killed after 3 seconds. Use
+`tmux`, `screen`, `nohup` or a [cron job](/guides/websites/cron/) for anything that must keep
+running.
+</Aside>
+
+## How it works
+
+- The agent starts the shell in a pseudo-terminal on the server and streams it over the agent's
+  existing encrypted connection to the panel (mutual TLS). The panel passes it on to your browser
+  over a WebSocket on the panel's own HTTPS address. No extra port is opened on the server.
+- An app shell is `docker exec` into the first running container of the chosen service.
+- At most **10 terminals** can be open on one server at the same time.
+- The WebSocket only accepts connections from the panel's own pages, so another website cannot
+  open a terminal with your session.
+
+## What is recorded
+
+The **Audit log** (under **Administration**) records when a terminal is **opened** and **closed**:
+who, which server or app (and service), how long it was open, and how many bytes went in and out.
+
+It does **not** record what was typed or shown. Session recording is not there yet.
+
+## Security notes
+
+- A server terminal is a full **root** shell. Anything you can do over SSH as root, you can do
+  here, including breaking the server. Treat it like SSH.
+- Turn on two-factor authentication for every administrator; the terminal then needs the code too.
+- An app shell runs inside the container, as the container's user. It cannot see the server's
+  files, unless the app mounts them (only an administrator's own Compose file can do that).
+- Customers never get a shell on the server itself.
+
+## Limits and what is not there yet
+
+- Recording terminal sessions: not yet.
+- A shell as a **website's** own Linux account (for running Composer, WP-CLI or Artisan as the
+  site): not yet. Use [SFTP](/guides/websites/files/) or a [cron job](/guides/websites/cron/) for
+  now.
+- See the [roadmap](/project/roadmap/).
+
+## Troubleshooting
+
+**"… of app … is not running".** The service you chose has no running container. Start the app,
+or check its **Containers** and **Logs**.
+
+**"too many terminals are open on this server".** Close some terminal tabs (or wait for idle ones
+to close), then reconnect.
+
+## Related
+
+- [Docker apps](/guides/apps/docker-apps/): Containers, logs and restarts.
+- [Account security](/guides/security/accounts/): Two-factor authentication and sessions.

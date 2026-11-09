@@ -1,0 +1,187 @@
+---
+title: Working on the docs
+description: How to change these docs - run the site locally, write a page with Starlight components, add it to the sidebar, translate it, and how it gets published.
+sidebar:
+  order: 7
+---
+
+import { Aside, Steps, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+These docs are their own repository,
+[ekPanel/ekPanel-docs](https://github.com/ekPanel/ekPanel-docs), built with
+[Starlight](https://starlight.astro.build/) (on Astro). Anyone can fix a page or write a new
+one. This page shows how.
+
+<Aside type="tip" title="A small fix?">
+Every page has an **Edit page** link at the bottom. It opens the page's file on GitHub, where
+you can change it and open a pull request without installing anything.
+</Aside>
+
+## Before you start
+
+You need Node.js 22 or newer and Git.
+
+## Run the site locally
+
+<Steps>
+
+1. Clone the repository and install its dependencies:
+
+   ```bash
+   git clone https://github.com/ekPanel/ekPanel-docs.git
+   cd ekPanel-docs
+   npm ci
+   ```
+
+2. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   Open http://localhost:4321/ekPanel-docs/. Pages reload when you save.
+
+3. Before you open a pull request, build the whole site once. The build fails on broken pages:
+
+   ```bash
+   npm run build
+   ```
+
+   The finished site is in `dist/`. `npm run preview` serves it.
+
+</Steps>
+
+## Where things are
+
+<FileTree>
+
+- astro.config.mjs site settings, languages and the sidebar
+- WRITING.md the rules every page follows
+- src/
+  - assets/ logos
+  - content/docs/
+    - index.mdx the home page
+    - start/ install and first steps
+    - guides/ one folder per area: websites, apps, data, dns, security, admin
+    - concepts/ how ekPanel works
+    - reference/ configuration, ports, API, troubleshooting, FAQ, glossary
+    - development/ contributing (this page is here)
+    - project/ roadmap, policies, licence
+    - bn/ Bangla pages, with the same paths
+  - styles/ekpanel.css colours and fonts
+- .github/workflows/deploy.yml build and publish
+
+</FileTree>
+
+## Write a page
+
+Read [`WRITING.md`](https://github.com/ekPanel/ekPanel-docs/blob/main/WRITING.md) first. The
+short version:
+
+- **Truth first.** Describe what the code does today. Check the main repository before you
+  write about a feature. Never describe a planned feature as if it exists: say "not yet" and
+  link to the [roadmap](/project/roadmap/).
+- **Use the panel's real labels** (from `web/src/i18n/locales/en.json`), and real paths, ports,
+  commands and limits.
+- **Say when something was only tested in a VM**, or not against the real service.
+- **Plain English**, short sentences, "you", active voice. No marketing words.
+- **Start with what the page is for**, lead with the task, and number the steps.
+- **Explain terms** the first time, or link to the [glossary](/reference/glossary/).
+- **Say what can go wrong** and what to do about it.
+
+### Page layout
+
+Pages that use components are `.mdx`; plain pages may be `.md`. Every page starts with a title
+and a one-sentence description:
+
+```mdx
+---
+title: Short title, as in the sidebar
+description: One sentence, shown in search results and link previews.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+One or two sentences on what this is.
+
+## Before you start
+## Step-by-step task sections
+## How it works (optional, short)
+## Limits and what is not there yet
+## Troubleshooting (optional)
+## Related
+```
+
+### Components
+
+Import what you use from `@astrojs/starlight/components`:
+
+| Component | Use it for |
+| --- | --- |
+| `<Steps>` | A numbered procedure. Put an ordered list (`1.`, `2.`…) inside. |
+| `<Aside type="tip">` | Something people must not miss. Types: `note`, `tip`, `caution`, `danger`. |
+| `<Tabs>`, `<TabItem>` | The same task in different ways, such as two operating systems. |
+| `<Card>`, `<CardGrid>`, `<LinkCard>` | Overviews and links to other pages. |
+| `<Badge>` | A short label such as "not yet". |
+| `<FileTree>` | A folder layout, like the one above. |
+
+### Links and code
+
+- Link to other pages with paths from the site root, without the base:
+  `[Firewall](/guides/security/firewall/)`.
+- Link to the main repository with full GitHub URLs.
+- Code blocks name their language (`bash`, `json`, `yaml`). Commands a reader runs on a server
+  start with `sudo` where they need it.
+
+<Aside type="caution" title="MDX is strict">
+In `.mdx` files, `<` and `{` in normal text start a component or an expression. Put things like
+`<site id>` or `{{name}}` inside backticks.
+</Aside>
+
+## Add a page to the sidebar
+
+The sidebar is listed by hand in `astro.config.mjs`, so a new page appears only once you add
+it. Each entry is the page's path under `src/content/docs/`, without the extension:
+
+```js
+{
+	label: 'Security',
+	translations: { bn: 'নিরাপত্তা' },
+	items: [
+		'guides/security/overview',
+		'guides/security/firewall',
+		'guides/security/my-new-page', // add your page where it belongs
+	],
+},
+```
+
+The sidebar shows each page's `title`. A new group needs a `label` and its Bangla name in
+`translations`.
+
+## Bangla pages
+
+Bangla pages live in `src/content/docs/bn/`, with the same file names and folders as the
+English ones. Until a page is translated, the Bangla site shows the English page with a notice.
+See [Translating](/development/translating/#translate-these-docs) for the steps and the style.
+
+## How the site is published
+
+`.github/workflows/deploy.yml` builds the site with Node.js 22 on every push to `main` and
+publishes it on GitHub Pages at https://ekpanel.github.io/ekPanel-docs/. Pull requests are built
+too (but not published), so a broken page is caught before it is merged. The "last updated"
+date of each page comes from the Git history.
+
+The site is served under `/ekPanel-docs` until the project has a domain of its own; that is why
+`astro.config.mjs` sets `base`.
+
+## Licence
+
+The documentation (the files in `src/content/`) is under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the site's code (configuration and
+styles) is under the MIT licence.
+
+## Related
+
+- [Translating](/development/translating/)
+- [Contributing](/development/contributing/)
+- [Code of conduct](/project/code-of-conduct/)

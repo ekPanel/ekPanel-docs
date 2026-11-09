@@ -1,0 +1,197 @@
+---
+title: প্রথম ধাপগুলো
+description: ekPanel install করার পরে administrator তৈরি করুন, two-factor sign-in চালু করুন, প্রথম website যোগ করুন, একটা page online করুন আর backup set up করুন।
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+এই page আপনাকে নতুন install করা panel-এর সাথে প্রথম আধা ঘণ্টা ধাপে ধাপে দেখাবে: প্রথম sign-in
+থেকে শুরু করে online থাকা আর backup নেওয়া একটা website পর্যন্ত।
+
+## শুরু করার আগে
+
+- ekPanel [install করা আছে](/start/install/), আর installer যে address আর setup token দেখিয়েছিল
+  তা আপনার কাছে আছে।
+- Trusted certificate-সহ website-এর জন্য: একটা domain, যার DNS record (A, আর IPv6-এর জন্য AAAA)
+  আপনার server-এর দিকে point করা।
+- আপনার phone-এ একটা authenticator app, যেমন Google Authenticator, Aegis বা 1Password।
+
+## 1. Administrator তৈরি করুন
+
+<Steps>
+
+1. Panel-এর address খুলুন। Domain ছাড়া panel হলে আপনার browser self-signed certificate নিয়ে
+   সতর্ক করবে; একবার মেনে নিন।
+
+2. **ekPanel-এ স্বাগতম** (Welcome to ekPanel) page খুলবে। **সেটআপ টোকেন** (Setup token) paste
+   করুন। হারিয়ে ফেললে server-এ `sudo cat /var/lib/ekpanel/setup-token` চালান।
+
+3. **আপনার নাম**, **ইমেইল** আর **পাসওয়ার্ড** পূরণ করুন। Password-এ অন্তত 10 অক্ষর লাগবে; ছোট
+   একটা বাক্য মনে রাখা সহজ, কিন্তু আন্দাজ করা কঠিন।
+
+4. **অ্যাডমিন তৈরি করুন** (Create administrator)-এ click করুন। আপনি sign in হয়ে যাবেন।
+
+</Steps>
+
+এটা শুধু একবারই করতে হয়। পরের বার panel **সাইন ইন** (Sign in) দেখাবে, যেখানে আপনি email আর
+password দেবেন। শুরুতে panel-এর ভাষা আপনার browser-এর ভাষা অনুসরণ করে; যেকোনো সময় English আর
+বাংলার মধ্যে বদলাতে পারেন।
+
+## 2. Two-factor authentication চালু করুন
+
+Two-factor authentication মানে, sign in করতে password-এর পাশাপাশি আপনার phone থেকে একটা 6 সংখ্যার
+code-ও লাগবে। একজন administrator সব server-এ সবকিছু করতে পারেন, তাই এখনই এটা চালু করুন।
+
+<Steps>
+
+1. Menu-তে **আপনার অ্যাকাউন্ট** (Your account)-এর নিচে **নিরাপত্তা** (Security) খুলুন।
+
+2. **টু-ফ্যাক্টর অথেনটিকেশন চালু করুন** (Turn on two-factor authentication)-এ click করুন।
+
+3. আপনার authenticator app দিয়ে QR code-টা scan করুন। Scan করতে না পারলে, তার নিচে দেখানো key-টা
+   app-এ টাইপ করুন।
+
+4. App যে 6 সংখ্যার code দেখায় সেটা লিখুন, আর **নিশ্চিত করে চালু করুন** (Confirm and turn on)-এ
+   click করুন।
+
+</Steps>
+
+একই page-এ আপনি password বদলাতে পারেন, আর **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all
+other devices) করতে পারেন।
+
+<Aside type="caution">
+আপনার phone, বা authenticator app-এর একটা backup, নিরাপদে রাখুন। Code ছাড়া আপনি sign in করতে
+পারবেন না।
+</Aside>
+
+## 3. ঘুরে দেখুন: dashboard আর server
+
+**ড্যাশবোর্ড** (Dashboard) আপনাকে স্বাগত জানায় আর দেখায় সবকিছু চলছে কি না। কাজ শেষ না হওয়া
+পর্যন্ত একটা **শুরু করা যাক** (Getting started) card-এ তিনটা ধাপ থাকে: administrator তৈরি করা,
+একটা server connect করা, আর two-factor authentication চালু করা। Installer আগেই আপনার server
+connect করে দিয়েছে, তাই ওপরের ধাপের পরে তিনটাতেই টিক পড়ে যায় আর card-টা চলে যায়।
+
+Menu-তে **সার্ভার** (Servers) খুলুন। আপনার server তার host নামে তালিকায় আছে আর **অনলাইন**
+(Online) দেখাচ্ছে। এতে click করলে দেখবেন:
+
+- **সিস্টেম** (System): host নাম, operating system, kernel, architecture, agent version আর কখন
+  connect হয়েছে।
+- Live **CPU**, **মেমোরি** (Memory), **ডিস্ক** (Disk) আর **নেটওয়ার্ক** (Network) chart।
+  **সময়সীমা** (Time range) হিসেবে বেছে নিন **লাইভ**, **১ ঘণ্টা**, **২৪ ঘণ্টা**, **৭ দিন** বা
+  **৩০ দিন**।
+- Caddy, PostgreSQL আর cron-এর মতো **সার্ভিস** (Services), তাদের অবস্থা-সহ, আর যেগুলো ekPanel
+  restart করতে পারে সেগুলোর জন্য একটা **রিস্টার্ট** (Restart) button।
+- এই server-এর website, database আর app, firewall, আর আরও কিছু।
+
+সময়সাপেক্ষ কাজ, যেমন কোনো service restart করা বা PHP install করা, background task হিসেবে চলে।
+Panel-এর task list এটাকে **অপেক্ষায়** (Waiting), **চলছে** (Running), **সম্পন্ন** (Done) বা
+**ব্যর্থ** (Failed) হিসেবে দেখায়।
+
+## 4. আপনার প্রথম website যোগ করুন
+
+<Steps>
+
+1. **ওয়েবসাইট** (Websites) খুলে **ওয়েবসাইট যোগ করুন** (Add website)-এ click করুন।
+
+2. **ডোমেইন** (Domain) লিখুন, যেমন `example.com`। দুটো address-ই কাজ করাতে চাইলে
+   **www.example.com-এও চালু রাখুন** (Also answer on www.example.com)-এ টিক দেওয়া রাখুন।
+
+3. **সার্ভার** (Server) বেছে নিন। আপাতত আপনার একটাই আছে।
+
+4. **সাইটের ধরন** (Type of site) বেছে নিন:
+   - WordPress, Laravel আর অন্যান্য PHP application-এর জন্য **PHP**। তারপর **PHP ভার্সন** (PHP
+     version) বেছে নিন; recommended version-টা চিহ্নিত করা থাকে। যে version server-এ এখনো নেই,
+     সেটা নিজে থেকেই install হয়, প্রথমবার এতে কয়েক মিনিট লাগতে পারে।
+   - সাধারণ HTML, CSS আর JavaScript file-এর জন্য **স্ট্যাটিক** (Static)।
+
+5. **SSL সার্টিফিকেট (HTTPS)** বেছে নিন:
+   - **স্বয়ংক্রিয়, ফ্রি** (Automatic, free): Let's Encrypt, নিজে থেকেই renew হয়। Domain-এর DNS
+     এই server-এর দিকে point করা থাকতে হবে।
+   - **সেলফ-সাইনড** (Self-signed): testing-এর জন্য, বা যেসব domain public internet-এ নেই। Browser
+     সতর্কবার্তা দেখায়।
+
+6. PHP site-এর জন্য সাথে সাথে WordPress পেতে **WordPress ইনস্টল করুন** (Install WordPress)-এ টিক
+   দিতে পারেন। বিস্তারিত আছে [WordPress guide](/guides/websites/wordpress/)-এ।
+
+7. **ওয়েবসাইট তৈরি করুন** (Create website)-এ click করুন।
+
+</Steps>
+
+Agent যখন website set up করে, তখন কয়েক সেকেন্ড website-এর page-এ **চালু হচ্ছে…** (Applying…)
+দেখায়, তারপর **চালু** (Live)। **সাইট দেখুন** (Visit site)-এ click করুন: একটা page দেখবেন, যেখানে
+লেখা আপনার domain তৈরি।
+
+Site যদি **সমস্যা** (Problem) দেখায়, page-টা বুঝিয়ে দেয় কী ভুল হয়েছে। কারণটা ঠিক করুন (প্রায়ই
+domain-এর DNS) আর **আবার চেষ্টা করুন** (Try again)-এ click করুন। আরও আছে
+[website guide](/guides/websites/websites/)-এ।
+
+## 5. একটা page online করুন
+
+প্রতিটা website-এর নিজস্ব folder আছে, `public_html`, site-এর নিজস্ব Linux account-এর home folder-এ।
+এইমাত্র যে page দেখলেন সেটা হলো `public_html/index.html`।
+
+<Steps>
+
+1. Website-এর page-এ **ফাইল** (Files)-এ click করুন।
+
+2. `public_html` খুলুন।
+
+3. আপনার computer থেকে `index.html` (আর অন্য যেকোনো file) টেনে এনে তালিকার ওপর ছেড়ে দিন, অথবা
+   **আপলোড** (Upload)-এ click করুন। জিজ্ঞেস করলে welcome page-এর ওপরে লিখতে **বদলে দিন**
+   (Replace it) বেছে নিন।
+
+4. Browser-এ আপনার website reload করুন।
+
+</Steps>
+
+Browser-এই সরাসরি file edit-ও করতে পারেন: editor-এ খুলতে একটা text file-এর নামে click করুন,
+তারপর **সেভ** (Save)-এ click করুন (বা `Ctrl+S` চাপুন)। অনেক file-এর জন্য, বা নিজের editor থেকে
+কাজ করতে, SFTP ব্যবহার করুন; দেখুন [file guide](/guides/websites/files/)।
+
+## 6. Backup set up করুন
+
+Backup encrypted আর deduplicated হয়, আর একটা server-এর প্রতিটা website আর database এর আওতায় থাকে।
+
+<Steps>
+
+1. **ব্যাকআপ** (Backups) খুলে **ব্যাকআপের জায়গা যোগ করুন** (Add backup location)-এ click করুন।
+
+2. **সার্ভার** (Server) বেছে নিন।
+
+3. **ব্যাকআপ কোথায় থাকবে** (Where to keep the backups)-এর নিচে বেছে নিন:
+   - **এই সার্ভারে** (This server): set up করা দ্রুত, কিন্তু server-এর disk গেলে এগুলোও যাবে।
+   - **S3-এর মতো স্টোরেজে** (S3-compatible storage): Amazon S3, Backblaze B2, Cloudflare R2,
+     Wasabi, MinIO আর অন্যান্য। বেশি নিরাপদ, কারণ backup server-এর বাইরে থাকে। **এন্ডপয়েন্ট**
+     (Endpoint), **বাকেট** (Bucket), **অ্যাক্সেস কী আইডি** (Access key ID) আর **সিক্রেট অ্যাক্সেস
+     কী** (Secret access key) পূরণ করুন।
+
+4. **কত ঘন ঘন** (How often) বেছে নিন (প্রতি ঘণ্টায়, প্রতিদিন, প্রতি সপ্তাহে, অথবা শুধু যখন আপনি
+   চালু করবেন), সময় (**সময়**, At) আর **কতগুলো রাখা হবে** (How many to keep)।
+
+5. **তৈরি করুন** (Create)-এ click করুন।
+
+6. Panel একবার **রিকভারি কী** (Recovery key) দেখায়। এটা এই server থেকে দূরে কোথাও রাখুন, যেমন
+   একটা password manager-এ, তারপর **আমি রিকভারি কী রেখে দিয়েছি** (I have saved the recovery
+   key)-এ টিক দিন।
+
+7. প্রথম backup নিতে **এখনই ব্যাকআপ নিন** (Back up now)-এ click করুন।
+
+</Steps>
+
+<Aside type="danger" title="Recovery key রেখে দিন">
+Recovery key-ই আপনার backup-এর একমাত্র চাবি। ekPanel এটা রাখে না। এটা ছাড়া কেউই, আপনিও না,
+এগুলো পড়তে বা restore করতে পারবে না, যেমন server নতুন করে বানানোর পরে।
+</Aside>
+
+## এরপর কী
+
+- [আরেকটা server যোগ করুন](/start/add-server/)।
+- [Cloudflare](/guides/dns/cloudflare/) connect করুন, যাতে ekPanel আপনার site-গুলোর DNS record
+  তৈরি করে দেয়।
+- [Notification](/guides/admin/notifications/) set up করুন, যাতে disk ভরে গেলে বা backup ব্যর্থ
+  হলে আপনি জানতে পারেন।
+- [নিরাপত্তার overview](/guides/security/overview/) দেখুন আর
+  [firewall](/guides/security/firewall/) চালু করুন।
+- অন্যদের host করুন: [customer আর package](/guides/admin/customers/)।

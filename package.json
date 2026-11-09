@@ -1,0 +1,30 @@
+{
+  "name": "ekpanel-docs",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.6",
+    "@astrojs/starlight": "^0.42.10",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/noto-sans": "^5.3.0",
+    "@fontsource-variable/noto-sans-bengali": "^5.3.0",
+    "astro": "^7.3.6",
+    "github-slugger": "^2.0.0",
+    "sharp": "^0.35.3",
+    "unist-util-visit": "^5.2.0"
+  },
+  "description": "Documentation of ekPanel, the open-source hosting control panel",
+  "private": true,
+  "license": "CC-BY-4.0 AND MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ekPanel/ekPanel-docs.git"
+  }
+}

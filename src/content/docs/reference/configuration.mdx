@@ -1,0 +1,227 @@
+---
+title: Configuration
+description: Every setting, flag and command of the ekPanel panel and agent, and the files the installer writes.
+sidebar:
+  order: 1
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ekPanel has very few settings on purpose. Almost everything is set in the panel's web UI and
+kept in its database. This page lists what is left: the panel's environment variables and
+flags, the agent's commands and credential file, and the files the installer writes.
+
+## The panel (`ekpanel`)
+
+The panel is one program, `/usr/local/bin/ekpanel`. It serves the web UI and the API, and
+listens for agents. It reads its settings from `EKPANEL_*` environment variables. A command
+line flag with the same meaning wins over the variable.
+
+| Variable | Flag | Default | What it does |
+| --- | --- | --- | --- |
+| `EKPANEL_LISTEN` | `--listen` | `127.0.0.1:8080` | Address for the web UI and the API. Caddy forwards HTTPS traffic to it. |
+| `EKPANEL_AGENT_LISTEN` | `--agent-listen` | `:7443` | Address agents connect to, with mutual TLS. `:7443` means port 7443 on every address. |
+| `EKPANEL_DATABASE_URL` | `--database-url` | (none) | PostgreSQL connection URL. Required unless you use the development database. |
+| `EKPANEL_DEV_DB` | `--dev-db` | `false` | Starts a private, embedded PostgreSQL inside the data folder. For development only. |
+| `EKPANEL_DATA_DIR` | `--data-dir` | `/var/lib/ekpanel` | Folder for panel state that is not in the database (see below). |
+| `EKPANEL_SECURE_COOKIES` | `--secure-cookies` | `true` | Marks the session cookie `Secure` and names it `__Host-ekpanel_session`. Turn it off only for plain-HTTP development. |
+
+True or false values accept the usual forms (`true`, `false`, `1`, `0`). An unreadable value
+falls back to the default.
+
+The panel refuses to start without a database: you must set `EKPANEL_DATABASE_URL` or turn on
+`EKPANEL_DEV_DB`.
+
+<Aside type="caution" title="Do not use the development database on a server">
+`--dev-db` downloads PostgreSQL binaries and runs them inside the data folder. It is meant
+for `make dev` on your own computer. The panel prints a warning when it is on.
+</Aside>
+
+### What is in the data folder
+
+| Path (inside `EKPANEL_DATA_DIR`) | What it is |
+| --- | --- |
+| `setup-token` | The one-time setup token, while no administrator exists yet. It is deleted once you create the first administrator. |
+| `agent-ca/` | The panel's private certificate authority. Agents pin its fingerprint (the "CA pin") when they connect for the first time. |
+| `secret.key` | The key that encrypts secrets the panel keeps, such as notification tokens and the SMTP password (AES-256-GCM). |
+| `devdb/`, `devdb.log` | Only with `--dev-db`: the embedded database and its log. |
+
+<Aside type="danger" title="Back up the data folder">
+Without `secret.key`, the panel cannot read the secrets it encrypted. Without `agent-ca/`,
+no agent can connect until you connect every server again. Keep a copy of the whole data
+folder together with a dump of the panel's PostgreSQL database.
+</Aside>
+
+### Other variables
+
+| Variable | Used by | What it does |
+| --- | --- | --- |
+| `EKPANEL_CLOUDFLARE_API` | panel | Replaces Cloudflare's API address. Only for testing against the fake Cloudflare server in the repository (see [Development setup](/development/setup/)). |
+| `EKPANEL_DEV_TARGET` | Vite dev server | Where `npm run dev` sends API requests. Default `http://127.0.0.1:8080`. Development only. |
+
+Other `EKPANEL_*` names appear in the code, but they are passed internally to installer
+processes on a server. They are not settings.
+
+## Panel commands
+
+| Command | What it does |
+| --- | --- |
+| `ekpanel` | Runs the panel. Flags as in the table above. |
+| `ekpanel version` | Prints the version, for example in bug reports. Builds made without a Git tag print a commit or `dev`. |
+| `ekpanel add-server --name NAME` | Registers a server and prints one line: `<token> <ca-pin>`. It takes the panel's flags too, such as `--database-url`. |
+
+`add-server` exists for the installer: it connects the panel's own server before any
+administrator exists. It needs a real database (`--database-url`); it does not work with the
+development database, because that only runs inside the panel process. Normally you add servers
+in the panel with **Add server** instead.
+
+If you run it by hand on a server made by the installer, run it as the `ekpanel` user with the
+same environment as the service:
+
+```bash
+sudo runuser -u ekpanel -- bash -c 'set -a; . /etc/ekpanel/panel.env; exec /usr/local/bin/ekpanel add-server --name "web 2"'
+```
+
+The token works once and expires after one hour.
+
+## The agent (`ekpanel-agent`)
+
+The agent runs as root on every managed server. It has three commands you use:
+
+| Command | What it does |
+| --- | --- |
+| `ekpanel-agent enroll --panel HOST[:7443] --token TOKEN --ca-pin sha256:… [--config PATH]` | Connects this server to a panel once: trades the one-time token for a certificate and saves the credential file. |
+| `ekpanel-agent run [--config PATH]` | Runs the agent. It connects out to the panel and keeps the connection open. |
+| `ekpanel-agent version` | Prints the agent's version. |
+
+The `--config` default is `/etc/ekpanel/agent.json`. If `--panel` has no port, the agent uses
+7443. You can give it a host, a `host:port`, or a URL; the agent keeps only the host and port.
+
+The panel shows the exact `enroll` command, with the token and CA pin filled in, when you
+click **Add server** or **New connection command**. Copy it from there.
+
+<Aside type="note">
+There is a fourth command, `ekpanel-agent files`. The agent starts it by itself for each file
+manager action, inside the website's folder and as the website's account. You never run it.
+</Aside>
+
+### The credential file `/etc/ekpanel/agent.json`
+
+`enroll` writes this file with mode `0600` (readable by root only). It is JSON with five
+fields:
+
+| Field | What it holds |
+| --- | --- |
+| `panel` | The panel's agent address, `host:port`. |
+| `server_id` | This server's ID in the panel. |
+| `ca_pem` | The panel's CA certificate, pinned at enrolment. |
+| `cert_pem` | This agent's client certificate (valid 90 days). |
+| `key_pem` | This agent's private key. It never leaves the server. |
+
+You do not edit this file. The agent renews its certificate by itself before it expires and
+rewrites the file atomically, so a crash never leaves half a file. If the file is missing,
+incomplete or from a very old agent, `run` stops and asks you to enrol again.
+
+To connect a server again (for example after moving the panel), click **New connection
+command** on the server's page in the panel and run the new `enroll` command. That also
+revokes the old certificate and closes the old connection.
+
+## Files the installer writes
+
+`deploy/install.sh` sets up the panel's server. These are the settings it leaves behind:
+
+<Tabs>
+<TabItem label="/etc/ekpanel/panel.env">
+
+```bash
+EKPANEL_LISTEN=127.0.0.1:8080
+EKPANEL_AGENT_LISTEN=:7443
+EKPANEL_DATABASE_URL=postgres:///ekpanel?host=/var/run/postgresql
+EKPANEL_DATA_DIR=/var/lib/ekpanel
+```
+
+The database URL uses PostgreSQL's local socket with peer authentication, so there is no
+database password at all. The panel runs as the `ekpanel` system user, which owns the
+`ekpanel` database.
+
+</TabItem>
+<TabItem label="ekpanel.service">
+
+`/etc/systemd/system/ekpanel.service` runs `/usr/local/bin/ekpanel` as the `ekpanel` user
+with `EnvironmentFile=/etc/ekpanel/panel.env`. It restarts on failure and is sandboxed: no
+new privileges, no capabilities, a read-only system, no access to `/home`, and write access
+only to `/var/lib/ekpanel`. The panel needs no privileges, because the agent does the work on
+the server.
+
+</TabItem>
+<TabItem label="ekpanel-agent.service">
+
+`/etc/systemd/system/ekpanel-agent.service` runs
+`/usr/local/bin/ekpanel-agent run --config /etc/ekpanel/agent.json` as root and always
+restarts it, three seconds after it stops.
+
+</TabItem>
+<TabItem label="Caddyfile">
+
+`/etc/caddy/Caddyfile` sends the panel's address to `127.0.0.1:8080` and imports every
+website's file from `/etc/ekpanel/caddy/sites/*.caddy`. It trusts the `CF-Connecting-IP`
+header only from Cloudflare's published address ranges. With `--domain`, Caddy gets a free
+Let's Encrypt certificate for that name. Without it, the panel answers on the server's
+addresses with a self-signed certificate from `/etc/ekpanel/tls/`.
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="The installer rewrites these files">
+Running `install.sh` again (to upgrade) writes `panel.env`, both service files and the
+Caddyfile again. Changes you made by hand are lost. If you change them, note what you
+changed and apply it again after each upgrade. Also keep `EKPANEL_LISTEN` at
+`127.0.0.1:8080`: the Caddyfile and the installer's start check expect the panel there.
+</Aside>
+
+### Installer options
+
+```bash
+sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
+```
+
+| Option | What it does |
+| --- | --- |
+| `--local-dir DIR` | Folder with the `ekpanel` and `ekpanel-agent` binaries. Required for now: downloading releases comes with the first release. |
+| `--domain NAME` | A DNS name that points at this server. Caddy gets a trusted certificate for it. Without it, browsers show a certificate warning. |
+| `--email ADDRESS` | Contact address for Let's Encrypt expiry notices. Optional. |
+| `-h`, `--help` | Shows the usage text. |
+
+See [Install](/start/install/) for the whole procedure and [Upgrade](/start/upgrade/) for
+running it again.
+
+## Changing a setting on a server
+
+<Steps>
+
+1. Edit `/etc/ekpanel/panel.env` as root:
+
+   ```bash
+   sudo nano /etc/ekpanel/panel.env
+   ```
+
+2. Restart the panel:
+
+   ```bash
+   sudo systemctl restart ekpanel
+   ```
+
+3. Check that it started:
+
+   ```bash
+   curl -fsS http://127.0.0.1:8080/api/v1/health
+   journalctl -u ekpanel -n 50
+   ```
+
+</Steps>
+
+## Related
+
+- [Ports and paths](/reference/ports-and-paths/)
+- [Troubleshooting](/reference/troubleshooting/)
+- [Development setup](/development/setup/): the same settings for local development

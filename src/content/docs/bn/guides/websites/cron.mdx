@@ -1,0 +1,220 @@
+---
+title: Cron job
+description: Website বা app-এর জন্য নির্দিষ্ট সময়ে command চালান, preset বা যেকোনো cron expression দিয়ে, আপনার time zone-এ, সময়সীমা, log আর এখনই চালানোর সুবিধা সহ।
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Cron job একটা নির্দিষ্ট সময়সূচি ধরে command চালায়: প্রতি রাতে একটা backup script, প্রতি মিনিটে WordPress বা Laravel-এর
+scheduler, প্রতি সোমবার একটা report। ekPanel-এ একটা job কোনো **website** বা কোনো **app**-এর হয়, আর সেটার সাথেই চলে যায়।
+
+## Job যোগ করুন
+
+<Steps>
+
+1. Website (বা app) খুলে **ক্রন জব** (Cron jobs) খুঁজুন। **জব যোগ করুন** (Add job)-এ click করুন।
+
+2. **কমান্ড** (Command) লিখুন। Website-এর ক্ষেত্রে এটা website-এর নিজের account হিসেবে `sh` দিয়ে চলে, `public_html` থেকে
+   শুরু করে। App-এর ক্ষেত্রে এটা app-এর container-এর ভেতরে `sh` দিয়ে চলে।
+
+3. **কত ঘন ঘন** (How often) বেছে নিন: একটা preset, বা **নিজের মতো (ক্রন এক্সপ্রেশন)** (Custom (cron expression))।
+   **প্রতিদিন** (Every day), **প্রতি সপ্তাহে** (Every week) আর **প্রতি মাসে (১ তারিখে)** (Every month (on the 1st))-এর
+   জন্য সময়ও (**সময়** (At)) বেছে নিন, আর সাপ্তাহিক job-এর জন্য **দিন** (Day)।
+
+4. **টাইম জোন** (Time zone) check করুন। শুরুতে এটা আপনার browser-এর time zone থাকে।
+
+5. **পরের চলার সময়** (Next runs) পড়ুন: ওই time zone-এ job টা পরের যে পাঁচবার চলবে। সময়সূচি ভুল হলে এখানে তার বদলে একটা
+   error দেখায়।
+
+6. চাইলে job-কে একটা **নাম** (Name) দিন। নাম না দিলে command টাই নাম হিসেবে ব্যবহার হয়।
+
+7. **সময়সীমা (মিনিট)** (Time limit (minutes)) set করুন। Default হলো ৬০।
+
+8. **জব তৈরি করুন** (Create job)-এ click করুন।
+
+</Steps>
+
+App-এর জন্য কোন **সার্ভিস** (Service)-এ চলবে সেটাও বেছে নিন। Image app-এ একটাই service থাকে, `app`; Compose app-এ তার
+Compose file-এর প্রতিটা service-এর জন্য একটা করে থাকে।
+
+## সময়সূচি
+
+### Preset
+
+| Preset | Cron expression |
+| --- | --- |
+| **প্রতি মিনিটে** (Every minute) | `* * * * *` |
+| **প্রতি ৫ মিনিটে** (Every 5 minutes) | `*/5 * * * *` |
+| **প্রতি ১৫ মিনিটে** (Every 15 minutes) | `*/15 * * * *` |
+| **প্রতি ঘণ্টায়** (Every hour) | `0 * * * *` |
+| **প্রতিদিন**, আপনার বেছে নেওয়া সময়ে (শুরুতে 03:00) | `0 3 * * *` |
+| **প্রতি সপ্তাহে**, আপনার বেছে নেওয়া দিনে আর সময়ে (এখানে সোমবার 03:00) | `0 3 * * 1` |
+| **প্রতি মাসে (১ তারিখে)**, আপনার বেছে নেওয়া সময়ে | `0 3 1 * *` |
+
+আপনি যে preset বেছে নেন সেটা ডান পাশের cron expression হিসেবে save হয়। যে job-এর সময়সূচি এগুলোর কোনোটা না, সেটা edit
+করার সময় **নিজের মতো (ক্রন এক্সপ্রেশন)** হিসেবে দেখায়।
+
+### Cron expression
+
+একটা cron expression-এ space দিয়ে আলাদা করা পাঁচটা field থাকে:
+
+```text
+┌───────── minute (0-59)
+│ ┌─────── hour (0-23)
+│ │ ┌───── day of month (1-31)
+│ │ │ ┌─── month (1-12, or jan-dec)
+│ │ │ │ ┌─ day of week (0-7, or sun-sat; 0 and 7 are both Sunday)
+│ │ │ │ │
+30 2 * * 1-5
+```
+
+প্রতিটা field-এ দেওয়া যায়:
+
+- প্রতিটা value-র জন্য `*`;
+- একটা সংখ্যা, যেমন `30`;
+- একটা range, যেমন `1-5`;
+- একটা list, যেমন `0,15,30,45`;
+- একটা step, যেমন `*/10` (প্রতি ১০-এ) বা `5/15` (৫ থেকে শুরু করে প্রতি ১৫-এ)।
+
+এই shortcut-গুলোও চলে: `@hourly`, `@daily` (বা `@midnight`), `@weekly`, `@monthly`, `@yearly` (বা `@annually`)।
+
+| Expression | কখন চলে |
+| --- | --- |
+| `30 2 * * 1-5` | সপ্তাহের কাজের দিনগুলোতে 02:30-এ |
+| `*/10 8-18 * * *` | 08:00 থেকে 18:50 পর্যন্ত প্রতি ১০ মিনিটে |
+| `0 0 1,15 * *` | ১ আর ১৫ তারিখে মাঝরাতে |
+| `0 9 * * mon` | প্রতি সোমবার 09:00-এ |
+| `0 6 1 jan *` | ১ জানুয়ারি 06:00-এ |
+
+<Aside type="note">
+পুরনো cron-এর মতোই, **day of month** আর **day of week** দুটোই set করা থাকলে (`*` না), যেকোনো **একটা** মিললেই job চলে।
+`0 0 13 * 5` চলে প্রতি মাসের ১৩ তারিখে **আর** প্রতি শুক্রবারে।
+</Aside>
+
+যে সময়সূচি কখনো আসে না (যেমন ৩০ ফেব্রুয়ারি) তাতে পরের চলার কোনো সময় দেখায় না। প্রতিটা সময়সূচি panel check করে, আর
+ব্যবহারের আগে server-এ আবার check করা হয়।
+
+### Time zone
+
+Job চলে আপনার দেখা সময়ে, আপনার বেছে নেওয়া time zone-এ, যেমন `Asia/Dhaka`। Daylight saving-এর পরিবর্তন মেনে চলা হয়।
+List-এ সবার প্রথমে থাকে `UTC`।
+
+## Command লেখা
+
+Command হলো ছোট একটা shell script। Pipe, `&&`, `;` আর redirection ব্যবহার করতে পারবেন।
+
+<Tabs>
+<TabItem label="Laravel">
+
+```bash
+/usr/bin/php8.4 artisan schedule:run
+```
+
+প্রতি মিনিটে। [PHP app installer](/guides/websites/php-apps/)-এর বানানো Laravel-এ `artisan` থাকে `public_html`-এ, যেখান
+থেকে job শুরু হয়।
+
+</TabItem>
+<TabItem label="WordPress">
+
+```bash
+/usr/bin/php8.4 wp-cron.php
+```
+
+ভিজিটর এলে WordPress নিজের scheduled task চালায়। কম ভিজিটরের site-এ তার বদলে প্রতি ৫ বা ১৫ মিনিটে `wp-cron.php` চালান।
+Job `public_html` থেকে শুরু হয়, তাই path টা সেখান থেকে ধরা।
+
+</TabItem>
+<TabItem label="Script">
+
+```bash
+sh .scripts/nightly.sh >> ../logs/nightly.log 2>&1
+```
+
+আপনার `public_html/.scripts/`-এ upload করা একটা script চালায়, আর এর output site-এর `logs` folder-এর একটা log file-এ যোগ
+করে। যেসব folder-এর নাম dot দিয়ে শুরু সেগুলো ভিজিটরদের কখনো দেখানো হয় না।
+
+</TabItem>
+<TabItem label="App">
+
+```bash
+php artisan schedule:run
+```
+
+App-এর container-এর ভেতরে, image-এ যেসব program আছে সেগুলো দিয়ে।
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip">
+Site-এর নিজের version-এর PHP binary ব্যবহার করুন, যেমন PHP 8.4 site-এর জন্য `/usr/bin/php8.4`, যাতে job website-এর মতো
+একই PHP দিয়ে চলে। Site-এর [PHP settings](/guides/websites/php/#php-settings-per-site) খাটে web server-এর PHP-তে, এই
+command-line run-গুলোতে না।
+</Aside>
+
+Website-এর job:
+
+- website-এর Linux account হিসেবে চলে, কখনো root হিসেবে না;
+- বেশি অধিকার পেতে পারে না (`NoNewPrivileges`), এর নিজের private `/tmp` থাকে, আর `/usr`, `/boot` ও `/etc` শুধু পড়তে পারে;
+- কম priority নিয়ে চলে (`nice` 5);
+- customer-এর website হলে customer-এর slice-এর ভেতরে চলে, তাঁর package-এর memory আর CPU সীমা নিয়ে।
+
+App-এর job চলে service-এর প্রথম চালু container-এ `docker exec` দিয়ে। ওই service চালু না থাকলে job "… is not running"
+বলে fail করে।
+
+## সময়সীমা
+
+যে job তার **সময়সীমা**-র চেয়ে বেশি সময় চলে সেটা থামিয়ে দেওয়া হয়। ১০ সেকেন্ড থেকে ২৪ ঘণ্টা পর্যন্ত দেওয়া যায় (panel-এ
+পূর্ণ মিনিটে, সর্বোচ্চ ১৪৪০)।
+
+পরের সময় আসার সময়ও যে job চলছে, সেটা **দ্বিতীয়বার শুরু করা হয় না**। পরের run তার পরের নির্ধারিত সময়ের জন্য অপেক্ষা করে।
+
+## এখনই চালান, pause, edit, delete
+
+Job-এর list-এ:
+
+- **এখনই চালান** (Run now) সময়সূচির বাইরে এখনই job শুরু করে। Server-এ job set up হওয়ার পর এটা কাজ করে।
+- Switch দিয়ে job pause করা যায় (**বন্ধ রাখা** (Paused)) আর আবার **চালু** (On) করা যায়। Pause করা job তার settings রেখে
+  দেয়।
+- **জব সম্পাদনা** (Edit job) কোথায় চলে সেটা ছাড়া সবকিছু বদলায়।
+- **জব মুছুন** (Delete job) server থেকে এটা সরিয়ে দেয়।
+
+## Status আর output
+
+প্রতিটা job তার পরের run দেখায় (**পরেরবার …** (Next …)), আর **শেষবারের ফল আর আউটপুট** (Last run and output)-এর নিচে:
+
+- **শেষবার চলেছে** (Last run) আর **পরেরবার চলবে** (Next run)-এর সময়;
+- ফলাফল: **চলছে** (Running), **সফল** (Succeeded), **ব্যর্থ (…, এক্সিট কোড …)** (Failed (…, exit code …)) (যেমন সময়সীমা
+  পার হওয়া বা error exit code), বা **এখনো চলেনি** (Not run yet);
+- সাম্প্রতিক run-গুলোর output (শেষ ২০০ লাইন), server-এর journal থেকে।
+
+Output বেশিদিন রাখতে চাইলে ওপরের script-এর উদাহরণের মতো job-এর output একটা file-এ লিখুন।
+
+<Aside type="caution">
+Cron job fail করলে ekPanel এখনো notification পাঠায় না। গুরুত্বপূর্ণ job মাঝে মাঝে check করুন।
+</Aside>
+
+## Package-এর সীমা
+
+Customer-এর [package](/guides/admin/customers/) ঠিক করে তাঁর সব website আর app মিলিয়ে কতগুলো cron job রাখতে পারবেন।
+[PHP app installer](/guides/websites/php-apps/#moodle)-এর যোগ করা Moodle-এর job-ও গোনা হয়। সীমায় পৌঁছালে job যোগ করার
+চেষ্টা "the package allows no more of these" বলে ফিরিয়ে দেওয়া হয়।
+
+## কীভাবে কাজ করে
+
+প্রতিটা job server-এ একটা systemd timer আর একটা one-shot service হয়ে যায় (`ekpanel-cron-<id>.timer` আর `.service`)।
+Command রাখা হয় একটা script file-এ (`/etc/ekpanel/cron/<id>.sh`), যেটা শুধু root আর site-এর account পড়তে পারে, তাই
+command-এর ভেতরের quote বা `%` চিহ্ন unit বদলাতে পারে না। সময়সূচিকে systemd-এর `OnCalendar` রূপে বদলে
+`systemd-analyze calendar` দিয়ে check করা হয়।
+
+Test server-এ (VM) পরীক্ষা করা হয়েছে: `Asia/Dhaka`-তে প্রতি মিনিটের একটা job, exit code আর সময়সীমা ঠিকঠাক report হওয়া,
+Alpine container-এর ভেতরে একটা job, customer-এর slice-এ তাঁর job, pause করা, আর delete করার পর কিছু থেকে না যাওয়া।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="PHP app" href="/guides/websites/php-apps/" description="Laravel আর Moodle-এর scheduler লাগে।" />
+	<LinkCard title="Docker app" href="/guides/apps/docker-apps/" />
+	<LinkCard title="Log আর traffic" href="/guides/websites/logs-traffic/" />
+</CardGrid>

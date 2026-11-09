@@ -1,0 +1,157 @@
+---
+title: Upgrade
+description: Install a newer build of ekPanel on the panel's server and update the agents on your other servers.
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+To upgrade ekPanel today, you build the new version and run the installer again. Your data
+stays. Agents on other servers are updated by copying the new program to them.
+
+<Aside type="note" title="Self-update comes later">
+There is no update button and no automatic update yet. Phase 4a of the
+[roadmap](/project/roadmap/) adds signed releases, a panel that shows a newer release and
+updates itself (keeping the old program to go back to), and agents updated by the panel one
+server at a time.
+</Aside>
+
+## Before you start
+
+- Read what changed since your build. Until there are release notes, that is the commit
+  history of the repository.
+- **Back up the panel's own data.** ekPanel's [backups](/guides/data/backups/) cover your
+  websites and databases, not the panel's database. Database changes run only forwards, so
+  an older panel cannot use a database a newer one has changed. On the panel's server:
+
+  ```bash
+  sudo -u postgres pg_dump -Fc ekpanel > ekpanel-db.dump
+  sudo tar -czf ekpanel-data.tar.gz /var/lib/ekpanel /etc/ekpanel
+  ```
+
+  Keep both files somewhere safe and private: `/var/lib/ekpanel` holds the key that opens
+  the panel's stored secrets and the certificate authority your agents trust.
+
+## Upgrade the panel's server
+
+<Steps>
+
+1. Build the new version, as in [install](/start/install/#build-ekpanel):
+
+   ```bash
+   git pull
+   make release
+   ```
+
+2. Copy the archive for your server's CPU type to the server and unpack it:
+
+   ```bash
+   tar -xzf ekpanel-*-linux-amd64.tar.gz
+   cd ekpanel-*-linux-amd64
+   ```
+
+3. Run the installer again, **with the same options as the first time**:
+
+   ```bash
+   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
+   ```
+
+4. Reload the panel in your browser.
+
+</Steps>
+
+### What running the installer again does
+
+The installer is written to be run more than once. On a server that already has ekPanel, it:
+
+- installs any missing packages, and leaves PostgreSQL's `ekpanel` database and the
+  `ekpanel` user as they are;
+- replaces `/usr/local/bin/ekpanel` and `/usr/local/bin/ekpanel-agent` with the new
+  programs;
+- writes `/etc/ekpanel/panel.env`, `ekpanel.service` and `ekpanel-agent.service` again, and
+  restarts the panel;
+- skips enrolment, because the agent already has its credential, and restarts the panel
+  server's own agent;
+- writes `/etc/caddy/Caddyfile` again from the options you give, and reloads Caddy. A
+  self-signed certificate made earlier is kept.
+
+Everything in the panel's database and in `/var/lib/ekpanel` stays: your administrator,
+customers, websites, settings, the agents' certificate authority and the secret key. No
+setup token is printed, because an administrator exists.
+
+<Aside type="caution" title="Pass the same options">
+The installer rewrites the Caddyfile and the panel's settings file each time. If you leave
+out `--domain` on a panel that had one, the panel moves back to a self-signed certificate on
+the server's IP address. Changes you made by hand to `/etc/caddy/Caddyfile` or
+`/etc/ekpanel/panel.env` are overwritten too.
+</Aside>
+
+### Database changes run by themselves
+
+When the new panel starts, it applies any new database changes (migrations) before it does
+anything else. Each change runs once, in order, inside a transaction, and the panel records
+which ones are done. You do not run anything by hand. If a change fails, the panel does not
+start; `sudo journalctl -u ekpanel` shows why.
+
+## Update agents on other servers
+
+The installer updates only the agent on the panel's own server. On every other server,
+replace the program and restart the agent:
+
+<Steps>
+
+1. Copy the new `ekpanel-agent` for that server's CPU type to the server.
+
+2. Install it and restart the agent:
+
+   ```bash
+   sudo install -m 0755 ekpanel-agent /usr/local/bin/ekpanel-agent
+   sudo systemctl restart ekpanel-agent
+   ```
+
+3. In the panel, open the server. Under **System**, **Agent version** shows the new
+   version once the agent has reconnected.
+
+</Steps>
+
+The agent keeps its credential in `/etc/ekpanel/agent.json`, so it does not need to enrol
+again. When it reconnects, the panel applies the server's settings again.
+
+Update the agents soon after the panel. A new panel can ask for operations an old agent does
+not know yet; the agent refuses them, and the panel shows a message such as "the agent does
+not support email; update the agent" on the affected items until you do.
+
+<Aside type="tip">
+A server going offline for a minute while its agent restarts does not trigger an "offline"
+notification: the panel waits three minutes before it alerts.
+</Aside>
+
+## Check the versions
+
+On any server:
+
+```bash
+ekpanel version          # on the panel's server
+ekpanel-agent version
+```
+
+A build from a Git checkout is named after the nearest tag and commit (from `git describe`),
+or `dev` when Git is not available.
+
+## Troubleshooting
+
+- **The panel does not start after the upgrade**: read `sudo journalctl -u ekpanel`. A
+  failed database change is reported there.
+- **A server stays offline**: on that server, check `sudo systemctl status ekpanel-agent`.
+  An agent built for the wrong CPU type cannot start.
+- **Going back to the old version**: there is no downgrade command. Stop the panel, restore
+  its database from the dump you made before the upgrade (with `pg_restore`), install the
+  old programs, and start it again. This path has not been tested; without the dump, an
+  older panel may not work with the newer database at all.
+
+## Related
+
+- [Install](/start/install/)
+- [Add a server](/start/add-server/)
+- [Roadmap](/project/roadmap/)

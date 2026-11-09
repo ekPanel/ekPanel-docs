@@ -1,0 +1,304 @@
+---
+title: Docker apps
+description: Run any Docker image or Compose file on your server, with a domain, free HTTPS, variables, kept folders and limits.
+sidebar:
+  order: 1
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+An **app** is a program that runs in Docker containers on one of your servers. You can run any
+image from Docker Hub or another registry, or paste a Compose file with several services.
+ekPanel keeps the app's ports private, puts a domain with free HTTPS in front of it, and brings it
+back if its containers disappear.
+
+There are four ways to make an app. This page covers the first two:
+
+| App type (in the panel) | What it is | Who can use it |
+| --- | --- | --- |
+| **Docker image** | One container from an image, with variables and kept folders | Administrators, and customers whose package allows the image |
+| **Compose file** | Several services described in a `docker-compose.yml` | Administrators only |
+| **Git repository** | Built from a branch, see [Git deploys](/guides/apps/git-deploys/) | Administrators, and customers whose package includes Git apps |
+| From the **catalogue** | A ready-made service, see [App catalogue](/guides/apps/catalog/) | Administrators, and customers whose package allows its images |
+
+## Before you start
+
+- You need a connected server. See [Add a server](/start/add-server/).
+- You do **not** need to install Docker. The first app on a server installs Docker and the
+  Compose v2 plugin from the distribution's own packages (`docker.io`, and `docker-compose-v2`
+  on Ubuntu or `docker-compose` on Debian). This takes a minute or two.
+- If you want a domain, point its DNS (an `A` and/or `AAAA` record) at the server first, or let
+  ekPanel do it through [Cloudflare](/guides/dns/cloudflare/) or the
+  [built-in name servers](/guides/dns/name-servers/).
+
+<Aside type="note">
+Before Docker starts for the first time, ekPanel writes `/etc/docker/daemon.json` so that container
+logs are capped at 10 MB × 3 files per container. If that file already exists (you installed Docker
+yourself), ekPanel leaves it alone.
+</Aside>
+
+## Run an image
+
+<Steps>
+
+1. Open **Apps** and click **Add app**.
+
+2. Choose the server, and under **App type** choose **Docker image**.
+
+3. Enter a **Name**: 2 to 32 lowercase letters, digits and dashes, starting with a letter, for
+   example `kuma`. The name is used for the app's folder and its containers, and must be unique
+   on the server.
+
+4. Enter the **Image**, for example `nginx:alpine`, `louislam/uptime-kuma:2` or
+   `ghcr.io/owner/app:1.2`. The image is downloaded on the server.
+
+5. If the app serves a web page or an API, enter the **Port inside the container**: the port the
+   program listens on inside its container (for example `80` for nginx, `3001` for Uptime Kuma).
+   Leave it empty for apps that serve nothing over HTTP, such as a worker.
+
+6. Optionally enter a **Domain**, such as `status.example.com`, and choose the
+   **SSL certificate (HTTPS)**: **Automatic, free** (Let's Encrypt) or **Self-signed** (for
+   testing). A domain needs the port from the previous step.
+
+7. Add **Environment variables** and **Folders to keep** if the app needs them (see below).
+
+8. Click **Create app**. The panel shows "Setting up the app on the server…" until the server has
+   pulled the image and started the container.
+
+</Steps>
+
+## Run a Compose file
+
+Only administrators can run their own Compose files. A Compose file can ask Docker for anything
+(the host's files, its network, root privileges), so customers are limited to single images and
+to the reviewed services of the [catalogue](/guides/apps/catalog/).
+
+<Steps>
+
+1. Click **Add app** and choose **Compose file**.
+
+2. Paste the file (up to 256 KB). For example:
+
+   ```yaml
+   services:
+     web:
+       image: nginx:alpine
+       volumes:
+         - html:/usr/share/nginx/html
+     cache:
+       image: redis:8-alpine
+       command: [redis-server, --requirepass, "${REDIS_PASSWORD}"]
+
+   volumes:
+     html:
+   ```
+
+3. To give the app a domain, enter **Service for the domain** (here `web`) and the
+   **Port inside the container** that service listens on (here `80`). Do not add a `ports:`
+   section for this: ekPanel publishes that port itself.
+
+4. Enter variables, one `NAME=value` per line. The Compose file reads them as `${NAME}`, as
+   `${REDIS_PASSWORD}` above.
+
+5. Click **Create app**.
+
+</Steps>
+
+Each app, of any type, is a Compose project called `ekpanel-<name>`, kept in
+`/srv/ekpanel/apps/<name>` on the server. That folder is readable by root only, because Compose
+files and variables often hold passwords.
+
+## Domain and free HTTPS
+
+When an app has a domain, ekPanel writes a site for it in Caddy, the web server, that forwards
+requests to the app. With **Automatic, free**, Caddy gets a Let's Encrypt certificate and renews
+it; the domain's DNS must point at this server for that to work. Responses are compressed, and
+each request is written to the app's own log, which feeds the
+[request log and traffic charts](/guides/websites/logs-traffic/).
+
+A host name can belong to only one website or app in the whole panel. If you enter one that is
+already used, the panel refuses it.
+
+You can change the domain later in the app's **Settings**; click **Save and apply**.
+
+## Ports are kept private
+
+Docker has an awkward habit: a port published on a public address is opened **past the
+firewall**, because Docker writes its own packet rules ahead of ufw. A database published as
+`5432:5432` is open to the whole internet even when the [firewall](/guides/security/firewall/)
+says otherwise.
+
+ekPanel avoids this:
+
+- The app's port is published on `127.0.0.1` only, on a free port between 20000 and 29999 that
+  ekPanel picks. The app page shows it, for example `web:80 → 127.0.0.1:20003`. Only programs on
+  the same server, and Caddy, can reach it.
+- Visitors reach the app through its domain, over HTTPS.
+- A Compose file that publishes a port on any address other than `127.0.0.1` or `::1`, or that
+  uses `network_mode: host`, is **refused** with an error such as "service web publishes port
+  8080 on every address, which skips the firewall".
+
+### Allowing public ports
+
+Some services must be reached directly, without a web server in front: a game server, a mail
+server, a VPN. For a Compose app, open **Limits and advanced settings** and turn on
+**Allow ports published on public addresses**. ekPanel then accepts the Compose file's own
+`ports:` and host networking.
+
+<Aside type="caution">
+With this on, the ports you publish are reachable from the internet **whatever the firewall
+says**. Turn it on only for an app that really needs it, and make sure the program on that port
+has its own password or access control. Image apps and Git apps cannot publish public ports.
+</Aside>
+
+## Environment variables
+
+Enter variables like a `.env` file: one `NAME=value` per line. Blank lines and lines starting with
+`#` are skipped.
+
+```bash
+# Uptime Kuma does not need any; this is an example
+TZ=Asia/Dhaka
+DATABASE_URL=postgresql://app:secret@db:5432/app
+```
+
+- Names use letters, digits and `_`, and do not start with a digit. Each name may appear once.
+- An app can have up to 200 variables; each value up to 32 KB.
+- Values never appear on a command line, where other users of the server could see them. For an
+  image app they are written into the app's generated Compose file (as JSON, so no value can change
+  the file's structure, and `$` is kept as a literal `$`). For a Compose app they are given to
+  Compose in its environment, so the file reads them as `${NAME}`.
+
+## Folders to keep
+
+A container's own files are thrown away when it is recreated, for example after an image update.
+Anything that must survive goes in a **folder to keep**.
+
+For an image app, enter paths inside the container, one per line, such as `/data` or
+`/app/uploads`. Each becomes a Docker named volume of the app. You can keep up to 20 folders.
+
+For a Compose app, declare volumes in the Compose file itself, as in the example above.
+
+The contents of kept folders count toward a customer's disk space (see
+[Customers and packages](/guides/admin/customers/)).
+
+## Memory and CPU limits
+
+Under **Limits and advanced settings**:
+
+- **Memory limit (MB)**: at least 16 MB. When a container needs more, the kernel stops a process
+  in it. Image apps are started again by Docker (they run with `restart: unless-stopped`); for a
+  Compose app, that depends on the `restart:` setting in your file.
+- **CPU limit (cores)**: for example `0.5` for half a core, or `2`.
+
+Empty means no limit. For a Compose app, these limits apply to the **service for the domain**
+only; set limits for other services in the Compose file.
+
+For customers there is a second, outer limit: every container of a customer runs inside the
+customer's own systemd slice, which holds the memory and CPU of their package for all their
+websites and apps together. See [Customers and packages](/guides/admin/customers/).
+
+## Managing a running app
+
+The app page has these buttons and sections:
+
+| Button or section | What it does |
+| --- | --- |
+| **Open** | Opens the app's domain |
+| **Start** / **Stop** | Stops the containers, or starts them again. A stopped app stays stopped: ekPanel does not restart it on its regular checks |
+| **Restart** | Restarts all containers of the app. Not available while it is stopped |
+| **Update image** | Downloads newer versions of the app's images and recreates the containers whose image changed (see below) |
+| **Shell** | Opens a shell inside a container, see [Web terminal](/guides/apps/terminal/) |
+| **Containers** | Each container with its service, image and state (running, exited, healthy …) |
+| **Logs** | The last 100, 200, 1,000 or 5,000 lines of the app's output, with timestamps, from all its services |
+| **Settings** | Change the image or Compose file, domain, variables, kept folders and limits; **Save and apply** |
+
+ekPanel checks every app regularly, as it does websites (see
+[Desired state](/concepts/desired-state/)). If a container of a running app is removed by hand,
+it is brought back.
+
+### Updating the image
+
+**Update image** runs as a task on the server: Docker pulls every image of the app again and
+recreates the containers whose image changed, then waits up to two minutes for them to be up. It
+helps only when the image tag moves, such as `latest`, `2` or `stable`. To go to a fixed new
+version, change the image in **Settings** instead (for example from `nginx:1.26` to `nginx:1.27`).
+
+If the app is stopped, the new images are pulled and the containers recreated, but not started.
+
+## What ekPanel checks in a Compose file
+
+Every time an app is applied, the agent runs `docker compose config` and reads the result. It
+refuses the app (and shows the reason on the app page) when:
+
+- the file is not valid Compose, or has no services;
+- the **Service for the domain** does not exist in the file;
+- a port is published on an address other than `127.0.0.1` or `::1`, or a service uses the host
+  network, unless **Allow ports published on public addresses** is on.
+
+Customers' apps (always catalogue services) are checked much more strictly. The agent also
+refuses any service that:
+
+- asks for `privileged`, `cap_add`, `devices` or `security_opt`;
+- shares a namespace with the host or other containers (`network_mode`, `pid`, `ipc`,
+  `userns_mode`, `volumes_from`);
+- mounts a folder of the host (only named volumes and `tmpfs` are allowed);
+- is not in the customer's slice;
+
+and any file that uses volumes with a driver, driver options or `external`, or `secrets` and
+`configs`, which read files of the host.
+
+<Aside type="danger">
+An administrator's own Compose file is **not** checked for privileges. It can mount `/`, run
+privileged containers or reach the Docker socket, all as root. Only paste Compose files you have
+read and trust.
+</Aside>
+
+## Deleting an app
+
+<Steps>
+
+1. On the app page, scroll to **Delete this app**.
+
+2. Click **Delete app**. By default, the containers are removed but the data stays: the volumes and
+   the folder `/srv/ekpanel/apps/<name>`. An app created later **with the same name** on the same
+   server uses that data again.
+
+3. To remove everything, tick **Also delete all its data** (the button becomes
+   **Delete app and data**). This removes the volumes and `/srv/ekpanel/apps/<name>` and cannot be
+   undone.
+
+</Steps>
+
+Deleting an app also removes its web server site, its [cron jobs](/guides/websites/cron/) and,
+for Git apps, all its [previews](/guides/apps/git-deploys/#pull-request-previews).
+
+## Limits and what is not there yet
+
+- An app runs on one server. Moving an app to another server, or to another owner, is not there
+  yet (see the [roadmap](/project/roadmap/)).
+- [Backups](/guides/data/backups/) cover websites and databases, **not** app volumes. Back up
+  important app data yourself for now.
+- An app gets one domain on one port. Apps that need several domains or ports need a Compose file
+  with public ports, or several apps.
+- The app's memory and CPU limits apply to one service of a Compose app.
+
+## Troubleshooting
+
+**The app shows a problem right after creating it.** The message on the app page comes from
+Docker. "pull access denied" or "manifest unknown" means the image name or tag is wrong, or the
+image is private. A crash shows the last lines of the app's own log; open **Logs** for more.
+
+**The domain shows a certificate error.** With **Automatic, free**, the domain's DNS must point at
+this server and ports 80 and 443 must be reachable. Check with `dig +short your.domain`.
+
+**"publishes port … on every address, which skips the firewall".** Remove the `ports:` section
+and use **Service for the domain** and **Port inside the container** instead, or publish as
+`127.0.0.1:8080:80`. Turn on public ports only if visitors must reach that port directly.
+
+## Related
+
+- [App catalogue](/guides/apps/catalog/): One-click services such as Uptime Kuma, n8n and Nextcloud.
+- [Git deploys](/guides/apps/git-deploys/): Build and release your own code from a repository.
+- [Web terminal](/guides/apps/terminal/): A shell inside a running container.
+- [Cron jobs](/guides/websites/cron/): Run commands inside an app's container on a schedule.

@@ -1,0 +1,207 @@
+---
+title: Architecture
+description: ekPanel কীভাবে বানানো - panel, প্রতিটা server-এর agent, তাদের মধ্যের mutual TLS link, typed operation, task queue আর তারা যেসব service চালায়।
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ekPanel দুই ভাগে ভাগ করা: একটা **panel**, যা মনে রাখে কী কী থাকার কথা, আর প্রতিটা server-এ একটা
+**agent**, যা সেটা বাস্তবে ঘটায়। এই page-এ অংশগুলো আর তারা কীভাবে কথা বলে তা বোঝানো হয়েছে।
+ekPanel ব্যবহার করতে এটা জানা লাগে না, কিন্তু কিছু ভুল হলে কাজে আসে।
+
+## বড় ছবিটা
+
+```text
+                 ┌────────────────────────── Panel (control plane) ───────────────────────┐
+ Browser ──────► │  Web UI (React)  ──►  Panel API (Go)  ──►  PostgreSQL                   │
+   HTTPS via     │                         │   tasks, metric history, audit log          │
+   Caddy         └─────────────────────────┼───────────────────────────────────────────────┘
+                                           │ mutual TLS WebSocket on TCP 7443
+                                           │ (opened by each agent: works behind NAT)
+              ┌────────────────────────────┼────────────────────────────┐
+              ▼                            ▼                            ▼
+        ┌──────────┐                 ┌──────────┐                 ┌──────────┐
+        │  Agent   │  server 1       │  Agent   │  server 2       │  Agent   │  server N
+        │ (Go,root)│                 │          │                 │          │
+        └────┬─────┘                 └──────────┘                 └──────────┘
+             │ manages
+   Caddy (web server, HTTPS) · PHP-FPM · MariaDB / PostgreSQL · Docker · restic
+   Stalwart mail · PowerDNS · ufw / nftables · CrowdSec · ClamAV · systemd and cgroups
+```
+
+এক server-এর install-এ panel আর একটা agent একই machine-এ চলে। অন্য server-এর agent-দের সাথে
+panel যেভাবে কথা বলে, এই local agent-এর সাথেও ঠিক সেভাবেই বলে, তাই দ্বিতীয় একটা server যোগ করলে
+প্রথমটার কাজের ধরনে কিছুই বদলায় না।
+
+## Panel
+
+Panel হলো একটা Go program, `ekpanel`, যার ভেতরে React web interface build করা। এটা unprivileged
+`ekpanel` user হিসেবে একটা কড়া systemd sandbox-এ চলে, আর দুটো address-এ শোনে:
+
+| Address | কী |
+| --- | --- |
+| `127.0.0.1:8080` | Web interface আর API। Caddy HTTPS request এখানে পৌঁছে দেয়। |
+| `:7443` | Agent-দের endpoint, mutual TLS-সহ। |
+
+Panel:
+
+- সবকিছু PostgreSQL-এ রাখে: user, server, website, database, app, setting, background task,
+  metric history আর audit log;
+- web interface আর interface যে API ব্যবহার করে তা serve করে;
+- agent-দের জন্য একটা private certificate authority (CA) চালায়, `/var/lib/ekpanel/agent-ca`-তে;
+- যেসব secret তাকে আবার ব্যবহার করতে হয় (Cloudflare token, deploy key, notification channel),
+  সেগুলো `/var/lib/ekpanel/secret.key`-এর একটা key দিয়ে seal করে রাখে;
+- background task আর নিয়মিত check চালায় (দেখুন [নিচে](#the-task-queue));
+- notification পাঠায়।
+
+Panel কখনো নিজে কোনো server বদলায় না। এর root অধিকার নেই, আপনার server-এ SSH access-ও নেই।
+Server ছুঁয়ে যায় এমন সবকিছু সেই server-এর agent-এর মাধ্যমে যায়।
+
+## Agent
+
+Agent হলো একটা Go program, `ekpanel-agent`, যা প্রতিটা managed server-এ থাকে। এটা root হিসেবে চলে
+(`ekpanel-agent.service`), কারণ এটা Linux account তৈরি করে, web server-এর configuration লেখে আর
+package install করে। এটা:
+
+- প্রতি 2 সেকেন্ডে live metric (CPU, memory, disk, network, load, uptime) পাঠায়;
+- connect হওয়ার সময় panel-কে server-এর তথ্য জানায়: host নাম, OS, kernel, CPU, agent version আর
+  IP address;
+- panel যেসব **typed operation** চায় সেগুলো করে, এর বাইরে কিছু না;
+- panel যে **desired state** পাঠায়, server-টাকে সেই অবস্থায় আনে (দেখুন
+  [desired state](/concepts/desired-state/));
+- terminal session, build output আর log panel-এ stream করে পাঠায়।
+
+Panel আগেই check করলেও, agent যা পায় সবকিছু আবার check করে। এটা শুধু সেইসব Linux account,
+database আর app ছোঁয়, যেগুলো এটা নিজে তৈরি করেছে।
+
+## Panel আর agent কীভাবে কথা বলে
+
+Connection সবসময় agent খোলে:
+
+1. **Enrolment, একবার।** Agent port 7443-এ panel-এর সাথে connect করে, আপনার দেওয়া fingerprint
+   (CA pin) দিয়ে panel-এর CA check করে, আর একবারের একটা token দিয়ে একটা client certificate নেয়।
+   এর private key কখনো server ছেড়ে যায় না। দেখুন
+   [server যোগ করা](/start/add-server/#how-enrolment-works)।
+2. **Connection।** Agent **mutual TLS** দিয়ে panel-এর সাথে একটা WebSocket খোলা রাখে: panel নিজের
+   CA-র certificate দিয়ে নিজেকে প্রমাণ করে, আর agent তার client certificate দিয়ে। Certificate চলে
+   90 দিন আর নিজে থেকেই renew হয়। Connection কেটে গেলে agent আবার connect করে, প্রতিবার একটু বেশি
+   অপেক্ষা করে, সর্বোচ্চ প্রায় 30 সেকেন্ড পর্যন্ত।
+3. **Message।** দুই পক্ষই ওই একটা connection-এ ছোট JSON message পাঠায়: agent পাঠায় একটা hello,
+   metric আর উত্তর; panel পাঠায় request। লম্বা সময় ধরে চলা stream, যেমন web terminal, একই
+   connection ভাগ করে নেয়।
+
+যেহেতু agent নিজে বাইরে connect করে, NAT বা বাসার router-এর পেছনের server কোনো incoming port খোলা
+ছাড়াই কাজ করে। শুধু panel-এর server-কে TCP 7443-এ connection নিতে হয়।
+
+একটা server revoke করলে (delete করে, অথবা **নতুন সংযোগ কমান্ড** (New connection command)
+বানিয়ে) তার certificate বাতিল হয় আর খোলা থাকা connection বন্ধ হয়ে যায়।
+
+## Typed operation
+
+Panel একটা agent-এর কাছে শুধু একটা নির্দিষ্ট তালিকার operation চাইতে পারে। প্রতিটার একটা নাম আর
+type-সহ, check করা parameter আছে, যা source code-এর `internal/agentproto`-তে define করা। কিছু
+উদাহরণ:
+
+| Operation | কী করে |
+| --- | --- |
+| `state.apply` | Server-টাকে তার পুরো desired state-এ আনে: website, database, app, cron job, customer limit, firewall, security, mail, name server। |
+| `services.status` | ekPanel যেসব service দেখায় সেগুলোর অবস্থা জানায়। |
+| `services.restart` | একটা নির্দিষ্ট allowlist (Caddy, PostgreSQL, cron, mail server, CrowdSec) থেকে একটা service restart করে। |
+| `php.info`, `php.extension` | PHP version আর extension-এর তালিকা দেয়, একটা extension যোগ করে বা সরায়। |
+| `mail.check` | অন্য mail server এই server-এর mail নেবে কি না, তা যেসব জিনিস ঠিক করে সেগুলো পরীক্ষা করে। |
+
+এর বাইরে যেকোনো কিছুর উত্তরে agent বলে "unknown operation"। **Shell command চালায় এমন কোনো
+operation নেই।** যেকোনো command চালানোর একমাত্র উপায় হলো [web terminal](/guides/apps/terminal/),
+যা আবার sign in করা একজন মানুষের জন্য interactive shell, API দিয়ে script করার মতো কিছু না।
+
+## Task queue
+
+সময়সাপেক্ষ যেকোনো কাজ, বা যে কাজে agent-কে server বদলাতে বলা হয়, চলে একটা **task** হিসেবে:
+PostgreSQL-এর একটা row, যা panel-এ তার অবস্থা-সহ দেখা যায় (**অপেক্ষায়** (Waiting), **চলছে**
+(Running), **সম্পন্ন** (Done), **ব্যর্থ** (Failed))। উদাহরণ: server setting apply করা, WordPress
+install করা, একটা backup, একটা deploy, একটা malware scan।
+
+- Panel-এর চারটা worker task তুলে নেয়। প্রতিটা worker একবারে একটা task lock করে
+  (`FOR UPDATE SKIP LOCKED`), তাই একটা task কখনো একই সময়ে দুবার চলে না।
+- চলমান task-এর 30 মিনিটের একটা **lease** থাকে, যা কাজ চলার সময় সে renew করতে থাকে, তাই কয়েক
+  ঘণ্টার একটা backup-কে crash বলে ভুল করা হয় না।
+- মাঝপথে panel থেমে গেলে task-এর lease শেষ হয়ে যায় আর সেটা আবার তুলে নেওয়া হয়।
+- ব্যর্থ task প্রতিবার একটু বেশি বিরতির পরে আবার চেষ্টা করা হয়, তার সর্বোচ্চ চেষ্টার সংখ্যা পর্যন্ত।
+  শেষ পর্যন্ত ব্যর্থ হলে administrator-রা (আর customer-এর task হলে তার মালিক) notification পান।
+- একই কাজের বারবার আসা request, যেমন একটা server-এর setting apply করা, মিলে একটা task হয়ে যায়।
+- শেষ হওয়া task 30 দিন পরে মুছে ফেলা হয়।
+
+Task ছাড়াও panel নিয়মিত কিছু loop চালায়: প্রতি 10 মিনিটে প্রতিটা online server আবার apply করা,
+offline check (3 মিনিট পরে alert), প্রতি 15 মিনিটে traffic সংগ্রহ, প্রতি 30 মিনিটে disk ব্যবহার,
+নির্ধারিত backup, নির্ধারিত malware scan, প্রতিদিনের WordPress check আর DNS sync। এগুলো task হিসেবে
+দেখানো হয় না, যাতে তালিকা ভরে না যায়; এদের ফলাফল সংশ্লিষ্ট জিনিসগুলোতেই দেখা যায়।
+
+কোনো Redis বা অন্য queue service নেই: queue-ও PostgreSQL-এই থাকে।
+
+## Caddy, web server
+
+প্রতিটা server-এ port 80 আর 443 [Caddy](https://caddyserver.com/)-র দখলে। এটা নিজেই Let's Encrypt
+certificate নেয় আর renew করে, আর প্রতিটা domain-কে ঠিক জায়গায় পাঠায়: একটা static folder, একটা
+website-এর PHP-FPM pool, একটা Docker app-এর private port, বা panel।
+
+Agent প্রতিটা website আর app-এর জন্য একটা করে Caddy file লেখে `/etc/ekpanel/caddy/sites/`-এ, যা মূল
+`/etc/caddy/Caddyfile` import করে। কোনো পরিবর্তন live হওয়ার আগে Caddy নতুন configuration check করে
+(`caddy` user হিসেবে), তারপর connection না কেটে ধীরেসুস্থে reload করে। Caddy কোনো পরিবর্তন
+বাতিল করলে agent আগের file ফিরিয়ে দেয় আর error-টা শুধু ওই একটা website-এই দেখায়, তাই একটা ভাঙা
+site বাকিগুলোকে বসিয়ে দিতে পারে না।
+
+## ekPanel যা install করে আর চালায়
+
+Installer শুধু panel-এর যা লাগে তা-ই set up করে। বাকি সবকিছু agent install করে, যখন প্রথমবার কোনো
+feature-এর সেটা দরকার হয়।
+
+| Service | কখন install হয় | কীসের জন্য |
+| --- | --- | --- |
+| PostgreSQL | Installer করে | Panel-এর database; customer-দের PostgreSQL database-ও |
+| Caddy | Installer করে (official package repository) | Panel, website আর app-এর web server আর HTTPS |
+| PHP-FPM | প্রথম PHP site-এর সাথে (Ondřej Surý-র package) | PHP 7.4 আর 8.1 থেকে 8.5, প্রতিটা site-এর জন্য একটা pool |
+| MariaDB | প্রথম MariaDB database বা WordPress-এর সাথে | Database |
+| OpenSSH `internal-sftp` | Server-এ আগে থেকেই আছে | প্রতিটা website-এর SFTP |
+| Pure-FTPd | যখন প্রথম কোনো site FTP চালু করে | FTPS |
+| Docker আর Compose | প্রথম app-এর সাথে (distribution-এর package) | Docker app, catalogue service |
+| Docker Buildx, Railpack | প্রথম Git build-এর সাথে (Railpack শুধু Dockerfile ছাড়া repository-র জন্য) | Git app build করা |
+| restic | প্রথম backup location-এর সাথে | Encrypted backup |
+| ufw | যখন firewall চালু করা হয় | Firewall rule |
+| CrowdSec আর তার nftables bouncer | চালু করলে (CrowdSec-এর package repository) | Attacker-দের ban করা |
+| ClamAV | যখন malware scan চালু করা হয় | Malware scan |
+| nftables | Country blocking-এর সাথে | দেশভিত্তিক rule |
+| Stalwart আর Roundcube | যখন email চালু করা হয় | Mail server আর webmail |
+| PowerDNS (SQLite backend) | যখন server-টা name server হয় | আপনার নিজের name server |
+| WP-CLI, Composer | WordPress আর PHP app-এর সাথে | এগুলো install আর update করা |
+| systemd timer আর slice | Server-এ আগে থেকেই আছে | Cron job, আর customer-দের memory ও CPU limit |
+
+যেসব download package repository থেকে আসে না (WP-CLI, Railpack, Composer, Stalwart, Roundcube,
+Joomla, Moodle), সেগুলো নির্দিষ্ট (pinned) version, আর তাদের publish করা checksum-এর সাথে মিলিয়ে
+দেখা হয়।
+
+## কোন জিনিস কোথায় থাকে
+
+| Path | কী |
+| --- | --- |
+| `/usr/local/bin/ekpanel`, `/usr/local/bin/ekpanel-agent` | দুটো program |
+| `/etc/ekpanel/panel.env` | Panel-এর setting |
+| `/etc/ekpanel/agent.json` | Agent-এর credential (শুধু root) |
+| `/var/lib/ekpanel/` | Panel-এর data: agent CA, secret key, setup token |
+| `/etc/ekpanel/caddy/sites/` | প্রতিটা website আর app-এর জন্য একটা Caddy file |
+| `/home/<site account>/public_html` | একটা website-এর file |
+| `/srv/ekpanel/apps/<name>` | একটা Docker app-এর Compose project (শুধু root) |
+
+পুরো তালিকা আছে [port আর path reference](/reference/ports-and-paths/)-এ।
+
+<Aside type="tip">
+Panel-এর log আর local agent-এর log আছে systemd journal-এ:
+`sudo journalctl -u ekpanel -u ekpanel-agent -f`।
+</Aside>
+
+## আরও দেখুন
+
+- [Desired state](/concepts/desired-state/): পরিবর্তন কীভাবে server-এ পৌঁছায় আর সেখানে টিকে থাকে।
+- [Security model](/concepts/security-model/)
+- [Server যোগ করা](/start/add-server/)
