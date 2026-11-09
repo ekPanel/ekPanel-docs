@@ -81,32 +81,24 @@ export const paths: { link: string; en: Text; bn: Text }[] = [
 ];
 
 /**
- * The commands shown next to the headline. They follow the install page (/start/install/).
- * Until the first release they build a release from source; once v0.1.0 is published, this
- * becomes the one-line installer:
- *   curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com
+ * The commands shown next to the headline. They follow the install page (/start/install/):
+ * the one-line installer, which downloads the newest release (v0.1.0 is the first).
  */
 export const quickstart: Record<'en' | 'bn', { label: string; lines: string[] }> = {
 	en: {
-		label: 'Install from source',
+		label: 'Install',
 		lines: [
-			'# On your computer: build ekPanel',
-			'git clone https://github.com/ekPanel/ekpanel.git',
-			'cd ekpanel && make release VERSION=v0.0.1',
-			'# On a fresh Ubuntu 24.04 server',
-			'tar -xzf ekpanel-*-amd64.tar.gz && cd ekpanel-*-amd64',
-			'sudo ./install.sh --local-dir . --domain panel.example.com',
+			'# On a fresh Ubuntu 24.04+ or Debian 12+ server',
+			'curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash',
+			'# For a domain, add: -s -- --domain panel.example.com',
 		],
 	},
 	bn: {
-		label: 'Source থেকে install',
+		label: 'Install করুন',
 		lines: [
-			'# আপনার computer-এ: ekPanel build করুন',
-			'git clone https://github.com/ekPanel/ekpanel.git',
-			'cd ekpanel && make release VERSION=v0.0.1',
-			'# নতুন একটা Ubuntu 24.04 server-এ',
-			'tar -xzf ekpanel-*-amd64.tar.gz && cd ekpanel-*-amd64',
-			'sudo ./install.sh --local-dir . --domain panel.example.com',
+			'# নতুন একটা Ubuntu 24.04+ বা Debian 12+ server-এ',
+			'curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash',
+			'# Domain দিতে চাইলে যোগ করুন: -s -- --domain panel.example.com',
 		],
 	},
 };

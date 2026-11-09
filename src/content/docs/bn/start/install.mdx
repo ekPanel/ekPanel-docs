@@ -11,13 +11,6 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 যায়। Installer ekPanel-এর একটা release download করে, আর কিছু install করার আগে তার signature
 check করে। প্রায় দশ মিনিট লাগে, যার বেশিরভাগই download।
 
-<Aside type="caution" title="প্রথম release এখনো আসেনি">
-এক লাইনের install একটা official release download করে, আর সেটা এখনো একটাও নেই। প্রথমটা, v0.1.0,
-আসবে যখন project-এর owner সেটা publish করবেন। ততদিন নিচের command `curl`-এর একটা "404" error দিয়ে
-fail করবে: নিজে একটা release build করে install করুন, যেমন দেখানো আছে
-[নিজের build থেকে install](#install-from-your-own-build)-এ।
-</Aside>
-
 ## শুরু করার আগে
 
 - [যা যা লাগবে](/start/requirements/) তা পূরণ করে এমন একটা নতুন server: amd64 বা arm64-এ
@@ -138,8 +131,8 @@ gh attestation verify ekpanel-v0.1.0-linux-amd64.tar.gz --repo ekPanel/ekpanel
 
 ## নিজের build থেকে install
 
-প্রথম release publish না হওয়া পর্যন্ত, আর যখনই এমন code চালাতে চান যা এখনো release হয়নি,
-তখন আপনি নিজে একটা release build করে `--local-dir` দিয়ে install করেন।
+এমন code চালাতে চাইলে যা এখনো release হয়নি, নিজে একটা release build করে `--local-dir` দিয়ে
+install করুন।
 
 আপনার computer-এ লাগবে Linux, Go 1.27+, Node.js 22+, `make`, `git` আর `tar`। আগে server-এর CPU
 type জেনে নিন: server-এ `uname -m` দেখায় `x86_64` (**amd64**) বা `aarch64` (**arm64**)।
@@ -237,7 +230,7 @@ panel থেকে নিজেকে update করতে পারে না।
 </Aside>
 
 `make release VERSION=v0.0.1` দিয়ে build করা panel নিজেকে একটা release হিসেবে ধরে: এটা নতুন
-release খোঁজে, আর v0.1.0 publish হলে **আপডেট** (Updates)-এ সেটায় update করার কথা বলে। এর **সার্ভার
+release খোঁজে, আর **আপডেট** (Updates)-এ নতুন একটায় (যেমন v0.1.0) update করার কথা বলে। এর **সার্ভার
 যোগ করুন** (Add server) dialog এক লাইনের command দেখায়, কিন্তু সেই download শুধু publish করা
 version-এর জন্যই থাকে। তার বদলে কী চালাবেন, দেখুন
 [Server যোগ করা](/start/add-server/#when-the-panel-is-not-a-published-release)-এ।
@@ -341,9 +334,9 @@ DNS record বা cloud firewall ঠিক করুন, Caddy নিজে থ�
 
 ## সমস্যা হলে
 
-- **`curl: (22) The requested URL returned error: 404`**: এখনো কোনো release publish হয়নি, বা
-  আপনি যে version চেয়েছেন সেটা নেই। [নিজের build থেকে](#install-from-your-own-build) install
-  করুন।
+- **`curl: (22) The requested URL returned error: 404`**: address ভুল, বা `--version` দিয়ে আপনি
+  যে version চেয়েছেন সেটা নেই। URL আর
+  [release-এর তালিকা](https://github.com/ekPanel/ekpanel/releases) check করুন।
 - **"could not find the latest release at …"** বা **"could not download …"**: server
   `github.com` (বা আপনার `--release-url`) পর্যন্ত পৌঁছাতে পারছে না। এর outgoing HTTPS আর DNS check
   করুন।

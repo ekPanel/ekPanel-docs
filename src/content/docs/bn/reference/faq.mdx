@@ -12,15 +12,16 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## ekPanel কি production-এর জন্য তৈরি?
 
-**এখনো না।** ekPanel শুরুর দিকের development-এ আছে আর এর **কোনো release হয়নি**। এই docs-এ যা কিছু
+**এখনো না।** ekPanel শুরুর দিকের development-এ আছে। এর প্রথম release, **v0.1.0**, বের হয়েছে
+9 November 2026-এ। এই docs-এ যা কিছু
 বলা আছে সব কাজ করে আর একটা test server-এ (একটা local virtual machine) test করা হয়েছে, কিন্তু এটা
 এখনো আসল customer-দের জন্য আসল hosting চালায়নি। কিছু অংশ কখনো আসল বাইরের service-এর সাথে চেষ্টা
 করা হয়নি: Cloudflare-এর API test করা হয়েছে তার একটা নকল copy-র সাথে, আর internet-এ mail পাঠানো ও
 internet থেকে mail আসা দিয়ে email চেষ্টা করা হয়নি।
 
-এটা দিয়ে জিনিস চেষ্টা করে দেখুন, test করুন, আর সমস্যা খুঁজে পেতে আমাদের সাহায্য করুন। প্রথম release-এর
-আগে এতে গুরুত্বপূর্ণ কিছু host করবেন না। Signed release, সেগুলো download করে এমন installer, আর
-self-update তৈরি হয়ে গেছে; এরপরই আসছে প্রথম release। দেখুন [roadmap](/project/roadmap/)।
+এটা দিয়ে জিনিস চেষ্টা করে দেখুন, test করুন, আর সমস্যা খুঁজে পেতে আমাদের সাহায্য করুন। এখনই এতে
+গুরুত্বপূর্ণ কিছু host করবেন না। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন, আর
+panel থেকেই এটা নিজেকে update করে। দেখুন [roadmap](/project/roadmap/)।
 
 ## "ek" মানে কী?
 
@@ -113,8 +114,8 @@ memory আর CPU-এর সীমা (memory আর CPU kernel মানতে 
 Customer-রা একই panel-এ sign in করে আর শুধু নিজেদের জিনিসই দেখে।
 
 এখনো নেই: reseller account, white-label branding, customer suspend করা, bandwidth-এর সীমা, আর billing
-integration (WHMCS, Blesta, Paymenter)। আর এখনো কোনো release নেই, তাই আজ এটা দিয়ে hosting বিক্রি
-করবেন না। দেখুন [Customer আর package](/guides/admin/customers/)।
+integration (WHMCS, Blesta, Paymenter)। আর ekPanel এখনো শুরুর দিকের software, তাই আজ এটা দিয়ে
+hosting বিক্রি করবেন না। দেখুন [Customer আর package](/guides/admin/customers/)।
 
 ## cPanel বা অন্য panel থেকে কি site import করা যায়?
 

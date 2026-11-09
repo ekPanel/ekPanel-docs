@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: আজ ekPanel ধাপে ধাপে কী কী করতে পারে, আর এরপর কী আসছে - প্রথম release, API, server-এর মধ্যে সরানো, importer, reseller, একটা WAF, billing আর game server।
+description: আজ ekPanel ধাপে ধাপে কী কী করতে পারে, আর এরপর কী আসছে - API, server-এর মধ্যে সরানো, importer, reseller, একটা WAF, billing আর game server।
 sidebar:
   order: 1
 ---
@@ -9,13 +9,13 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
-update (4a)। এরপর আসছে প্রথম release। প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
+update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে; এরপর আসছে API (4b)। প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
-<Aside type="caution" title="এখনো কোনো release নেই">
+<Aside type="caution" title="এখনো শুরুর দিকের software">
 নিচে "শেষ" মানে একটা test server-এ (একটা local VM) বানানো আর test করা, production-এ ব্যবহার করা নয়।
-এখনো কোনো release নেই। এর জন্য যা যা লাগে সব তৈরি (নিচে 4a); প্রথমটা, v0.1.0, আসবে যখন project-এর
-owner সেটা publish করবেন।
+প্রথম release, v0.1.0, বের হয়েছে: চালিয়ে দেখুন, test করুন, কিন্তু এখনই এতে গুরুত্বপূর্ণ কিছু host
+করবেন না।
 </Aside>
 
 ## শেষ হয়েছে
@@ -72,7 +72,9 @@ Billing আসবে সবার শেষে, কারণ এটা API token
 
 ### 4a. Release আর update <Badge text="শেষ" variant="success" />
 
-VM-এ test key দিয়ে sign করা test release দিয়ে বানানো আর পরীক্ষা করা হয়েছে। **এরপর আসছে প্রথম release।**
+VM-এ test key দিয়ে sign করা test release দিয়ে বানানো আর পরীক্ষা করা হয়েছে। **এখান থেকেই 9 November
+2026-এ প্রথম release, [v0.1.0](https://github.com/ekPanel/ekpanel/releases/tag/v0.1.0), publish হয়েছে।**
+এরপর আসছে 4b।
 
 - CI-তে release build (Linux amd64 আর arm64), একটা tag থেকে হুবহু আবার বানানো যায় (reproducible),
   sign করা checksum তালিকা আর GitHub build attestation-সহ
@@ -82,7 +84,7 @@ VM-এ test key দিয়ে sign করা test release দিয়ে ব�
   দিয়ে, আর নতুনটা চালু না হলে সেটা ফিরিয়ে এনে), তারপর প্রতিটা agent update করে, একবারে একটা server
 - Changelog থেকে release notes, আর [আপডেট](/guides/admin/updates/) page-এ প্রতিটা server-এর agent
   version
-- এখনো বাকি: প্রথম public release-এর আগে একটা web translation platform (Weblate বা এমন কিছু)
+- এখনো বাকি: একটা web translation platform (Weblate বা এমন কিছু)
 
 Release কীভাবে বানানো হয়: একজন owner `pub`-এ `vX.Y.Z` tag দেন। Release workflow amd64 আর arm64-এর জন্য
 reproducible archive build করে, সুরক্ষিত `release` environment-এ রাখা key দিয়ে `SHA256SUMS` sign করে,

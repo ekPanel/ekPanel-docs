@@ -1,7 +1,7 @@
 ---
 /**
- * The "where the project stands" notice. Its text follows src/data/project.ts, so it changes
- * on every page at once when the project reaches its first release.
+ * The "where the project stands" notice. Its text follows src/data/project.ts (stage and
+ * latestVersion), so it changes on every page at once.
  */
 import { Aside } from '@astrojs/starlight/components';
 import { project } from '~/data/project';
@@ -16,13 +16,16 @@ const roadmap = `${base}${bn ? '/bn' : ''}/project/roadmap/`;
 		<Aside type="caution" title={bn ? 'শুরুর পর্যায়ে' : 'Early development'}>
 			{bn ? (
 				<>
-					ekPanel একটা test server-এ পুরোপুরি কাজ করে, কিন্তু এর প্রথম release এখনো হয়নি। জরুরি কিছু এখনই এতে host করবেন না।{' '}
+					{project.latestVersion ? `ekPanel v${project.latestVersion} বের হয়েছে, তবে এটা এখনো শুরুর দিকের software: চালিয়ে দেখুন, test করুন, কিন্তু` : 'ekPanel-এর এখনো কোনো release নেই।'}{' '}
+					জরুরি কিছু এখনই এতে host করবেন না।{' '}
 					<a href={roadmap}>Roadmap</a>-এ দেখুন এরপর কী আসছে।
 				</>
 			) : (
 				<>
-					ekPanel works end to end on a test server, but it has not had its first release yet. Do not host anything important
-					on it yet. The <a href={roadmap}>roadmap</a> shows what comes next.
+					{project.latestVersion
+						? `ekPanel v${project.latestVersion} is out, but it is still early software: try it and test it, but do not`
+						: 'ekPanel has no release yet. Do not'}{' '}
+					host anything important on it yet. The <a href={roadmap}>roadmap</a> shows what comes next.
 				</>
 			)}
 		</Aside>

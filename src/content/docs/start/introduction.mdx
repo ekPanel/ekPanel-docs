@@ -14,9 +14,8 @@ customers accounts of their own.
 **ek** (এক) is Bangla for "one": one panel for your whole hosting.
 
 <Aside type="caution" title="Early development">
-ekPanel works end to end on a test server, but it has no release yet. The installer, signed
-releases and self-update are ready, and the first release comes next; until then you build it
-from source. Do not host anything important on it yet. The [roadmap](/project/roadmap/) shows
+The first release, v0.1.0, is out, and you can [install it](/start/install/) with one command.
+It is still early software: try it and test it, but do not host anything important on it yet. The [roadmap](/project/roadmap/) shows
 what comes next.
 </Aside>
 
@@ -74,7 +73,7 @@ things to know:
 | Servers | One panel manages many servers. Each server runs an agent that dials out to the panel, so servers behind NAT work too. |
 | How changes reach a server | The panel keeps the full wanted state of each server and the agent brings the server in line, also every 10 minutes. See [desired state](/concepts/desired-state/). |
 | Operating systems | Ubuntu 24.04 or newer, and Debian 12 or 13. No Red Hat family yet. |
-| Releases | None published yet; the first comes next. Ready for it: a one-line installer that checks signatures, and updates of the panel and every agent from the panel. |
+| Releases | The first, v0.1.0, came out on 9 November 2026. A one-line installer that checks signatures, and updates of the panel and every agent from the panel. |
 | Not there yet | Resellers, importers from other panels, moving sites between servers, a WAF, an API with tokens, billing. See [features](/start/features/#not-yet). |
 
 If you need a mature, supported panel for paying customers today, ekPanel is not ready for

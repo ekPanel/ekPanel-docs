@@ -11,13 +11,6 @@ One command on a fresh server installs the panel, its agent, PostgreSQL and the 
 server. The installer downloads an ekPanel release and checks its signature before it
 installs anything. It takes about ten minutes, most of it downloads.
 
-<Aside type="caution" title="The first release is not out yet">
-The one-line install downloads an official release, and there is none yet. The first one,
-v0.1.0, comes when the project's owner publishes it. Until then the command below fails with
-a "404" error from `curl`: build a release yourself and install it, as in
-[Install from your own build](#install-from-your-own-build).
-</Aside>
-
 ## Before you start
 
 - A fresh server that meets the [requirements](/start/requirements/): Ubuntu 24.04+ or
@@ -138,8 +131,8 @@ gh attestation verify ekpanel-v0.1.0-linux-amd64.tar.gz --repo ekPanel/ekpanel
 
 ## Install from your own build
 
-Until the first release is published, and whenever you want to run code that is not released
-yet, you build a release yourself and install it with `--local-dir`.
+To run code that is not released yet, build a release yourself and install it with
+`--local-dir`.
 
 On your computer you need Linux, Go 1.27+, Node.js 22+, `make`, `git` and `tar`. Find out your
 server's CPU type first: `uname -m` on the server prints `x86_64` (**amd64**) or `aarch64`
@@ -238,7 +231,7 @@ your server differ.
 </Aside>
 
 A panel built with `make release VERSION=v0.0.1` counts as a release: it looks for new
-releases, and once v0.1.0 is published it offers to update to it under **Updates**. Its
+releases, and offers to update to a newer one (such as v0.1.0) under **Updates**. Its
 **Add server** dialog shows the one-line command, but that download only exists for published
 versions. See [Add a server](/start/add-server/#when-the-panel-is-not-a-published-release)
 for what to run instead.
@@ -345,9 +338,9 @@ itself.
 
 ## Troubleshooting
 
-- **`curl: (22) The requested URL returned error: 404`**: there is no published release yet,
-  or the version you asked for does not exist. Install
-  [from your own build](#install-from-your-own-build).
+- **`curl: (22) The requested URL returned error: 404`**: the address is wrong, or the
+  version you asked for with `--version` does not exist. Check the URL and the
+  [list of releases](https://github.com/ekPanel/ekpanel/releases).
 - **"could not find the latest release at …"** or **"could not download …"**: the server
   cannot reach `github.com` (or your `--release-url`). Check its outgoing HTTPS and DNS.
 - **"SHA256SUMS is not signed by the ekPanel release key; not installing."** or **"… does not
