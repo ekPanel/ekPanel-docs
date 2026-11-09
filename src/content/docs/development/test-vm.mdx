@@ -168,20 +168,29 @@ run a second VM with its own folder, name and ports, joined to the first by a pr
    sudo ip link set <link card> up && sudo ip addr add 192.168.77.2/24 dev <link card>
    ```
 
-4. Put the agent on the second VM and connect it to the panel in the first VM over the link:
-   copy `bin/ekpanel-agent` into it, install it to `/usr/local/bin`, click **Add server** in the
-   panel, and run the `enroll` command with `--panel 192.168.77.1:7443` instead of the address
-   the dialog shows. Then start the agent with `sudo ekpanel-agent run`. It runs in the
-   foreground, so keep that SSH session open (or run it in `tmux`).
+4. Set up the second VM as a server of the panel in the first VM, over the link. Copy the
+   agent and the installer into it (with the second VM's variables):
+
+   ```bash
+   VM_DIR=~/vms/panel-test2 VM_NAME=panel-test2 VM_PORT_OFFSET=10 scripts/test-vm.sh copy bin/ekpanel-agent deploy/install.sh
+   ```
+
+   Click **Add server** in the panel, and run the installer in the second VM with the token
+   and CA pin the dialog shows, but `--panel 192.168.77.1:7443` instead of the address in the
+   dialog:
+
+   ```bash
+   sudo ./install.sh --agent --local-dir . --panel 192.168.77.1:7443 --token <token> --ca-pin sha256:<pin>
+   ```
 
 </Steps>
 
 Addresses set with `ip addr` are lost when the VM restarts; set them again after each start.
 
 <Aside type="note">
-The agent does not install Caddy by itself; the installer does that on the panel's server. So a
-second VM with only an agent suits tests that need no web server there, such as a secondary
-name server. An installer for an agent alone is planned for [phase 4a](/project/roadmap/).
+With `--agent`, the installer sets up the second VM like a real second server: Caddy, the
+`acl` package, the Caddyfile import and the agent's systemd service. So websites work there
+too, not only tests such as a secondary name server.
 </Aside>
 
 ## Troubleshooting

@@ -8,8 +8,9 @@ export const project = {
 	stage: 'early' as 'early' | 'release',
 	/** The latest release, such as "0.1.0", or null before the first. */
 	latestVersion: null as string | null,
-	/** The roadmap phase being worked on (see /project/roadmap/). */
-	currentPhase: '4a',
+	/** The roadmap phase being worked on (see /project/roadmap/). 4a (releases and updates) is
+	 * done; the first release is published from it, then work goes on with 4b. */
+	currentPhase: '4b',
 	links: {
 		org: 'https://github.com/ekPanel',
 		repo: 'https://github.com/ekPanel/ekpanel',

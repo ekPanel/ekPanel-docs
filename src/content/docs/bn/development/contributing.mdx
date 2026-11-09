@@ -112,6 +112,22 @@ job আছে:
 - আসল server-এ বা test VM-এ চেষ্টা করা হয়েছে, যদি এটা agent যা করে তা বদলায়
 - docs update করা হয়েছে, অথবা docs repository-তে একটা issue বলছে কী যোগ করতে হবে
 
+## Release
+
+শুধু project-এর owner-রা release publish করেন:
+
+1. `CHANGELOG.md`-এর `## [Unreleased]` অংশটা হয়ে যায় `## [v1.2.3] - YYYY-MM-DD`, আর পরিবর্তনটা একটা pull
+   request দিয়ে `dev` থেকে `pub`-এ যায়।
+2. একজন owner `pub`-এর merge-এ `vX.Y.Z` tag দিয়ে tag-টা push করেন।
+3. **Release** workflow (`.github/workflows/release.yml`) check করে যে tag-টা `pub`-এ আছে আর changelog-এ
+   version-টার কথা লেখা আছে, তারপর amd64 আর arm64-এর জন্য reproducible archive build করে
+   (`make release`), সুরক্ষিত `release` environment-এ রাখা key দিয়ে `SHA256SUMS` sign করে
+   (`make sign`), build attestation যোগ করে, আর notes-সহ release publish করে।
+
+`v1.2.3-rc.1`-এর মতো pre-release অংশওয়ালা tag pre-release হয়, যা panel কখনো update হিসেবে দেখায় না।
+Panel-গুলো 6 ঘণ্টার মধ্যে নতুন release খুঁজে পায়। বিস্তারিত, আর নিজের key দিয়ে test release build ও sign
+করার নিয়ম আছে [`CONTRIBUTING.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/CONTRIBUTING.md)-এ।
+
 ## Guideline
 
 এগুলো main repository-র `CONTRIBUTING.md` থেকে নেওয়া:

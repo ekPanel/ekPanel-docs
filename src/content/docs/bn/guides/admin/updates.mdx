@@ -1,0 +1,96 @@
+---
+title: Update
+description: Panel আর প্রতিটা server কোন ekPanel version-এ চলছে দেখুন, panel-কে নতুন release খুঁজতে দিন, আর নতুন release এলে খবর পান।
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+**আপডেট** (Updates) page দেখায় panel আর প্রতিটা server-এ ekPanel-এর কোন version চলছে, নতুন release
+খোঁজে, আর সেগুলো install করে। এই page-এ বলা আছে সেখানে কী দেখায় আর release খোঁজা কীভাবে কাজ করে।
+একটা update ধাপে ধাপে দেখানো আছে [Upgrade করা](/start/upgrade/)-তে।
+
+<Aside type="note">
+এখনো কোনো official release নেই, তাই প্রথমটা, v0.1.0, publish না হওয়া পর্যন্ত page-এ দেওয়ার মতো কিছু
+থাকে না।
+</Aside>
+
+## শুরু করার আগে
+
+- আপনি একজন administrator। Customer-রা এই page দেখেন না।
+- Panel একটা release থেকে install করা। Source থেকে build করা panel দেখায় "এই প্যানেল কোনো রিলিজ থেকে
+  নয়, সোর্স থেকে বানানো, তাই এটা নিজে নিজে আপডেট হয় না। আপডেট পেতে একটা রিলিজ বসান।" এটা নিজে থেকে
+  release খোঁজে না।
+
+## Page খুলুন
+
+<Steps>
+
+1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **আপডেট** (Updates)-এ click করুন। Address
+   `/settings/updates`; command palette (`Ctrl+K`)-ও এটা খুঁজে দেয়।
+
+2. এখনই সবচেয়ে নতুন release জানতে **আপডেট খুঁজুন** (Check for updates)-এ click করুন।
+
+</Steps>
+
+## Page-এ কী দেখায়
+
+| অংশ | কী দেখায় |
+| --- | --- |
+| **এই প্যানেল চলছে** (This panel runs) | Panel-এর version, যেমন `v0.1.0`। |
+| **সবচেয়ে নতুন রিলিজ: …** (Newest release: …) | সবচেয়ে নতুন release আর কবে publish হয়েছে, আর panel আগে থেকেই সেটা চালালে **হালনাগাদ আছে** (Up to date)। নিচে **খোঁজা হয়েছে …** (Checked …) বলে panel শেষবার কখন খুঁজেছে। প্রথমবার খোঁজার আগে: "এখনো খোঁজা হয়নি। প্যানেল প্রতি ৬ ঘণ্টায় নতুন রিলিজ খোঁজে।" |
+| **শেষবার খুঁজতে গিয়ে সমস্যা হয়েছে: …** (The last check failed: …) | শেষবার খোঁজা কেন কাজ করেনি, যেমন server GitHub পর্যন্ত পৌঁছাতে না পারলে। |
+| **ekPanel … এসেছে** (ekPanel … is available) | নতুন release থাকলে দেখায়: update কী করে, **…-এ আপডেট করুন** (Update to …) button, আর **কী নতুন** (What is new), যা release notes খোলে। |
+| অগ্রগতি | সর্বশেষ update: **প্যানেল …-এ আপডেট হচ্ছে…**, **এজেন্টগুলো …-এ আপডেট হচ্ছে…**, **…-এ আপডেট হয়েছে** বা **…-এ আপডেট ব্যর্থ**, সাথে কারণ, আগে নেওয়া database-এর কপি, আর প্রতিটা server-এর ফলাফল। পরের update পর্যন্ত এটা থাকে। |
+| **এজেন্ট** (Agents) | প্রতিটা server, তার **এজেন্টের ভার্সন** (Agent version) আর **অবস্থা** (Status): **হালনাগাদ** (Current), **প্যানেলের চেয়ে পুরোনো** (Older than the panel) বা **অফলাইন** (Offline)। Panel-এর নিজের server-এ লেখা থাকে "প্যানেল এখানে চলে" (runs the panel)। |
+| **…টা এজেন্ট আপডেট করুন** (Update … agents) | কিছু agent panel-এর চেয়ে পুরোনো হলে দেখায়, যেমন update-এর সময় কোনো server offline থাকলে। |
+
+Panel-এর নিজের server-এর agent connected না থাকলে page বলে "প্যানেল যে সার্ভারে চলছে, তার এজেন্ট
+যুক্ত নেই, তাই আপডেট বসানো যাচ্ছে না।", আর update button ব্যবহার করা যায় না। নতুন panel install করে
+এই agent-ই।
+
+**…-এ আপডেট করুন**-এ click করার পরে কী হয়, আর update ব্যর্থ হলে কী করবেন, তা আছে
+[Upgrade করা](/start/upgrade/#update-from-the-panel)-তে।
+
+## Panel কীভাবে নতুন release খোঁজে
+
+Release থেকে install করা panel চালু হওয়ার এক মিনিট পরে নতুন release খোঁজে, তারপর প্রতি **6 ঘণ্টায়**।
+এটা `EKPANEL_RELEASES_URL` (default হিসেবে GitHub-এর release page, বা আপনার mirror) থেকে সবচেয়ে নতুন
+release-এর ছোট একটা file, `release.json`, download করে। এই request-এ আপনার panel-এর version বা অন্য
+কোনো তথ্য যায় না।
+
+- শুধু পূর্ণ release গোনা হয়। `v1.2.3-rc.1`-এর মতো suffix-ওয়ালা release হলো test release, এগুলো
+  কখনো দেখানো হয় না।
+- Release খুঁজে পেলেও কিছু বদলায় না। Panel কখনো নিজে থেকে update install করে না; একজন administrator
+  **…-এ আপডেট করুন**-এ click করেন।
+- নিজে থেকে খোঁজা বন্ধ করতে `/etc/ekpanel/panel.env`-এ `EKPANEL_UPDATE_CHECK=false` দিন আর panel
+  restart করুন (দেখুন [Configuration](/reference/configuration/))। তখন page বলে "নিজে থেকে খোঁজা বন্ধ
+  (EKPANEL_UPDATE_CHECK=false)। হাতে খুঁজতে পারেন।" **আপডেট খুঁজুন** কাজ করতে থাকে।
+
+## Notification
+
+Update প্রত্যেক administrator-কে তিনটা [notification](/guides/admin/notifications/) পাঠায়। অন্য
+সব ঘটনার মতো এগুলোও প্রতিটা notification channel-এর জন্য আলাদা করে বেছে নিতে পারেন।
+
+| ঘটনা (panel-এ) | কখন পাঠানো হয় |
+| --- | --- |
+| **ekPanel-এর নতুন ভার্সন** (New ekPanel version) | খোঁজার সময় panel-এর চেয়ে নতুন একটা version পাওয়া গেছে। প্রতিটা নতুন version-এ একবার পাঠানো হয়। |
+| **ekPanel আপডেট হয়েছে** (ekPanel updated) | একটা update শেষ হয়েছে, কয়টা server আর তার কয়টায় সমস্যা হয়েছে সহ। |
+| **ekPanel আপডেট ব্যর্থ** (ekPanel update failed) | একটা update install করা যায়নি; panel তার বর্তমান version-এই চলতে থাকে। |
+
+Update শুরু করা আর agent update করা audit log-এ লেখা থাকে।
+
+## সীমা আর যা এখনো নেই
+
+- Update শুধু সামনের দিকে যায়, আর শুধু সবচেয়ে নতুন release-এ। ফিরে যেতে দেখুন
+  [হাতে আগের version-এ ফেরা](/start/upgrade/#go-back-by-hand)।
+- Schedule করে update নেই: প্রতিটা update একজন administrator শুরু করেন।
+- Release খোঁজা আর update একটা VM-এ test key দিয়ে sign করা test release দিয়ে পরীক্ষা করা হয়েছে।
+  এখনো কোনো আসল release হয়নি।
+
+## আরও দেখুন
+
+- [Upgrade করা](/start/upgrade/): ধাপে ধাপে একটা update, ব্যর্থতা আর ফিরে যাওয়া।
+- [Server](/guides/admin/servers/)
+- [Notification](/guides/admin/notifications/)

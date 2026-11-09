@@ -28,8 +28,9 @@ sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
 | Unit | What it is | When it exists |
 | --- | --- | --- |
 | `ekpanel` | The panel | On the panel's server |
-| `ekpanel-agent` | The agent | On the panel's server (made by the installer) |
-| `caddy` | Web server for the panel, websites and apps | On the panel's server |
+| `ekpanel-agent` | The agent | On every server (made by the installer) |
+| `ekpanel-agent-rollback` | A timer that puts the previous agent back if an update fails | Only during an agent update |
+| `caddy` | Web server for the panel, websites and apps | On every server set up by the installer |
 | `postgresql` | The panel's database, and customers' PostgreSQL databases | Panel's server; servers with PostgreSQL databases |
 | `mariadb` | MariaDB databases | After the first MariaDB database |
 | `php8.4-fpm` (any version) | PHP of administrators' websites | After the first PHP website with that version |
@@ -92,11 +93,13 @@ connection is still encrypted. You can accept the warning, or switch to a truste
 <Steps>
 
 1. Point a DNS name, such as `panel.example.com`, at the server's address.
-2. Run the installer again with that name (with the same binaries, or newer ones):
+2. Run the installer again with that name, the same way you installed:
 
    ```bash
-   sudo ./install.sh --local-dir . --domain panel.example.com
+   curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com
    ```
+
+   or, from your own build, `sudo ./install.sh --local-dir . --domain panel.example.com`.
 
 3. Open `https://panel.example.com`. Caddy gets a free Let's Encrypt certificate on the first
    visit; this needs port 80 and 443 open to the internet.
@@ -136,8 +139,8 @@ notification after 3 minutes.
    sudo journalctl -u ekpanel-agent -n 100
    ```
 
-   On the panel's server the installer made the `ekpanel-agent` service. On other servers, the
-   agent runs however you started it (`sudo ekpanel-agent run`); check that it still runs.
+   The installer makes the `ekpanel-agent` service on every server it sets up. If you started
+   an agent by hand with `sudo ekpanel-agent run`, check that it still runs.
 
 3. Can the server reach the panel on TCP 7443? From the managed server:
 
@@ -150,8 +153,10 @@ notification after 3 minutes.
 4. Does the agent's log repeat "lost connection to panel; retrying" with a certificate error,
    or say that `/etc/ekpanel/agent.json` is incomplete? Then the server must be connected
    again (for example after its certificate was revoked). Click **New connection command** on the server's
-   page in the panel and run the new `enroll` command on the server, then start the agent
-   again.
+   page in the panel and run `sudo ekpanel-agent enroll` on the server with the `--panel`,
+   `--token` and `--ca-pin` values of the new command, then
+   `sudo systemctl restart ekpanel-agent`. (The one-line install command does not enrol a server
+   that already has a credential.)
 
 </Steps>
 
@@ -249,15 +254,41 @@ Open **Recent tasks** (the task tray) to see the error. Most tasks can simply be
 again. Tasks that were running when the panel stopped are picked up again when it starts.
 For details, see `journalctl -u ekpanel` and, for work on a server, `journalctl -u ekpanel-agent`.
 
+## Updates
+
+- **"Update to … failed" and the previous version was kept.** The panel's new version did not
+  start, or did not report its version within 90 seconds, so the agent put the old program
+  back. The new one is in `/usr/local/bin/ekpanel.failed`. Read why it failed with
+  `sudo journalctl -u ekpanel --since "30 min ago"`; a failed database change is reported
+  there. If the update stopped before that (a download, signature or trial-run error), nothing
+  was changed. See [When an update fails](/start/upgrade/#when-an-update-fails).
+- **A server shows Failed in the update's results.** Its new agent did not reach the panel
+  within the panel's wait, and its rollback timer puts the previous agent back within 3
+  minutes (the new one is kept as `ekpanel-agent.failed`). On that server, read
+  `sudo journalctl -u ekpanel-agent` and `sudo systemctl status ekpanel-agent`. When the cause
+  is fixed, click **Update 1 agent** on the **Updates** page.
+- **"The agent on the panel's own server is not connected, so it cannot install the
+  update."** That agent installs new panels. On the panel's server, check
+  `sudo systemctl status ekpanel-agent`. If the agent was never enrolled there (for example a
+  panel started without the installer), run the installer once.
+- **"The last check failed: …" on the Updates page**: the panel cannot reach `github.com` (or
+  the mirror in `EKPANEL_RELEASES_URL`). Check the server's outgoing HTTPS and DNS.
+- **The installer refuses a download** with "SHA256SUMS is not signed by the ekPanel release
+  key; not installing." or "… does not match its signed checksum; not installing.": the file
+  was changed or cut off on the way, and nothing was installed. Try again later or from
+  another network. A `--release-url` mirror must serve the official files unchanged.
+
 ## Run the installer again
 
-Running `install.sh` again is safe. It upgrades the binaries and keeps your data:
+Running `install.sh` again is safe. It upgrades the programs to the version it downloads (or
+the one in `--local-dir`) and keeps your data:
 
 ```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- [--domain panel.example.com]
 sudo ./install.sh --local-dir . [--domain panel.example.com]
 ```
 
-It installs the new binaries, writes the settings files and service files again, restarts the
+It installs the new programs (keeping the old ones as `.prev`), writes the settings files and service files again, restarts the
 panel and the agent, and writes the Caddyfile again. It connects the agent again only if
 `/etc/ekpanel/agent.json` has no credential. Changes you made by hand to `panel.env`, the
 service files or the Caddyfile are lost. See [Configuration](/reference/configuration/).

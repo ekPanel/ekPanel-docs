@@ -14,9 +14,10 @@ customer-দের তাদের নিজস্ব account দিতে প�
 **ek** (এক) মানে বাংলায় "এক": আপনার পুরো hosting-এর জন্য একটাই panel।
 
 <Aside type="caution" title="এখনো শুরুর দিকের development">
-একটা test server-এ ekPanel শুরু থেকে শেষ পর্যন্ত কাজ করে, কিন্তু এর এখনো কোনো release নেই। আজকের
-দিনে আপনাকে source থেকে build করে একটা script দিয়ে install করতে হয়। এখনই এতে গুরুত্বপূর্ণ কিছু
-host করবেন না। প্রথম release-এর আগে কী কী আসছে, তা [roadmap](/project/roadmap/)-এ দেখুন।
+একটা test server-এ ekPanel শুরু থেকে শেষ পর্যন্ত কাজ করে, কিন্তু এর এখনো কোনো release নেই। Installer,
+sign করা release আর self-update তৈরি, আর এরপরই আসছে প্রথম release; ততদিন আপনাকে source থেকে build
+করতে হয়। এখনই এতে গুরুত্বপূর্ণ কিছু host করবেন না। এরপর কী আসছে, তা [roadmap](/project/roadmap/)-এ
+দেখুন।
 </Aside>
 
 ## এটা কাদের জন্য
@@ -72,7 +73,7 @@ Panel আপনি একবারই install করেন। প্রতিট
 | Server | একটা panel অনেক server চালায়। প্রতিটা server-এ একটা agent চলে, যা নিজে থেকে panel-এ connect করে, তাই NAT-এর পেছনে থাকা server-ও কাজ করে। |
 | পরিবর্তন কীভাবে server-এ পৌঁছায় | Panel প্রতিটা server-এর পুরো কাঙ্ক্ষিত অবস্থা (wanted state) রাখে, আর agent server-টাকে সেই অবস্থায় নিয়ে আসে, প্রতি 10 মিনিটেও একবার। দেখুন [desired state](/concepts/desired-state/)। |
 | Operating system | Ubuntu 24.04 বা তার নতুন, আর Debian 12 বা 13। Red Hat পরিবারের system এখনো না। |
-| Release | এখনো নেই। এক লাইনের installer নেই, নিজে নিজে update-ও নেই। |
+| Release | এখনো একটাও publish হয়নি; প্রথমটা আসছে এরপরই। এর জন্য তৈরি: signature check করে এমন এক লাইনের installer, আর panel থেকেই panel ও প্রতিটা agent-এর update। |
 | এখনো নেই | Reseller, অন্য panel থেকে importer, এক server থেকে আরেক server-এ site সরানো, WAF, token-সহ API, billing। দেখুন [features](/start/features/#not-yet)। |
 
 আজই যদি paying customer-দের জন্য একটা পরিণত, support-সহ panel দরকার হয়, ekPanel সেটার জন্য

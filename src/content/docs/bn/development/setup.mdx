@@ -123,7 +123,8 @@ EKPANEL_DEV_TARGET=https://127.0.0.1:8443 npm run dev
 | `make ui` | Web dependency install করে, UI build করে আর panel-এ embed করে। |
 | `make panel` | `bin/ekpanel` build করে। |
 | `make agent` | `bin/ekpanel-agent` build করে। |
-| `make release` | `install.sh` আর `LICENSE`-সহ Linux amd64 আর arm64 archive, আর `SHA256SUMS`, `dist/`-এ build করে। |
+| `make release VERSION=v1.2.3` | `dist/`-এ একটা release build করে: Linux amd64 আর arm64 archive (প্রতিটায় দুটো program, `install.sh` আর `LICENSE`), version লেখা `install.sh`, `release.json` আর `SHA256SUMS`। `VERSION` দেখতে `v1.2.3`-এর মতো হতে হবে। একই commit আর version থেকে হুবহু একই file হয়। |
+| `make sign KEY=…` | একটা Ed25519 key দিয়ে `dist/SHA256SUMS` sign করে `SHA256SUMS.sig` বানায়, আর `internal/release/release.pub` (বা `PUBKEY=…`) দিয়ে সেটা check করে। Release workflow project-এর key দিয়ে এটা করে। |
 | `make test` | `test-go` আর `test-web`: CI যা check করে, শুধু `gofmt` আর UI build বাদে। |
 | `make test-go` | `go vet ./...` আর `go test -race ./...`। |
 | `make test-web` | UI type-check করে আর অনুবাদ check করে। |

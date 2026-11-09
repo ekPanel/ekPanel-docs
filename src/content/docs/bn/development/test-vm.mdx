@@ -167,20 +167,28 @@ restart, VM-এর reboot (`scripts/test-vm.sh ssh 'sudo reboot'`)। Project-�
    sudo ip link set <link card> up && sudo ip addr add 192.168.77.2/24 dev <link card>
    ```
 
-4. দ্বিতীয় VM-এ agent বসান আর link-এর ওপর দিয়ে প্রথম VM-এর panel-এর সাথে connect করুন: `bin/ekpanel-agent`
-   এতে copy করুন, `/usr/local/bin`-এ install করুন, panel-এ **সার্ভার যোগ করুন** (Add server)-এ click করুন,
-   আর dialog যে address দেখায় তার বদলে `--panel 192.168.77.1:7443` দিয়ে `enroll` command চালান। তারপর
-   `sudo ekpanel-agent run` দিয়ে agent চালু করুন। এটা foreground-এ চলে, তাই ওই SSH session খোলা রাখুন (অথবা
-   `tmux`-এ চালান)।
+4. Link-এর ওপর দিয়ে দ্বিতীয় VM-কে প্রথম VM-এর panel-এর একটা server হিসেবে set up করুন। Agent আর
+   installer এতে copy করুন (দ্বিতীয় VM-এর variable দিয়ে):
+
+   ```bash
+   VM_DIR=~/vms/panel-test2 VM_NAME=panel-test2 VM_PORT_OFFSET=10 scripts/test-vm.sh copy bin/ekpanel-agent deploy/install.sh
+   ```
+
+   Panel-এ **সার্ভার যোগ করুন** (Add server)-এ click করুন, আর dialog-এর token আর CA pin দিয়ে দ্বিতীয়
+   VM-এ installer চালান, কিন্তু dialog-এর address-এর বদলে `--panel 192.168.77.1:7443` দিয়ে:
+
+   ```bash
+   sudo ./install.sh --agent --local-dir . --panel 192.168.77.1:7443 --token <token> --ca-pin sha256:<pin>
+   ```
 
 </Steps>
 
 `ip addr` দিয়ে set করা address VM restart হলে হারিয়ে যায়; প্রতিবার চালু করার পর আবার set করুন।
 
 <Aside type="note">
-Agent নিজে থেকে Caddy install করে না; installer সেটা panel-এর server-এ করে। তাই শুধু agent-ওয়ালা একটা
-দ্বিতীয় VM এমন test-এর জন্য মানানসই যেখানে ওখানে কোনো web server লাগে না, যেমন একটা secondary name
-server। শুধু agent-এর জন্য একটা installer [phase 4a](/project/roadmap/)-এর জন্য plan করা আছে।
+`--agent` দিলে installer দ্বিতীয় VM-কে একটা আসল দ্বিতীয় server-এর মতো set up করে: Caddy, `acl`
+package, Caddyfile-এর import আর agent-এর systemd service। তাই সেখানে website-ও কাজ করে, শুধু secondary
+name server-এর মতো test নয়।
 </Aside>
 
 ## সমস্যা সমাধান

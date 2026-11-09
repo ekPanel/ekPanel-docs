@@ -34,8 +34,8 @@ Also needed:
 - **Root access**, directly or with `sudo`.
 - **systemd.** ekPanel runs its services, cron jobs and customer limits through systemd, so
   a plain container without systemd does not work. A normal VPS or a virtual machine does.
-- **Internet access** from the server, to download packages (PostgreSQL, Caddy, PHP, Docker
-  and so on), certificates and Docker images.
+- **Internet access** from the server, to download ekPanel's releases (from GitHub), packages
+  (PostgreSQL, Caddy, PHP, Docker and so on), certificates and Docker images.
 
 ### Memory and disk
 
@@ -102,6 +102,8 @@ DNS and FTP ports by itself while those features are on.
 
 - Servers with an agent connect **out** to the panel on TCP port 7443. They do not need any
   incoming port for this, so they can sit behind NAT.
+- Every server downloads ekPanel releases and updates from `github.com` over HTTPS, and the
+  panel looks there for new releases.
 - A mail server needs outgoing port 25 to deliver mail. Many cloud providers block it until
   you ask; the delivery check in the panel tells you.
 
@@ -123,7 +125,9 @@ make the records for you through [Cloudflare](/guides/dns/cloudflare/) or
 
 ## Your own computer
 
-There is no release to download yet, so you build ekPanel from source. You need:
+Once releases are published, you need only an SSH client, a web browser and an authenticator
+app: the server downloads everything itself. Until the first release, you build ekPanel from
+source, and you need:
 
 - **Linux** (the build has been used on Linux only).
 - **Go 1.27 or newer.** An older `go` downloads 1.27 by itself when it builds ekPanel.
@@ -134,7 +138,7 @@ There is no release to download yet, so you build ekPanel from source. You need:
   or similar) for two-factor sign-in.
 
 You can also build on the server itself if you install Go and Node.js there. The
-[install guide](/start/install/) shows both ways.
+[install guide](/start/install/#install-from-your-own-build) shows both ways.
 
 ## Next
 

@@ -1,34 +1,148 @@
 ---
 title: Install করা
-description: Source থেকে ekPanel build করুন, আর একটা নতুন Ubuntu বা Debian server-এ panel আর তার agent install করুন।
+description: এক command-এ একটা নতুন Ubuntu বা Debian server-এ ekPanel-এর panel আর তার agent install করুন, অথবা নিজের build করা release থেকে।
 sidebar:
   order: 4
 ---
 
 import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-আজকের দিনে ekPanel install করতে আপনি দুটো program source থেকে build করেন, সেগুলো server-এ copy
-করেন আর installer চালান। প্রায় দশ মিনিট লাগে, যার বেশিরভাগই download।
+নতুন একটা server-এ একটা command চালালেই panel, তার agent, PostgreSQL আর Caddy web server install হয়ে
+যায়। Installer ekPanel-এর একটা release download করে, আর কিছু install করার আগে তার signature
+check করে। প্রায় দশ মিনিট লাগে, যার বেশিরভাগই download।
 
-<Aside type="note" title="এক লাইনের installer এখনো নেই">
-Signed release download করে এমন এক লাইনের installer আসবে প্রথম release-এর সাথে
-([roadmap](/project/roadmap/), phase 4a)। ততদিন এই page-এর ধাপগুলো ব্যবহার করুন।
+<Aside type="caution" title="প্রথম release এখনো আসেনি">
+এক লাইনের install একটা official release download করে, আর সেটা এখনো একটাও নেই। প্রথমটা, v0.1.0,
+আসবে যখন project-এর owner সেটা publish করবেন। ততদিন নিচের command `curl`-এর একটা "404" error দিয়ে
+fail করবে: নিজে একটা release build করে install করুন, যেমন দেখানো আছে
+[নিজের build থেকে install](#install-from-your-own-build)-এ।
 </Aside>
 
 ## শুরু করার আগে
 
-- [যা যা লাগবে](/start/requirements/) তা পূরণ করে এমন একটা নতুন server, আর root বা `sudo`
-  থাকা কোনো user হিসেবে তাতে SSH access।
-- আপনার computer-এ: Linux, Go 1.27+, Node.js 22+, `make`, `git` আর `tar`।
+- [যা যা লাগবে](/start/requirements/) তা পূরণ করে এমন একটা নতুন server: amd64 বা arm64-এ
+  Ubuntu 24.04+ বা Debian 12+। তাতে root বা `sudo` থাকা কোনো user হিসেবে SSH access লাগবে।
+- Server থেকে `github.com`-এ outgoing HTTPS, কারণ release সেখান থেকেই download হয়।
 - ঐচ্ছিক: panel-এর জন্য একটা domain নাম (যেমন `panel.example.com`), যার DNS record server-এর
   দিকে point করা। এখনই এটা তৈরি করুন, যাতে install-এর সময় Let's Encrypt এটা check করতে পারে।
-- আপনার server-এর CPU type জেনে নিন। Server-এ `uname -m` চালান: `x86_64` মানে **amd64**,
-  `aarch64` মানে **arm64**।
 
-## ekPanel build করুন
+## এক command-এ install
 
-ekPanel দুটো program: `ekpanel` (panel, web interface ভেতরেই build করা) আর `ekpanel-agent`
-(agent)। Installer-এর দুটোই এক folder-এ লাগে।
+Server-এ এটা চালান:
+
+<Tabs>
+<TabItem label="Domain-সহ">
+
+```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com --email you@example.com
+```
+
+তখন panel থাকে `https://panel.example.com`-এ, একটা trusted certificate-সহ।
+
+</TabItem>
+<TabItem label="Domain ছাড়া">
+
+```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash
+```
+
+তখন panel থাকে `https://<server IP>`-এ, একটা self-signed certificate-সহ। আপনার browser একবার
+সতর্ক করবে; এগিয়ে যেতে সতর্কবার্তাটা মেনে নিন। পরে `--domain` দিয়ে installer আবার চালিয়ে
+domain যোগ করতে পারেন।
+
+</TabItem>
+</Tabs>
+
+`bash -s --` তার পরের option-গুলো installer-কে দিয়ে দেয়। Installer আপনার server-এর CPU type-এর
+জন্য সবচেয়ে নতুন release download করে, check করে, তারপর install করে।
+
+শেষে এটা এ রকম কিছু দেখায়:
+
+```text
+==> ekPanel is installed.
+    Open:  https://panel.example.com
+    Setup token (needed once, to create the administrator):
+        <setup token>
+    Agents on other servers connect to TCP port 7443; allow it in any cloud firewall.
+    Logs:  journalctl -u ekpanel -u ekpanel-agent -f
+```
+
+**Setup token**-টা copy করে রাখুন। [Administrator তৈরি করতে](#create-the-administrator) এটা লাগবে।
+
+<Aside type="tip" title="আগে script-টা পড়ে নিন">
+Installer চালানোর আগে দেখে নিতে চাইলে এটা download করুন, পড়ুন, তারপর file-টা চালান:
+
+```bash
+curl -fsSLO https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh
+less install.sh
+sudo bash install.sh --domain panel.example.com
+```
+</Aside>
+
+## Download কীভাবে check হয়
+
+প্রতিটা release sign করা থাকে। Signature-এর সাথে না মিললে installer download-টা নেয় না, তাই
+কোনো mirror-এ বা পথে বদলে যাওয়া file কখনো install হয় না।
+
+<Steps>
+
+1. Installer release-এর তিনটা file download করে: `SHA256SUMS` (release-এর প্রতিটা file-এর
+   SHA-256 checksum), `SHA256SUMS.sig` (ওই তালিকার একটা Ed25519 signature) আর আপনার server-এর
+   archive, `ekpanel-<version>-linux-<arch>.tar.gz`।
+
+2. `openssl` ekPanel-এর release key দিয়ে `SHA256SUMS`-এর signature check করে। Public key-টা
+   installer-এর ভেতরেই লেখা; main repository-তেও আছে
+   [`internal/release/release.pub`](https://github.com/ekPanel/ekpanel/blob/HEAD/internal/release/release.pub)
+   হিসেবে। Signature ভুল হলে installer থেমে যায় এই message দিয়ে: "SHA256SUMS is not signed by
+   the ekPanel release key; not installing."
+
+3. Archive-এর SHA-256 sign করা তালিকায় তার line-এর সাথে মিলতে হবে। না মিললে installer থেমে যায়:
+   "… does not match its signed checksum; not installing."
+
+</Steps>
+
+Panel-ও update install করার আগে একইভাবে check করে (দেখুন [Upgrade করা](/start/upgrade/))।
+
+### নিজে একটা release check করুন
+
+একই check আপনি হাতেও করতে পারেন, যেমন internet ছাড়া কোনো server-এ release copy করার আগে।
+Release-এর file আর `release.pub` এক folder-এ রাখুন, তারপর চালান:
+
+```bash
+openssl pkeyutl -verify -pubin -inkey release.pub -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+sha256sum --ignore-missing -c SHA256SUMS
+```
+
+প্রথম command দেখায় `Signature Verified Successfully`, দ্বিতীয়টা আপনার download করা প্রতিটা
+file-এর জন্য `OK`।
+
+প্রতিটা release-এর সাথে GitHub build attestation-ও থাকে, যা দেখায় যে file-গুলো GitHub-এ
+project-এর release workflow build করেছে। GitHub CLI দিয়ে:
+
+```bash
+gh attestation verify ekpanel-v0.1.0-linux-amd64.tar.gz --repo ekPanel/ekpanel
+```
+
+## Installer-এর option
+
+| Option | মানে |
+| --- | --- |
+| `--domain NAME` | এই server-এর দিকে point করা একটা DNS নাম। Caddy এর জন্য Let's Encrypt-এর একটা free certificate নেয়। না দিলে panel server-এর IP address-এ একটা self-signed certificate ব্যবহার করে। |
+| `--email ADDRESS` | Let's Encrypt-এর মেয়াদ শেষের notice-এর জন্য আপনার address। ঐচ্ছিক। |
+| `--agent` | Panel install না করে, এই server-টাকে আগে থেকে থাকা একটা panel-এর জন্য set up করে। সাথে লাগে `--panel HOST:7443`, `--token …` আর `--ca-pin …`; panel-এর **সার্ভার যোগ করুন** (Add server) dialog পুরো command-টা দেখায়। দেখুন [Server যোগ করা](/start/add-server/)। |
+| `--version vX.Y.Z` | এই release install করে। না দিলে installer যে release-এর সাথে এসেছে সেটাই install করে; `latest` address থেকে নিলে সেটা সবচেয়ে নতুন release। |
+| `--local-dir DIR` | Release download না করে `DIR`-এ থাকা `ekpanel` আর `ekpanel-agent` program ব্যবহার করে। কিছু download বা check হয় না। নিজের build-এর জন্য। |
+| `--release-url URL` | `https://github.com/ekPanel/ekpanel/releases`-এর বদলে একটা mirror থেকে release download করে। Mirror-এর layout একই হতে হবে। Signature তখনও check হয়। |
+| `--release-key FILE` | ekPanel-এর release key-এর বদলে এই public key-কে বিশ্বাস করে। শুধু নিজের sign করা build test করার জন্য; আসল server-এ কখনো ব্যবহার করবেন না। |
+| `-h`, `--help` | ব্যবহারের নিয়ম দেখায়। Download করা file চালালে এটা কাজ করে (`bash install.sh --help`), `curl … \| bash` দিয়ে নয়। |
+
+## নিজের build থেকে install
+
+প্রথম release publish না হওয়া পর্যন্ত, আর যখনই এমন code চালাতে চান যা এখনো release হয়নি,
+তখন আপনি নিজে একটা release build করে `--local-dir` দিয়ে install করেন।
+
+আপনার computer-এ লাগবে Linux, Go 1.27+, Node.js 22+, `make`, `git` আর `tar`। আগে server-এর CPU
+type জেনে নিন: server-এ `uname -m` দেখায় `x86_64` (**amd64**) বা `aarch64` (**arm64**)।
 
 <Tabs>
 <TabItem label="আপনার computer-এ build">
@@ -38,37 +152,46 @@ ekPanel দুটো program: `ekpanel` (panel, web interface ভেতরেই
 
 <Steps>
 
-1. Source code নামিয়ে release archive build করুন:
+1. Source code নামিয়ে একটা release build করুন। `VERSION` দেখতে `v1.2.3`-এর মতো হতে হবে; প্রথম
+   official version-এর চেয়ে ছোট একটা নিন, যেমন `v0.0.1`:
 
    ```bash
    git clone https://github.com/ekPanel/ekpanel.git
    cd ekpanel
-   make release
+   make release VERSION=v0.0.1
    ```
 
    এটা প্রথমে web interface-এর জন্য `npm ci` আর `npm run build` চালায়, তারপর Go program-গুলো
-   build করে। `dist/`-এ আপনি এ রকম file পাবেন:
+   build করে। `dist/`-এ আপনি এই file-গুলো পাবেন:
 
    ```text
-   dist/ekpanel-<version>-linux-amd64.tar.gz
-   dist/ekpanel-<version>-linux-arm64.tar.gz
+   dist/ekpanel-v0.0.1-linux-amd64.tar.gz
+   dist/ekpanel-v0.0.1-linux-arm64.tar.gz
+   dist/install.sh
+   dist/release.json
    dist/SHA256SUMS
    ```
 
 2. আপনার server-এর CPU type-এর archive-টা server-এ copy করুন:
 
    ```bash
-   scp dist/ekpanel-*-linux-amd64.tar.gz root@your-server:
+   scp dist/ekpanel-v0.0.1-linux-amd64.tar.gz root@your-server:
    ```
 
 3. Server-এ এটা unpack করে folder-এ ঢুকুন:
 
    ```bash
-   tar -xzf ekpanel-*-linux-amd64.tar.gz
-   cd ekpanel-*-linux-amd64
+   tar -xzf ekpanel-v0.0.1-linux-amd64.tar.gz
+   cd ekpanel-v0.0.1-linux-amd64
    ```
 
    Folder-এ আছে `ekpanel`, `ekpanel-agent`, `install.sh` আর `LICENSE`।
+
+4. `--local-dir .` আর আপনার দরকারি বাকি option দিয়ে installer চালান:
+
+   ```bash
+   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
+   ```
 
 </Steps>
 
@@ -90,14 +213,18 @@ Server-এ Go 1.27+ আর Node.js 22+ install করলে সেখানে�
 
    Program-গুলো এখন `bin/`-এ: `bin/ekpanel` আর `bin/ekpanel-agent`।
 
-2. Installer-টা তাদের পাশে copy করুন:
+2. Installer-টা তাদের পাশে copy করে চালান:
 
    ```bash
    cp deploy/install.sh bin/
    cd bin
+   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
    ```
 
 </Steps>
+
+এভাবে করা build-এর নাম হয় Git commit দিয়ে (বা `dev`), কোনো release version দিয়ে নয়, তাই এটা
+panel থেকে নিজেকে update করতে পারে না।
 
 </TabItem>
 </Tabs>
@@ -109,56 +236,11 @@ Server-এ Go 1.27+ আর Node.js 22+ install করলে সেখানে�
 `make release` ব্যবহার করুন।
 </Aside>
 
-## Installer চালান
-
-`install.sh`-এর একদম ওপরে লেখা installer-এর ব্যবহার:
-
-```bash
-sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
-```
-
-| Option | মানে |
-| --- | --- |
-| `--local-dir DIR` | যে folder-এ `ekpanel` আর `ekpanel-agent` program আছে। আপাতত এটা দিতেই হবে। |
-| `--domain NAME` | এই server-এর দিকে point করা একটা DNS নাম। Caddy এর জন্য Let's Encrypt-এর একটা free certificate নেয়। |
-| `--email ADDRESS` | Let's Encrypt-এর মেয়াদ শেষের notice-এর জন্য আপনার address। ঐচ্ছিক। |
-| `-h`, `--help` | ব্যবহারের নিয়ম দেখায়। |
-
-<Tabs>
-<TabItem label="Domain-সহ">
-
-```bash
-sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
-```
-
-তখন panel থাকে `https://panel.example.com`-এ, একটা trusted certificate-সহ।
-
-</TabItem>
-<TabItem label="Domain ছাড়া">
-
-```bash
-sudo ./install.sh --local-dir .
-```
-
-তখন panel থাকে `https://<server IP>`-এ, একটা self-signed certificate-সহ। আপনার browser একবার
-সতর্ক করবে; এগিয়ে যেতে সতর্কবার্তাটা মেনে নিন। পরে `--domain` দিয়ে installer আবার চালিয়ে
-domain যোগ করতে পারেন।
-
-</TabItem>
-</Tabs>
-
-শেষে installer এ রকম কিছু দেখায়:
-
-```text
-==> ekPanel is installed.
-    Open:  https://panel.example.com
-    Setup token (needed once, to create the administrator):
-        <setup token>
-    Agents on other servers connect to TCP port 7443; allow it in any cloud firewall.
-    Logs:  journalctl -u ekpanel -u ekpanel-agent -f
-```
-
-**Setup token**-টা copy করে রাখুন। পরের ধাপে এটা লাগবে।
+`make release VERSION=v0.0.1` দিয়ে build করা panel নিজেকে একটা release হিসেবে ধরে: এটা নতুন
+release খোঁজে, আর v0.1.0 publish হলে **আপডেট** (Updates)-এ সেটায় update করার কথা বলে। এর **সার্ভার
+যোগ করুন** (Add server) dialog এক লাইনের command দেখায়, কিন্তু সেই download শুধু publish করা
+version-এর জন্যই থাকে। তার বদলে কী চালাবেন, দেখুন
+[Server যোগ করা](/start/add-server/#when-the-panel-is-not-a-published-release)-এ।
 
 ## Administrator তৈরি করুন
 
@@ -187,13 +269,13 @@ sudo cat /var/lib/ekpanel/setup-token
 
 ## Installer কী করে
 
-`install.sh` আপনি নিজেই পড়ে দেখতে পারেন; প্রায় 270 লাইন। ক্রমানুসারে এটা:
+`install.sh` আপনি নিজেই পড়ে দেখতে পারেন; প্রায় 400 লাইন। Panel-এর জন্য ক্রমানুসারে এটা:
 
 <Steps>
 
 1. **Check করে** যে এটা root হিসেবে, support করা OS আর CPU-তে চলছে (দেখুন
-   [যা যা লাগবে](/start/requirements/)), `--local-dir`-এ দুটো program-ই আছে, আর `--domain`
-   একটা সাধারণ host নাম।
+   [যা যা লাগবে](/start/requirements/)), `--domain` একটা সাধারণ host নাম, আর `--version` দেখতে
+   `v1.2.3`-এর মতো।
 
 2. **Package install করে**: `ca-certificates`, `curl`, `gnupg`, `openssl`, `acl` (যাতে web
    server প্রতিটা site-এর file পড়তে পারে, অথচ অন্য site-এর জন্য সেগুলো খুলে দিতে না হয়) আর
@@ -201,37 +283,43 @@ sudo cat /var/lib/ekpanel/setup-token
    করতে লাগে। Caddy আগে থেকে install না থাকলে সেটা আসে Caddy-র official package repository
    থেকে।
 
-3. **`ekpanel` system user তৈরি করে** (shell ছাড়া), data folder `/var/lib/ekpanel` (শুধু সেই
+3. **Program-গুলো নেয়**: [ওপরে](#how-the-download-is-checked) যেমন বলা আছে, release download করে
+   check করে, অথবা `--local-dir` থেকে নেয়।
+
+4. **`ekpanel` system user তৈরি করে** (shell ছাড়া), data folder `/var/lib/ekpanel` (শুধু সেই
    user পড়তে পারে) আর `/etc/ekpanel`।
 
-4. **PostgreSQL role আর database `ekpanel` তৈরি করে।** Panel local socket দিয়ে peer
+5. **PostgreSQL role আর database `ekpanel` তৈরি করে।** Panel local socket দিয়ে peer
    authentication-এ connect করে, তাই কোনো database password নেই। বাকি সবার জন্য ওই database-এর
    access-ও তুলে নেয়, যাতে customer-দের database account সেখানে connect করতে না পারে।
 
-5. **Program-গুলো install করে** `/usr/local/bin/ekpanel` আর `/usr/local/bin/ekpanel-agent`
-   হিসেবে, panel-এর setting লেখে `/etc/ekpanel/panel.env`-এ, আর দুটো systemd unit লেখে:
+6. **Program-গুলো install করে** `/usr/local/bin/ekpanel` আর `/usr/local/bin/ekpanel-agent`
+   হিসেবে। যে program-এর জায়গায় অন্য একটা বসায়, পুরোনোটা রেখে দেয় `ekpanel.prev` বা
+   `ekpanel-agent.prev` নামে। Panel-এর setting লেখে `/etc/ekpanel/panel.env`-এ (যেখানে
+   `EKPANEL_RELEASES_URL`-ও থাকে, অর্থাৎ যে release address এটা ব্যবহার করেছে), আর দুটো systemd
+   unit লেখে:
    - `ekpanel.service` panel-কে `ekpanel` user হিসেবে চালায়, কোনো privilege ছাড়া আর কড়া
      sandbox-এ (read-only system, নিজস্ব `/tmp`, কোনো capability নেই)। Server-এ কাজ করে
      agent, panel না।
    - `ekpanel-agent.service` agent-কে root হিসেবে চালায়, কারণ এটাই server চালায়।
 
-6. **Panel চালু করে**, আর `http://127.0.0.1:8080/api/v1/health`-এ সাড়া দেওয়ার জন্য 30 সেকেন্ড
+7. **Panel চালু করে**, আর `http://127.0.0.1:8080/api/v1/health`-এ সাড়া দেওয়ার জন্য 30 সেকেন্ড
    পর্যন্ত অপেক্ষা করে। প্রথমবার চালু হওয়ার সময় panel তার database table, agent-দের জন্য নিজস্ব
    private certificate authority, তার secret key আর setup token তৈরি করে।
 
-7. **এই server-এর agent connect করে।** Server-টাকে তার host নামে register করে
+8. **এই server-এর agent connect করে।** Server-টাকে তার host নামে register করে
    (`ekpanel add-server` দিয়ে), agent-কে `127.0.0.1:7443`-এ enrol করে, আর `ekpanel-agent` চালু করে।
-   Agent আগে থেকেই enrolled থাকলে এই ধাপ বাদ যায়।
+   Agent আগে থেকেই enrolled থাকলে এই ধাপ বাদ যায়। পরে panel-এর update-ও এই agent-ই install করে।
 
-8. **Caddy configure করে** `/etc/caddy/Caddyfile`-এ: আপনার domain-এ বা server-এর address-এ
+9. **Caddy configure করে** `/etc/caddy/Caddyfile`-এ: আপনার domain-এ বা server-এর address-এ
    panel, `/etc/ekpanel/caddy/sites/*.caddy`-এর একটা import (প্রতিটা website-এর জন্য একটা file,
    agent লেখে), আর Cloudflare-এর publish করা address range-গুলোকে trust, যাতে Cloudflare-এর
    পেছনে থাকলেও log-এ visitor-দের আসল address দেখা যায়। Configuration check করে Caddy reload
    করে।
 
-9. **ufw-এ port 80, 443 আর 7443 খোলে**, শুধু ufw আগে থেকে চালু থাকলে।
+10. **ufw-এ port 80, 443 আর 7443 খোলে**, শুধু ufw আগে থেকে চালু থাকলে।
 
-10. **দেখায়** address, setup token আর log কোথায় আছে।
+11. **দেখায়** address, setup token আর log কোথায় আছে।
 
 </Steps>
 
@@ -253,12 +341,20 @@ DNS record বা cloud firewall ঠিক করুন, Caddy নিজে থ�
 
 ## সমস্যা হলে
 
+- **`curl: (22) The requested URL returned error: 404`**: এখনো কোনো release publish হয়নি, বা
+  আপনি যে version চেয়েছেন সেটা নেই। [নিজের build থেকে](#install-from-your-own-build) install
+  করুন।
+- **"could not find the latest release at …"** বা **"could not download …"**: server
+  `github.com` (বা আপনার `--release-url`) পর্যন্ত পৌঁছাতে পারছে না। এর outgoing HTTPS আর DNS check
+  করুন।
+- **"SHA256SUMS is not signed by the ekPanel release key; not installing."** বা **"… does not
+  match its signed checksum; not installing."**: download-টা পথে বদলে গেছে বা মাঝপথে কেটে গেছে।
+  কিছুই install হয়নি। পরে আবার, বা অন্য network থেকে চেষ্টা করুন। বারবার হলে
+  [security policy](/project/security-policy/)-তে যেমন বলা আছে, সেভাবে জানান।
 - **"is not supported yet"**: OS বা CPU support তালিকায় নেই। amd64 বা arm64-এ Ubuntu 24.04+ বা
   Debian 12+ ব্যবহার করুন।
-- **"release downloads are not available yet"**: আপনি `--local-dir` দেননি। দুটো program যে
-  folder-এ আছে সেটা দিন (সেই folder-এ থাকলে `--local-dir .`)।
-- **"not found or not executable"**: folder-এ একটা program নেই, বা তার executable bit হারিয়ে
-  গেছে। `chmod +x ekpanel ekpanel-agent` চালান।
+- **"not found or not executable"**: `--local-dir` folder-এ একটা program নেই, বা তার executable
+  bit হারিয়ে গেছে। `chmod +x ekpanel ekpanel-agent` চালান।
 - **"the panel did not start"**: `sudo journalctl -u ekpanel` দিয়ে panel-এর log পড়ুন।
 - **Page load হয় না**: আপনার provider-এর firewall-এ port 80 আর 443 খোলা আছে কি না দেখুন।
 - **"The web UI has not been built into this binary"**: panel web interface ছাড়া build করা
@@ -270,4 +366,4 @@ DNS record বা cloud firewall ঠিক করুন, Caddy নিজে থ�
 
 - [প্রথম ধাপগুলো](/start/first-steps/): two-factor sign-in, আপনার প্রথম website আর backup।
 - [Server যোগ করা](/start/add-server/): আরও server connect করুন।
-- [Upgrade করা](/start/upgrade/): নতুন build install করুন।
+- [Upgrade করা](/start/upgrade/): panel আর তার agent-দের নতুন release-এ update করুন।

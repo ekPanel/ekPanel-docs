@@ -1,29 +1,30 @@
 ---
 title: Add a server
-description: Connect another Linux server to your panel by installing the agent and enrolling it with a one-time token.
+description: Connect another Linux server to your panel with one command that installs the agent and the web server and enrols it with a one-time token.
 sidebar:
   order: 6
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside } from '@astrojs/starlight/components';
 
-One panel can manage many servers. To add a server, you put the ekPanel agent on it and run
-one command from the panel, and the server shows up with live statistics. You can then host
-websites, databases and apps on it.
+One panel can manage many servers. To add a server, you give it a name in the panel and run
+the one command the panel shows on the new server. The command installs the ekPanel agent and
+the web server, connects the server to the panel, and the server shows up with live
+statistics. You can then host websites, databases and apps on it.
 
-<Aside type="note" title="More manual than it will be">
-There is no installer for an agent alone yet; it comes with the first release
-([roadmap](/project/roadmap/), phase 4a). Today you copy the agent program yourself and, if
-the server will host websites, prepare Caddy on it. This page shows every step.
+<Aside type="note" title="Before the first release">
+The one command downloads the panel's own release from GitHub. Until the first release is
+published, your panel is built from source, and you use the steps in
+[When the panel is not a published release](#when-the-panel-is-not-a-published-release).
 </Aside>
 
 ## How enrolment works
 
 1. In the panel you add a server by name. The panel answers with a **one-time token** and
    the **CA pin**, the fingerprint of the panel's private certificate authority.
-2. On the new server, `ekpanel-agent enroll` connects to the panel on TCP port 7443. It
-   checks the panel's certificate against the CA pin, so it cannot be tricked into talking to
-   another machine.
+2. On the new server, `ekpanel-agent enroll` (which the installer runs for you) connects to
+   the panel on TCP port 7443. It checks the panel's certificate against the CA pin, so it
+   cannot be tricked into talking to another machine.
 3. The agent makes a private key that never leaves the server and sends the token with a
    certificate request. The panel checks the token and signs a client certificate valid for
    90 days. The token is then used up.
@@ -48,92 +49,14 @@ On the panel's server:
 On the new server:
 
 - Ubuntu 24.04+ or Debian 12+ on amd64 or arm64, with systemd, the same as for the
-  [panel's server](/start/requirements/). The agent uses `apt` to install what features
-  need, such as PHP, MariaDB or Docker.
+  [panel's server](/start/requirements/). Use a fresh server: ekPanel's web server needs
+  ports 80 and 443. The agent uses `apt` to install what features need, such as PHP,
+  MariaDB or Docker.
 - Root access. The agent runs as root, because it manages the server.
-- Outgoing access to the panel on port 7443, and to the internet for packages.
-- The `ekpanel-agent` program built for its CPU type. It is in the same
-  [release archive](/start/install/#build-ekpanel) as the panel (`make release`).
+- Outgoing access to the panel on port 7443, to `github.com` over HTTPS for the release,
+  and to the internet for packages.
 
-## Prepare the server
-
-<Steps>
-
-1. Copy the agent to the server and install it:
-
-   ```bash
-   scp ekpanel-agent root@new-server:
-   ```
-
-   Then, on the new server:
-
-   ```bash
-   sudo install -m 0755 ekpanel-agent /usr/local/bin/ekpanel-agent
-   sudo install -d -m 0755 /etc/ekpanel
-   ```
-
-   The second command creates the agent's folder readable for the web server, as the panel's
-   installer does. If the agent created it, it would be closed to everyone but root, and
-   Caddy could not read the website files the agent writes there.
-
-2. If this server will host **websites or apps with a domain**, install Caddy and the `acl`
-   package, and point Caddy at the folder where the agent writes one file per website. The
-   panel's installer does this on the panel's server; on other servers you do it once by
-   hand for now:
-
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y curl gnupg acl
-   curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-   curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-   sudo apt-get update
-   sudo apt-get install -y caddy
-   sudo install -d -m 0755 /etc/ekpanel/caddy/sites
-   ```
-
-   Then replace `/etc/caddy/Caddyfile` with:
-
-   ```text
-   # Websites are in /etc/ekpanel/caddy/sites.
-   import /etc/ekpanel/caddy/sites/*.caddy
-   ```
-
-   and reload Caddy with `sudo systemctl reload caddy`. On Ubuntu, also install
-   `software-properties-common`, which the agent uses to add the PHP package repository.
-
-3. Create the agent's systemd service, so it starts at boot and restarts if it stops. This is
-   the same unit the installer writes on the panel's server. Save it as
-   `/etc/systemd/system/ekpanel-agent.service`:
-
-   ```ini
-   [Unit]
-   Description=ekPanel agent
-   After=network-online.target
-   Wants=network-online.target
-
-   [Service]
-   # The agent manages this server (websites, services, files), so it runs as root.
-   ExecStart=/usr/local/bin/ekpanel-agent run --config /etc/ekpanel/agent.json
-   Restart=always
-   RestartSec=3
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-   Then run `sudo systemctl daemon-reload`. Do not start it yet.
-
-</Steps>
-
-<Aside type="caution" title="Not tested as a recipe">
-Step 2 copies what the panel's installer sets up, and the agent expects exactly that
-(Caddy's configuration in `/etc/caddy/Caddyfile`, website files in
-`/etc/ekpanel/caddy/sites`, and `setfacl` from the `acl` package). It has not been tested as
-a separate recipe yet. If a website on the new server shows **Problem**, the message on the
-website's page names what is missing.
-</Aside>
-
-## Connect it to the panel
+## Add the server
 
 <Steps>
 
@@ -142,25 +65,23 @@ website's page names what is missing.
 2. Enter a **Server name** you will recognise, like "Singapore web 1", and click
    **Continue**.
 
-3. The dialog **Connect** shows the command to run on the server. It looks like this:
+3. The dialog **Connect …** shows one command under **Install and connect**. It looks like
+   this:
 
    ```bash
-   sudo ekpanel-agent enroll \
+   curl -fsSL https://github.com/ekPanel/ekpanel/releases/download/v0.1.0/install.sh | sudo bash -s -- --agent \
      --panel panel.example.com:7443 \
      --token <one-time token> \
      --ca-pin sha256:<fingerprint>
    ```
 
-   The panel fills in its own host name, as you opened it in the browser, and the agent
-   port. Copy the command with the copy button and run it on the new server. It answers
-   `Enrolled as server …`.
+   The version in the address is your panel's own version, so the new server gets the same
+   agent version as the panel. The panel fills in its own host name, as you opened it in the
+   browser, and the agent port.
 
-4. Start the agent. The dialog suggests `sudo ekpanel-agent run`, which runs it in the
-   foreground. Use the service from the step above instead, so it survives a reboot:
-
-   ```bash
-   sudo systemctl enable --now ekpanel-agent
-   ```
+4. Copy the command with the copy button and run it on the new server as root. It takes a
+   few minutes, most of it package downloads, and ends with "This server is connected to the
+   panel."
 
 5. Back in the panel, the dialog changes from **Waiting for the agent to connect…** to
    **Connected!** within a few seconds. Click **Done**.
@@ -169,6 +90,86 @@ website's page names what is missing.
 
 The server now shows as **Online** on the **Servers** page, and you can pick it when you add
 a website, database or app.
+
+### What the command does
+
+It runs the same installer as for the panel, with `--agent`. On the new server it:
+
+- installs `ca-certificates`, `curl`, `gnupg`, `openssl`, `acl` and, on Ubuntu,
+  `software-properties-common`, and Caddy from Caddy's official package repository if it is
+  not installed yet. It does not install PostgreSQL or the panel;
+- downloads the agent from the panel's release and checks it, exactly as the
+  [panel's install](/start/install/#how-the-download-is-checked) does;
+- installs it as `/usr/local/bin/ekpanel-agent`, creates `/etc/ekpanel` and
+  `/etc/ekpanel/caddy/sites` (readable by the web server), and writes the
+  `ekpanel-agent` systemd service;
+- enrols the agent with the token and CA pin, then enables and starts the service, so the
+  agent also runs after a reboot;
+- writes `/etc/caddy/Caddyfile`, which imports `/etc/ekpanel/caddy/sites/*.caddy` (one file
+  per website, written by the agent). If the server already has a Caddyfile of its own, the
+  installer only adds the `import` line to it. Then it checks the configuration and reloads
+  Caddy;
+- opens ports 80 and 443 in ufw, if ufw is active.
+
+Running the same command again on a server that is already connected installs the agent
+again and keeps its connection; it does not enrol a second time. The installer refuses to run
+with `--agent` on the panel's own server, whose agent the panel's installer already set up.
+
+## When the panel is not a published release
+
+The one command needs your panel's version to exist as a release on GitHub. That is not the
+case when you [built the panel yourself](/start/install/#install-from-your-own-build):
+
+- A panel built **from source** (with `make build`, or a version that is not a release) shows
+  two commands instead, with the note "This panel is built from source, so there is no
+  release to install from. Copy the ekpanel-agent binary to /usr/local/bin on the new server
+  first."
+- A panel built with `make release VERSION=…` shows the one command, but its download does
+  not exist on GitHub and fails with a 404 error.
+
+In both cases, run the installer from your own build, with the values from the dialog:
+
+<Steps>
+
+1. Copy the archive you installed the panel from (the same version) to the new server, and
+   unpack it there:
+
+   ```bash
+   scp dist/ekpanel-v0.0.1-linux-amd64.tar.gz root@new-server:
+   ```
+
+   ```bash
+   tar -xzf ekpanel-v0.0.1-linux-amd64.tar.gz
+   cd ekpanel-v0.0.1-linux-amd64
+   ```
+
+   With a `make build` build, copy `bin/ekpanel-agent` and `deploy/install.sh` into one
+   folder on the new server instead.
+
+2. In the panel, click **Add server**, enter a name and click **Continue**. Take the
+   `--panel`, `--token` and `--ca-pin` values from the command the dialog shows.
+
+3. Run the installer with `--agent` and those values:
+
+   ```bash
+   sudo ./install.sh --agent --local-dir . \
+     --panel panel.example.com:7443 \
+     --token <one-time token> \
+     --ca-pin sha256:<fingerprint>
+   ```
+
+   It does everything listed in [What the command does](#what-the-command-does), except
+   the download.
+
+4. Wait for **Connected!** in the dialog, and click **Done**.
+
+</Steps>
+
+The two commands of a from-source panel (`sudo ekpanel-agent enroll …`, then
+`sudo ekpanel-agent run`) also work once `ekpanel-agent` is in `/usr/local/bin`. They only
+connect the agent: they set up no web server, no `acl` package and no systemd service, and
+`run` keeps the agent in the foreground of your SSH session. Use them for a quick test, not
+for a server that hosts websites.
 
 ### The `enroll` command
 
@@ -215,20 +216,33 @@ server's IP address or a name that is not proxied in `--panel`.
 - **The token expired or the command was lost.** Open the server on the **Servers** page and
   click **New connection command**. This makes a new token and revokes the server's current
   certificate, so an agent that was already connected is disconnected until you enrol it
-  again.
-- **"panel refused the request"**: the token was already used or has expired. Make a new
-  connection command.
+  again. On a server where the agent is already installed, the one-line command does not enrol
+  again (it keeps the existing credential), so run the `enroll` part yourself with the values
+  from the new command, then restart the agent:
+
+  ```bash
+  sudo ekpanel-agent enroll --panel panel.example.com:7443 --token <one-time token> --ca-pin sha256:<fingerprint>
+  sudo systemctl restart ekpanel-agent
+  ```
+- **"the panel did not accept this server. The token works once and expires; create a new
+  one in the panel."** (from the installer), or **"panel refused the request"** (from
+  `enroll`): the token was already used or has expired. Make a new connection command.
 - **"contact panel" errors or a timeout**: the server cannot reach the panel on port 7443.
   Check the panel's firewall and your provider's cloud firewall.
+- **`curl: (22) The requested URL returned error: 404`**: your panel's version is not a
+  published release. See
+  [When the panel is not a published release](#when-the-panel-is-not-a-published-release).
+- **"this server runs the panel; its agent is already set up."**: you ran the `--agent`
+  command on the panel's own server. It needs nothing more.
 - **The server shows Offline**: the agent is not running or cannot connect. On the server,
   check `sudo systemctl status ekpanel-agent` and `sudo journalctl -u ekpanel-agent`.
 - **To remove a server**, open it and delete it. The panel forgets the server and its agent
   can no longer connect. Nothing on the server itself is deleted; stop and disable the agent
-  service there yourself.
+  service there yourself (`sudo systemctl disable --now ekpanel-agent`).
 
 ## Related
 
 - [Servers guide](/guides/admin/servers/)
 - [Architecture](/concepts/architecture/): how the panel and agents talk.
 - [Security model](/concepts/security-model/)
-- [Upgrade](/start/upgrade/): updating agents on other servers.
+- [Upgrade](/start/upgrade/): the panel updates every server's agent.

@@ -29,8 +29,9 @@ sudo journalctl -u ekpanel -u ekpanel-agent --since "10 min ago"
 | Unit | এটা কী | কখন থাকে |
 | --- | --- | --- |
 | `ekpanel` | Panel | Panel-এর server-এ |
-| `ekpanel-agent` | Agent | Panel-এর server-এ (installer বানায়) |
-| `caddy` | Panel, website আর app-এর web server | Panel-এর server-এ |
+| `ekpanel-agent` | Agent | প্রতিটা server-এ (installer বানায়) |
+| `ekpanel-agent-rollback` | Update ব্যর্থ হলে আগের agent ফিরিয়ে আনার একটা timer | শুধু agent update-এর সময় |
+| `caddy` | Panel, website আর app-এর web server | Installer যেসব server set up করেছে, তার প্রতিটায় |
 | `postgresql` | Panel-এর database, আর customer-দের PostgreSQL database | Panel-এর server; PostgreSQL database আছে এমন server |
 | `mariadb` | MariaDB database | প্রথম MariaDB database-এর পরে |
 | `php8.4-fpm` (যেকোনো version) | Administrator-দের website-এর PHP | ওই version-এর প্রথম PHP website-এর পরে |
@@ -94,11 +95,13 @@ sign করেনি। Connection তবুও encrypted। আপনি warnin
 <Steps>
 
 1. একটা DNS name, যেমন `panel.example.com`, server-এর address-এর দিকে point করুন।
-2. ওই নাম দিয়ে installer আবার চালান (একই binary বা নতুন binary দিয়ে):
+2. ওই নাম দিয়ে installer আবার চালান, যেভাবে install করেছিলেন সেভাবেই:
 
    ```bash
-   sudo ./install.sh --local-dir . --domain panel.example.com
+   curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com
    ```
+
+   অথবা নিজের build থেকে, `sudo ./install.sh --local-dir . --domain panel.example.com`।
 
 3. `https://panel.example.com` খুলুন। প্রথমবার visit-এর সময় Caddy একটা free Let's Encrypt
    certificate নেয়; এর জন্য port 80 আর 443 internet-এর দিকে খোলা থাকতে হবে।
@@ -138,8 +141,8 @@ notification পাঠায়।
    sudo journalctl -u ekpanel-agent -n 100
    ```
 
-   Panel-এর server-এ installer `ekpanel-agent` service বানিয়েছে। অন্য server-এ agent সেভাবেই চলে
-   যেভাবে আপনি চালু করেছেন (`sudo ekpanel-agent run`); দেখুন সেটা এখনো চলছে কিনা।
+   Installer যে server set up করে, তার প্রতিটায় `ekpanel-agent` service বানায়। কোনো agent আপনি হাতে
+   `sudo ekpanel-agent run` দিয়ে চালু করে থাকলে দেখুন সেটা এখনো চলছে কিনা।
 
 3. Server কি TCP 7443-এ panel-এ পৌঁছাতে পারে? Managed server থেকে:
 
@@ -152,7 +155,9 @@ notification পাঠায়।
 4. Agent-এর log কি certificate error-সহ বারবার "lost connection to panel; retrying" লিখছে, বা বলছে
    যে `/etc/ekpanel/agent.json` অসম্পূর্ণ? তাহলে server-টা আবার connect করতে হবে (যেমন এর
    certificate revoke হওয়ার পরে)। Panel-এ server-এর page-এ **নতুন সংযোগ কমান্ড**-এ click করুন আর
-   নতুন `enroll` command-টা server-এ চালান, তারপর agent আবার চালু করুন।
+   নতুন command-এর `--panel`, `--token` আর `--ca-pin` value দিয়ে server-এ `sudo ekpanel-agent enroll`
+   চালান, তারপর `sudo systemctl restart ekpanel-agent`। (এক লাইনের install command, যে server-এ
+   আগে থেকে credential আছে, সেটাকে আবার enrol করে না।)
 
 </Steps>
 
@@ -249,15 +254,42 @@ Error দেখতে **সাম্প্রতিক কাজ** (task tray) �
 থামার সময় যে task-গুলো চলছিল, panel চালু হলে সেগুলো আবার ধরা হয়। বিস্তারিত দেখতে
 `journalctl -u ekpanel`, আর server-এর কাজের জন্য `journalctl -u ekpanel-agent` দেখুন।
 
+## Update
+
+- **"…-এ আপডেট ব্যর্থ" (Update to … failed), আর আগের version রেখে দেওয়া হয়েছে।** Panel-এর নতুন
+  version চালু হয়নি, বা 90 সেকেন্ডের মধ্যে তার version জানায়নি, তাই agent পুরোনো program ফিরিয়ে
+  এনেছে। নতুনটা আছে `/usr/local/bin/ekpanel.failed`-এ। কেন fail করেছে পড়ুন
+  `sudo journalctl -u ekpanel --since "30 min ago"` দিয়ে; database-এর কোনো পরিবর্তন ব্যর্থ হলে সেখানে
+  লেখা থাকে। Update যদি তার আগেই থেমে থাকে (download, signature বা পরীক্ষামূলক চালানোর error), তাহলে
+  কিছুই বদলায়নি। দেখুন [Update ব্যর্থ হলে](/start/upgrade/#when-an-update-fails)।
+- **Update-এর ফলাফলে একটা server ব্যর্থ (Failed) দেখায়।** তার নতুন agent panel-এর অপেক্ষার সময়ের
+  মধ্যে panel-এ পৌঁছায়নি, আর তার rollback timer 3 মিনিটের মধ্যে আগের agent ফিরিয়ে আনে (নতুনটা রাখা
+  থাকে `ekpanel-agent.failed` হিসেবে)। ওই server-এ `sudo journalctl -u ekpanel-agent` আর
+  `sudo systemctl status ekpanel-agent` দেখুন। কারণ ঠিক হলে **আপডেট** page-এ **1টা এজেন্ট আপডেট
+  করুন** (Update 1 agent)-এ click করুন।
+- **"প্যানেল যে সার্ভারে চলছে, তার এজেন্ট যুক্ত নেই, তাই আপডেট বসানো যাচ্ছে না।"** (The agent on
+  the panel's own server is not connected, so it cannot install the update.) নতুন panel install
+  করে এই agent-ই। Panel-এর server-এ `sudo systemctl status ekpanel-agent` দেখুন। সেখানে agent কখনো
+  enrol না হয়ে থাকলে (যেমন installer ছাড়া চালু করা panel), installer একবার চালান।
+- **Updates page-এ "শেষবার খুঁজতে গিয়ে সমস্যা হয়েছে: …"** (The last check failed: …): panel
+  `github.com` (বা `EKPANEL_RELEASES_URL`-এর mirror) পর্যন্ত পৌঁছাতে পারছে না। Server-এর outgoing
+  HTTPS আর DNS check করুন।
+- **Installer download নিতে রাজি হয় না**, এই message দিয়ে: "SHA256SUMS is not signed by the ekPanel
+  release key; not installing." বা "… does not match its signed checksum; not installing.": file-টা
+  পথে বদলে গেছে বা মাঝপথে কেটে গেছে, আর কিছুই install হয়নি। পরে আবার, বা অন্য network থেকে চেষ্টা
+  করুন। `--release-url`-এর mirror-কে official file-গুলো না বদলে দিতে হবে।
+
 ## Installer আবার চালানো
 
-`install.sh` আবার চালানো নিরাপদ। এটা binary upgrade করে আর আপনার data রেখে দেয়:
+`install.sh` আবার চালানো নিরাপদ। এটা program-গুলোকে যে version download করে (বা `--local-dir`-এ যেটা
+আছে) সেটায় upgrade করে, আর আপনার data রেখে দেয়:
 
 ```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- [--domain panel.example.com]
 sudo ./install.sh --local-dir . [--domain panel.example.com]
 ```
 
-এটা নতুন binary install করে, setting file আর service file আবার লেখে, panel আর agent restart করে, আর
+এটা নতুন program install করে (পুরোনোগুলো `.prev` হিসেবে রেখে), setting file আর service file আবার লেখে, panel আর agent restart করে, আর
 Caddyfile আবার লেখে। Agent-কে আবার connect করে শুধু তখনই, যখন `/etc/ekpanel/agent.json`-এ কোনো
 credential নেই। `panel.env`, service file বা Caddyfile-এ নিজে হাতে করা পরিবর্তন হারিয়ে যায়। দেখুন
 [Configuration](/reference/configuration/)।
