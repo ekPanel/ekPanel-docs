@@ -11,9 +11,9 @@ ekPanel is built in phases. Each phase ends with something you can install on a 
 use. **Phases 0 to 3 are done**, and so is the first part of phase 4: releases and updates (4a).
 The first release, v0.1.0, came out of it on 9 November 2026. Since then the API part of 4b
 (API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
-the next release, and so is the first part of 4c: moving a website or an app to another
-server. Next is the rest of 4c (databases on their own, backups onto another server, whole
-customers). The full plan, with every decision and
+the next release, and so is most of 4c: moving a website, an app, a database or everything a
+customer has on a server to another server. Next in 4c is restoring a backup onto another
+server. The full plan, with every decision and
 test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
@@ -122,7 +122,8 @@ Still to come:
 
 ### 4c. Moving between servers <Badge text="partly done" variant="caution" />
 
-Done in the `dev` branch and tested with two VMs; it comes with the **next release**:
+Done in the `dev` branch; it comes with the **next release**. Website and app moves were tested
+with two VMs; database and customer moves so far only with the panel's automated tests:
 
 - [Move a website](/guides/websites/move/), with the databases you choose, to another ekPanel
   server: files with owners and ACLs, databases, certificate, settings and cron jobs. The new
@@ -133,12 +134,19 @@ Done in the `dev` branch and tested with two VMs; it comes with the **next relea
   The app is stopped while it moves; the old copy stays stopped with its data until you remove
   it, and a failed move starts it again where it was. Apps with pull request previews do not
   move
+- [Move a database](/guides/data/move-database/) on its own: dump, switch, load on the new
+  server with the same user and password; the old copy stays until you remove it. Websites and
+  apps on the old server keep using the old copy, so usually you move the website with its
+  databases instead
+- [Move a customer](/guides/admin/move-customer/): everything a customer has on one server, one
+  thing at a time (the first website takes all their databases along), all checked before the
+  first move starts, stopping at the first failure; what moved stays moved
 - The copy goes over the agents' own connections to the panel, not public SSH
 
 Still to come:
 
-- Move a database on its own
-- Restore a backup onto another server; move a whole customer
+- Restore a backup onto another server, for a server that is gone (planned for backups kept in
+  S3 storage, since a local backup location is on the lost server)
 
 ### 4d. Importers
 

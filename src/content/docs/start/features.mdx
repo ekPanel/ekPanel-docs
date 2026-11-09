@@ -13,8 +13,9 @@ outside service, the list says so.
 
 <Aside type="note">
 Everything on this page is in v0.1.0, the first release, except
-[API and command line](#api-and-command-line) and moving websites and apps to another server
-(under [Many servers](#many-servers)), which come with the next release. You can
+[API and command line](#api-and-command-line) and moving websites, apps, databases and
+customers to another server (under [Many servers](#many-servers)), which come with the next
+release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -142,6 +143,8 @@ Everything on this page is in v0.1.0, the first release, except
   reach only that database.
 - Passwords are shown once and never stored; the panel keeps only the database's own hash.
 - Connection details, size and password reset.
+- <Badge text="next release" variant="note" /> [Move a database](/guides/data/move-database/) on
+  its own to another server.
 
 ## Backups
 
@@ -221,6 +224,8 @@ has not been tried yet.
 - Memory and CPU limits are enforced by the Linux kernel (cgroups) for all of a customer's
   PHP and containers. Disk use is measured every 30 minutes.
 - "Sign in as" a customer for one hour, recorded in the audit log.
+- <Badge text="next release" variant="note" /> [Move everything a customer has](/guides/admin/move-customer/)
+  on one server to another in one go.
 
 ## Notifications
 
@@ -234,7 +239,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -255,6 +260,11 @@ has not been tried yet.
   between the servers' agents, the new server sets it up and fills its volumes, DNS the panel
   manages follows, and the old copy stays stopped with its data until you remove it. Tested
   with two VMs.
+- <Badge text="next release" variant="note" /> Moving a database on its own to another server,
+  with the same user and password; the old copy stays until you remove it.
+- <Badge text="next release" variant="note" /> Moving everything a customer has on one server
+  (websites, databases and apps) in one go: all of it is checked first, then moved one thing
+  after the other, stopping at the first failure.
 
 ## API and command line
 
@@ -286,7 +296,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Moving | Move a database on its own to another server; restore a backup onto another server; move a whole customer. (Websites and apps can be moved already.) |
+| Moving | Restore a backup onto another server, for a server that is gone. (Websites, apps, databases and whole customers can be moved already.) |
 | Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |

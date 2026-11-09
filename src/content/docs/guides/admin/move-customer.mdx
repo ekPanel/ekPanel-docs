@@ -1,0 +1,198 @@
+---
+title: Move a customer to another server
+description: Move everything a customer has on one server (websites, databases and apps) to another server in one go, then remove the old copies.
+sidebar:
+  order: 2
+  label: Move a customer
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+To empty a server, or to give a customer a server of their own, you can move everything they have
+on one server to another in one go: their websites, databases and apps. The panel checks all of
+it first, then moves one thing after the other.
+
+Each thing moves exactly as if you had started its move from its own page. Read those guides for
+what is copied and how DNS follows: [Move a website](/guides/websites/move/),
+[Move a database](/guides/data/move-database/) and [Move an app](/guides/apps/move/).
+
+## Before you start
+
+- You are an **administrator**. Customers are under **Administration** in the menu.
+- **Both servers are connected**, and the new server is one the customer's package allows.
+- **Everything the customer has on the old server can move.** Before anything starts, the panel
+  checks every website, database and app of the customer on that server:
+  - each one is working (not being set up, no error);
+  - no app has pull request previews (turn them off and delete the previews first);
+  - the new server has no database or database user, and no app, with the same name;
+  - none of them is being moved already or still has an old copy to remove.
+
+  If one check fails, nothing moves, and the panel says what is wrong (see
+  [Troubleshooting](#troubleshooting)).
+- **The new server has enough free disk space** for all of it. See the disk space notes in the
+  [website](/guides/websites/move/#before-you-start) and [app](/guides/apps/move/#before-you-start)
+  guides.
+- **Pick a quiet time.** Apps are down while they move, and changes made to websites and
+  databases after their copy starts are not carried over.
+
+<Aside type="tip">
+For domains whose DNS the panel does not manage, lower the TTL of their `A` and `AAAA` records to
+300 seconds at the DNS provider a day before. Visitors then follow the new address within minutes.
+</Aside>
+
+## Move a customer
+
+<Steps>
+
+1. Open **Customers**. Next to the customer, click **Move…**.
+
+2. In **Move from**, choose the server their things are on now.
+
+3. In **Move to**, choose the new server. Servers that are not connected show **(Offline)** and
+   cannot be chosen.
+
+4. Read the warning, then click **Start the move**.
+
+5. The dialog says "The move has started. Each website, database and app shows its progress on
+   its own page, where you can also remove its old copy once it has moved." Click **Close**.
+
+</Steps>
+
+There is no single page for the whole move. Open each website, database or app to see its own
+move card. While the move runs, the list of tasks in progress (at the bottom corner of every page)
+shows it as `customer.move`.
+
+## The order of the moves
+
+The panel moves one thing at a time, in this order:
+
+<Steps>
+
+1. **The first website** (by domain name, alphabetically), with **all** the customer's databases
+   on that server. Websites reach their databases on their own server, so the databases go first,
+   together.
+
+2. **The other websites**, one after the other. Their databases are already on the new server.
+
+3. **Databases on their own**, only if the customer has no website on that server.
+
+4. **The apps**, one after the other. Each app is stopped while it moves.
+
+</Steps>
+
+Each move runs until it is **Moved**: the new server was set up and checked, and DNS records the
+panel manages point to it. Then the next one starts.
+
+<Aside type="caution">
+While the first website moves, its databases leave together with it. The customer's other
+websites keep using the old copies of those databases until their own turn comes. Anything they
+write to the databases in that time stays in the old copies.
+</Aside>
+
+## When something fails
+
+The move stops at the first failure:
+
+- The thing that failed stays where it was, as when its own move fails. Its card shows **Failed**
+  and the reason.
+- Everything moved before it **stays moved**, with its old copy still on the old server.
+- Everything after it was not touched and is still on the old server.
+
+Fix the cause, then start the customer's move again with the same servers. It moves only what is
+still on the old server.
+
+If something fails, administrators get a **Task failed** [notification](/guides/admin/notifications/),
+whose message starts with how many things moved, such as "after 2 of 5 moved: …".
+
+<Aside type="danger">
+If the move stopped after the first website, the customer's databases are already on the new
+server, while some of their websites are still on the old one and use the old copies. **Do not
+remove the first website's old copy** until the other websites have moved too: removing it
+deletes those databases on the old server. The panel asks first: while websites or apps of the
+same customer are still on the old server, removing an old copy with databases names them and
+needs a second confirmation.
+</Aside>
+
+Avoid updating or restarting the panel during the move. The thing moving at that moment fails
+("the panel restarted during the move; it stays where it was"), and the rest is not moved; start
+the customer's move again.
+
+## Remove the old copies
+
+Every website, database and app that moved has its own old copy on the old server. Remove each
+one from its own page, in its **Move to another server** card, once you have checked it:
+
+- **Websites**: once the domain points to the new server. See
+  [How long to wait](/guides/websites/move/#how-long-to-wait).
+- **Apps**: once the app works on the new server with its data. See
+  [Remove the old copy](/guides/apps/move/#remove-the-old-copy).
+- **Databases that went with the first website** are part of its move: their old copies are
+  removed together with that website's old copy. The database's own page shows no move.
+- **Databases that moved on their own** (when there is no website): from the database's page. See
+  [Remove the old copy](/guides/data/move-database/#remove-the-old-copy).
+
+Until its old copy is removed, a website, database or app cannot be deleted or moved again.
+
+## With the API or ekctl
+
+An administrator's [API token](/guides/security/api-tokens/) with the `customers` scope can start
+the move:
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/customers/{id}/move` | Start the move. Body: `{"from_server_id": "…", "server_id": "…"}`. Checks everything first, then answers `202` with a [task](/reference/api/#tasks-following-slow-work) of kind `customer.move`. |
+| `GET /api/v1/tasks/{id}` | Follow it. When it has `succeeded`, `result.moves` lists the IDs of the moves it made. When it has `failed`, `error` says how many moved and why. |
+
+Each move is then followed and finished like a single one: `GET /sites/{id}/moves`,
+`/databases/{id}/moves` or `/apps/{id}/moves`, and `POST /moves/{id}/cleanup`. Removing an old
+copy needs the `sites`, `databases` or `apps` scope, not `customers`.
+
+With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api POST customers/<customer id>/move --data '{"from_server_id":"<old server id>","server_id":"<new server id>"}'
+ekctl api GET tasks/<task id> | jq '.status, .result, .error'
+```
+
+## Limits and what is not there yet
+
+- One server at a time: a customer with things on several servers needs one move per server.
+- All the customer's databases on the server go with the first website, whichever website uses
+  them.
+- Email domains and mailboxes are not moved. Cron jobs move with their website or app.
+- There is no overview of the whole move; each thing shows its own move.
+- The panel does not check free disk space on the new server before it starts.
+- The whole customer move stops after 12 hours; the thing moving at that moment fails.
+- Restoring a backup onto another server (for a server that is gone): not yet. It is planned;
+  see the [roadmap](/project/roadmap/).
+- Checked with the panel's automated tests; not yet tried with two servers.
+
+## Troubleshooting
+
+The panel refuses to start the move with one of these messages. Through the API, the `message`
+also names the website, database or app.
+
+| Message (error code) | What to do |
+| --- | --- |
+| "The customer has nothing on that server." (`nothing_to_move`) | Choose the server in **Move from** where the customer's things are. |
+| "Choose a server to move to." (`invalid_server`) | Choose both servers. Through the API, check both server IDs. |
+| "It is already on this server." (`same_server`) | Choose two different servers. |
+| "The customer's package does not include this server. Add it to the package first." (`server_not_in_package`) | Add the server to the customer's [package](/guides/admin/customers/), or choose another server. |
+| "The server's agent is not connected." (`agent_offline`) | One of the two servers is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+| "The website must be working before it can move." (`site_not_active`) | Open the customer's websites on that server and fix the one whose status shows a problem, or wait until it is set up. |
+| "A chosen database must be working before it can move." (`database_not_active`) | Open **Databases** and fix the customer's database that is not **Ready**. |
+| "The target server already has a database or user with the same name." (`database_name_taken`) | Delete or rename that database or user on the new server, or move to another server. |
+| "The app must be working before it can move." (`app_not_active`) | Open the customer's apps on that server and fix the one that shows a problem. |
+| "Apps with pull request previews cannot move. Turn previews off and delete the remaining previews first." (`app_has_previews`) | Turn off **Preview each pull request** in the app's **Settings** and delete its previews. |
+| "The target server already has an app with this name." (`app_name_taken`) | Delete or rename the other app on the new server, or move to another server. |
+| "This is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | One of the customer's things is still in a move. Wait for it to finish, or remove its old copy. |
+| "You do not have permission to do that." (`forbidden`) | Only administrators can move customers. |
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Customers and packages" href="/guides/admin/customers/" />
+	<LinkCard title="Move a website" href="/guides/websites/move/" />
+	<LinkCard title="Move a database" href="/guides/data/move-database/" />
+	<LinkCard title="Move an app" href="/guides/apps/move/" />
+</CardGrid>

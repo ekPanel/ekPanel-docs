@@ -117,13 +117,13 @@ segment of the path: `/sites/{id}/files` belongs to `sites`.
 | --- | --- | --- |
 | `read` | Every `GET` its owner may see, in all the areas below. Changes nothing. | all of them |
 | `sites` | Websites, WordPress, PHP apps, PHP versions, cron jobs and moving websites | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
-| `databases` | Databases and their users | `/databases` |
+| `databases` | Databases and their users, and moving databases | `/databases`, `/moves` |
 | `apps` | Docker and Git apps, deploys, the app catalogue, cron jobs and moving apps | `/apps`, `/catalog`, `/cron`, `/moves` |
 | `dns` | Cloudflare and hosted DNS zones, records, templates, name servers | `/dns` |
 | `mail` | Email domains, mailboxes and forwarders | `/mail` |
 | `backups` | Backup storage, backups and restores | `/backups` |
 | `servers` | Servers, their services, firewall, security, mail server and PHP extensions | `/servers` |
-| `customers` | Customers and packages | `/customers`, `/packages` |
+| `customers` | Customers and packages, and moving everything a customer has on a server | `/customers`, `/packages` |
 | `settings` | Notification settings, updates, notifications and the audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
 The rules:
@@ -131,8 +131,9 @@ The rules:
 - A `GET` works with `read` **or** the area's own scope. Anything else (`POST`, `PUT`,
   `PATCH`, `DELETE`) needs the area's scope. A token with `sites` can list and change
   websites; a token with only `read` can list them but not change them.
-- Cron jobs and moves belong to both websites and apps, so `sites` or `apps` is enough for
-  `/cron` and `/moves`.
+- Cron jobs belong to both websites and apps, so `sites` or `apps` is enough for `/cron`.
+  Moves belong to websites, apps and databases, so `sites`, `apps` or `databases` is enough for
+  `/moves`.
 - **Any token**, whatever its scopes, may read who it belongs to (`GET /auth/me`), its owner's
   usage (`GET /me/usage`) and tasks (`GET /tasks`, `GET /tasks/{id}`).
 - Public endpoints (`/health`, `/openapi.json`, `/setup/status`) also work when a token is
@@ -224,10 +225,10 @@ What you get back depends on the endpoint:
 
 | You start | The answer | Follow it with |
 | --- | --- | --- |
-| A backup, a restore, a service restart, a PHP extension, a malware scan, a panel update | The task, with its `id` | `GET /tasks/{id}` until `status` is `succeeded` or `failed` |
+| A backup, a restore, a service restart, a PHP extension, a malware scan, a panel update, a [customer move](/guides/admin/move-customer/) | The task, with its `id` | `GET /tasks/{id}` until `status` is `succeeded` or `failed` |
 | A website, database or app (create or change) | The item, with `state` `pending` | `GET /sites/{id}` (or `/databases/{id}`, `/apps/{id}`) until `state` is `active` and `applied_generation` has reached `generation`; `error` means it failed, with the reason in `message` |
 | A Git deploy | The deployment | `GET /apps/{id}/deployments/{did}` until `status` is `live` or `failed` |
-| A [website move](/guides/websites/move/) or [app move](/guides/apps/move/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` (or `/apps/{id}/moves`) until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
+| A [website move](/guides/websites/move/), [app move](/guides/apps/move/) or [database move](/guides/data/move-database/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` (or `/apps/{id}/moves`, `/databases/{id}/moves`) until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
 
 A task looks like this:
 
@@ -440,6 +441,8 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Audit log | `/audit` |
 | Moving websites | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a website](/guides/websites/move/#with-the-api-or-ekctl). |
 | Moving apps | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move an app](/guides/apps/move/#with-the-api-or-ekctl). |
+| Moving databases | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a database](/guides/data/move-database/#with-the-api-or-ekctl). |
+| Moving customers | `POST /customers/{id}/move`. See [Move a customer](/guides/admin/move-customer/#with-the-api-or-ekctl). |
 
 ## Protection against cross-site requests
 

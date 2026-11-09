@@ -115,13 +115,13 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 | --- | --- | --- |
 | `read` | মালিক যা দেখতে পারেন তার প্রতিটা `GET`, নিচের সব অংশে। কিছু বদলায় না। | সবগুলো |
 | `sites` | Website, WordPress, PHP app, PHP version, cron job আর website সরানো | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
-| `databases` | Database আর তাদের user | `/databases` |
+| `databases` | Database আর তাদের user, আর database সরানো | `/databases`, `/moves` |
 | `apps` | Docker আর Git app, deploy, app catalogue, cron job আর app সরানো | `/apps`, `/catalog`, `/cron`, `/moves` |
 | `dns` | Cloudflare আর hosted DNS zone, record, template, name server | `/dns` |
 | `mail` | Email domain, mailbox আর forwarder | `/mail` |
 | `backups` | Backup storage, backup আর restore | `/backups` |
 | `servers` | Server, তাদের service, firewall, security, mail server আর PHP extension | `/servers` |
-| `customers` | Customer আর package | `/customers`, `/packages` |
+| `customers` | Customer আর package, আর একজন customer-এর এক server-এর সবকিছু সরানো | `/customers`, `/packages` |
 | `settings` | Notification setting, update, notification আর audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
 নিয়মগুলো:
@@ -129,8 +129,8 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 - একটা `GET` কাজ করে `read` **অথবা** ওই অংশের নিজের scope দিয়ে। বাকি সবকিছুর (`POST`, `PUT`, `PATCH`,
   `DELETE`) জন্য ওই অংশের scope লাগে। `sites`-ওয়ালা token website দেখতে আর বদলাতে পারে; শুধু `read`-ওয়ালা
   token দেখতে পারে, বদলাতে পারে না।
-- Cron job আর সরানোর কাজ website আর app দুটোরই, তাই `/cron` আর `/moves`-এর জন্য `sites` বা `apps` যেকোনো একটা
-  যথেষ্ট।
+- Cron job website আর app দুটোরই, তাই `/cron`-এর জন্য `sites` বা `apps` যেকোনো একটা যথেষ্ট। সরানোর কাজ website, app
+  আর database-এর, তাই `/moves`-এর জন্য `sites`, `apps` বা `databases` যেকোনো একটা যথেষ্ট।
 - **যেকোনো token**, scope যা-ই হোক, দেখতে পারে এটা কার (`GET /auth/me`), মালিকের usage (`GET /me/usage`)
   আর task (`GET /tasks`, `GET /tasks/{id}`)।
 - Public endpoint (`/health`, `/openapi.json`, `/setup/status`) token পাঠালেও কাজ করে, তাই কোনো client প্রতিটা
@@ -220,10 +220,10 @@ password বা two-factor setting বদলাতে, বা তাঁর জ�
 
 | আপনি শুরু করেন | উত্তর | খোঁজ রাখুন |
 | --- | --- | --- |
-| Backup, restore, service restart, PHP extension, malware scan, panel update | Task-টা, তার `id`-সহ | `GET /tasks/{id}`, যতক্ষণ না `status` হয় `succeeded` বা `failed` |
+| Backup, restore, service restart, PHP extension, malware scan, panel update, [customer সরানো](/guides/admin/move-customer/) | Task-টা, তার `id`-সহ | `GET /tasks/{id}`, যতক্ষণ না `status` হয় `succeeded` বা `failed` |
 | Website, database বা app (বানানো বা বদলানো) | জিনিসটা, `state` `pending` | `GET /sites/{id}` (বা `/databases/{id}`, `/apps/{id}`), যতক্ষণ না `state` হয় `active` আর `applied_generation` পৌঁছায় `generation`-এ; `error` মানে ব্যর্থ হয়েছে, কারণ থাকে `message`-এ |
 | Git deploy | Deployment-টা | `GET /apps/{id}/deployments/{did}`, যতক্ষণ না `status` হয় `live` বা `failed` |
-| [Website](/guides/websites/move/) বা [app সরানো](/guides/apps/move/) | সরানোর কাজটা, `phase` `copying` | `GET /sites/{id}/moves` (বা `/apps/{id}/moves`), যতক্ষণ না সবচেয়ে নতুনটার `phase` হয় `moved` বা `failed`। পুরোনো কপি মোছা (`POST /moves/{id}/cleanup`) একটা task দিয়ে উত্তর দেয় |
+| [Website](/guides/websites/move/), [app](/guides/apps/move/) বা [database সরানো](/guides/data/move-database/) | সরানোর কাজটা, `phase` `copying` | `GET /sites/{id}/moves` (বা `/apps/{id}/moves`, `/databases/{id}/moves`), যতক্ষণ না সবচেয়ে নতুনটার `phase` হয় `moved` বা `failed`। পুরোনো কপি মোছা (`POST /moves/{id}/cleanup`) একটা task দিয়ে উত্তর দেয় |
 
 একটা task দেখতে এরকম:
 
@@ -428,6 +428,8 @@ certificate বিশ্বাস করে।
 | Audit log | `/audit` |
 | Website সরানো | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Website সরান](/guides/websites/move/#with-the-api-or-ekctl)। |
 | App সরানো | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [App সরান](/guides/apps/move/#with-the-api-or-ekctl)। |
+| Database সরানো | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Database সরান](/guides/data/move-database/#with-the-api-or-ekctl)। |
+| Customer সরানো | `POST /customers/{id}/move`। দেখুন [Customer সরান](/guides/admin/move-customer/#with-the-api-or-ekctl)। |
 
 ## Cross-site request থেকে সুরক্ষা
 

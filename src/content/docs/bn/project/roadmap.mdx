@@ -10,8 +10,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
-description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর প্রথম অংশও তাই: একটা website বা app অন্য server-এ সরানো। এরপর আসছে 4c-এর
-বাকিটা (শুধু database, অন্য server-এ backup, পুরো customer)।
+description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর বেশিরভাগও তাই: একটা website, app, database বা একজন customer-এর এক server-এর সবকিছু অন্য
+server-এ সরানো। 4c-তে এরপর আসছে অন্য server-এ backup restore করা।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -117,7 +117,8 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 
 ### 4c. Server-এর মধ্যে সরানো <Badge text="আংশিক শেষ" variant="caution" />
 
-`dev` branch-এ শেষ আর দুটো VM দিয়ে test করা হয়েছে; আসবে **পরের release-এ**:
+`dev` branch-এ শেষ; আসবে **পরের release-এ**। Website আর app সরানো দুটো VM দিয়ে test করা হয়েছে; database আর customer
+সরানো এখন পর্যন্ত শুধু panel-এর automated test দিয়ে:
 
 - আপনার বেছে নেওয়া database সহ একটা [website অন্য ekPanel server-এ সরানো](/guides/websites/move/): owner আর ACL-সহ
   file, database, certificate, settings আর cron job। কিছু বদলানোর আগে নতুন server যাচাই করা হয়, panel যে DNS চালায় তা
@@ -126,12 +127,17 @@ build attestation যোগ করে, আর release publish করে। `v1.2
   build (নতুন করে কিছু build হয় না), certificate, settings আর cron job। সরানোর সময় app বন্ধ থাকে; আপনি না মোছা পর্যন্ত
   পুরোনো কপি তার data সহ বন্ধ থাকে, আর সরানো ব্যর্থ হলে app যেখানে ছিল সেখানে আবার চালু হয়। Pull request preview-ওয়ালা
   app সরে না
+- আলাদাভাবে একটা [database সরানো](/guides/data/move-database/): dump, switch, তারপর একই user আর password দিয়ে নতুন server-এ
+  load; আপনি না মোছা পর্যন্ত পুরোনো কপি থাকে। পুরোনো server-এর website আর app পুরোনো কপিই ব্যবহার করতে থাকে, তাই সাধারণত
+  website টাই তার database সহ সরান
+- একজন [customer সরানো](/guides/admin/move-customer/): তাঁর এক server-এর সবকিছু, একবারে একটা করে (প্রথম website তাঁর সব
+  database সাথে নেয়), প্রথম সরানো শুরুর আগে সব check করা, প্রথম ব্যর্থতায় থেমে যায়; যা সরেছে তা সরানোই থাকে
 - Copy যায় panel-এর সাথে agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
 
 এখনো বাকি:
 
-- শুধু একটা database সরানো
-- অন্য server-এ backup restore করা; পুরো একজন customer সরানো
+- অন্য server-এ backup restore করা, যে server আর নেই তার জন্য (S3 storage-এ রাখা backup-এর জন্য plan করা, কারণ local
+  backup location হারানো server-এই থাকে)
 
 ### 4d. Importer
 

@@ -1,0 +1,188 @@
+---
+title: একটা database অন্য server-এ সরান
+description: একটা MariaDB বা PostgreSQL database, তার user আর password সহ, আপনার অন্য server-এ সরান, আর কিছু আর ব্যবহার না করলে পুরোনো কপি মুছে ফেলুন।
+sidebar:
+  order: 3
+  label: Database সরান
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা database আলাদাভাবে, তার data, user আর password সহ, আপনার এক server থেকে আরেক server-এ সরাতে পারেন। কপি
+সরাসরি এক server থেকে আরেক server-এ যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি পুরোনো server-এ থাকে।
+
+এটা কমই লাগে। একটা website বা app তার database-এ পৌঁছায় নিজের server-এই (`localhost`), তাই একটা database আলাদাভাবে
+সরলে পুরোনো server-এর website আর app **তার পেছনে যায় না**: সেগুলো পুরোনো কপিই ব্যবহার করতে থাকে। একটা website তার
+database সহ সরাতে চাইলে [website টা সরান](/guides/websites/move/) আর database-গুলোতে tick দিন। একজন customer-এর এক
+server-এর সবকিছু সরাতে চাইলে [customer সরান](/guides/admin/move-customer/)।
+
+## কখন এটা ব্যবহার করবেন
+
+- একটা website তার কোনো database ছাড়াই [সরানো](/guides/websites/move/) হয়েছে, আর এখন নতুন server-এ database error
+  দেখায়। হারানো database টা একই server-এ সরান।
+- আপনি একটা পুরোনো server খালি করছেন, আর সেখানকার কোনো database সেখানকার কিছুই আর ব্যবহার করে না।
+- একজন customer-এর এমন server-এ database আছে, যেখানে তাঁর কোনো website নেই।
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এটা দেখেন না; database সরাতে হলে তাঁরা আপনাকে বলতে পারেন।
+- কোনো customer-এর database হলে, নতুন server তাঁর package-এ থাকতে হবে (না থাকলে: "গ্রাহকের প্যাকেজে এই সার্ভার নেই।
+  আগে প্যাকেজে যোগ করুন।")।
+- **দুটো server-ই connected।** নতুন server [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায়
+  **অনলাইন** (Online) দেখায়, database-এর বর্তমান server-ও তাই। নতুন server-এ এখনো MariaDB বা PostgreSQL না থাকলেও চলে:
+  সরানোর সময়ই সেটা install হয়।
+- **Database ঠিকমতো চলছে**: সেটা **প্রস্তুত** (Ready) দেখায়, **চালু হচ্ছে…** (Applying…) বা **সমস্যা** (Problem) নয়।
+- **নতুন server-এ নামটা খালি।** Database তার নাম আর user একই রাখে, তাই নতুন server-এ (একই engine-এর) ওই নামে কোনো
+  database বা user আগে থেকে থাকা চলবে না।
+- **নতুন server-এ যথেষ্ট disk জায়গা আছে** database আর তার dump-এর জন্য; load হওয়া পর্যন্ত dump টা নতুন server-এ রাখা
+  হয়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন।
+- **সরানোর সময় database-এ কিছু যেন না লেখে।** কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
+
+<Aside type="caution">
+"পুরোনো সার্ভারের ওয়েবসাইট আর অ্যাপ সেখানকার ডেটাবেসের সাথেই যুক্ত থাকে আর পুরোনো কপি ব্যবহার করতে থাকে; কপি শুরু হওয়ার
+পরের বদল নতুনটায় যায় না। ওয়েবসাইট তার ডেটাবেসসহ সরাতে চাইলে ওয়েবসাইটটাই সরান।"
+</Aside>
+
+## Database সরান
+
+<Steps>
+
+1. **ডাটাবেস** (Databases) খুলে database টা খুলুন। **অন্য সার্ভারে সরান** (Move to another server) card খুঁজে **সরান…**
+   (Move…)-এ click করুন।
+
+2. **যেখানে সরাবেন** (Move to)-এ server বেছে নিন। শুধু বর্তমান server ছাড়া অন্যগুলো তালিকায় থাকে; connected নয় এমন
+   server **(অফলাইন)** ((Offline)) দেখায়, সেগুলো বেছে নেওয়া যায় না।
+
+3. ধাপগুলো আর সতর্কবার্তা পড়ে **সরানো শুরু করুন** (Start the move)-এ click করুন।
+
+</Steps>
+
+এবার card-এ সরানোর কাজটা দেখায়: তার phase, দুটো server (**পুরোনো → নতুন**), কখন শুরু হয়েছে, আর কতটা কপি হয়েছে। এটা
+নিজে থেকেই update হয়।
+
+## সরানোর সময় কী হয়
+
+| Phase | যা হয় |
+| --- | --- |
+| **কপি হচ্ছে** (Copying) | পুরোনো server database-এর dump নিয়ে panel-এর মাধ্যমে নতুন server-এ পাঠায়, যা সেটা `/srv/ekpanel/incoming/<move>/`-এ রাখে। |
+| **বদলানো হচ্ছে** (Switching over) | Panel-এ database এখন নতুন server-এর। নতুন server এটা নতুন database-এর মতো set up করে (MariaDB বা PostgreSQL না থাকলে install করে, একই নাম, user আর password দিয়ে) আর dump load করে। পুরোনো server তার কপি রেখে দেয়। |
+| **সরানো হয়েছে** (Moved) | Database নতুন server-এ চলছে। পুরোনো কপি এখনো পুরোনো server-এ আছে, আর সেখানকার website আর app এখনো সেটাই ব্যবহার করে। |
+| **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy) | আপনি মুছতে বলার পরে: পুরোনো server তার কপি মুছে ফেলে। |
+| **শেষ** (Done) | Database শুধু নতুন server-এ আছে। |
+| **ব্যর্থ** (Failed) | Card-এ error দেখায়। দেখুন [সরানো ব্যর্থ হলে](#when-a-move-fails)। |
+
+নতুন server database set up করেছে আর dump load করেছে কি না, panel সেটা check করে। কোনো website বা app সেটা ব্যবহার
+করতে পারছে কি না, তা check করে না।
+
+### কী কপি হয়
+
+- **Data**: database-এর একটা dump, ঠিক যেভাবে [website](/guides/websites/move/#what-is-copied) তার database সহ সরলে নেওয়া
+  হয়, নতুন server-এ একই নামের database-এ load করা হয়।
+- **User আর password**: user তার নাম একই রাখে, আর panel নতুন server-কে একই password hash দেয়, তাই password একই থাকে।
+  Connection-এর তথ্য বদলায় না: host `localhost`, একই database-এর নাম, user আর password।
+
+## পুরোনো কপি মুছুন
+
+পুরোনো কপি তখনই মুছুন, যখন কিছুই আর সেটা ব্যবহার করে না: পুরোনো server-এর কোনো website বা app আর তার সাথে connect করে না।
+
+<Steps>
+
+1. Database-এর পাতায়, **অন্য সার্ভারে সরান** (Move to another server) card-এ **_server_-এর পুরোনো কপি মুছে ফেলুন** (Remove
+   the old copy on _server_)-এ click করুন।
+
+2. নিশ্চিত করুন: "_server_-এর পুরোনো ডেটাবেস মুছে ফেলবেন? সেখান থেকে এটা মুছে যাবে। আর কিছু এটা ব্যবহার না করলে তবেই
+   করুন।"
+
+</Steps>
+
+Phase বদলে হয় **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy), তারপর **শেষ** (Done)। পুরোনো server database, সেখানকার
+তার সব data আর তার user মুছে ফেলে। এটা আর ফেরানো যায় না।
+
+পুরোনো কপি মোছা না হওয়া পর্যন্ত কেউই (database-এর মালিকও না) database টা delete করতে পারেন না: panel উত্তর দেয় "এটা
+সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" কোনো [website সরানোর](/guides/websites/move/)
+সময় এতে tick-ও দেওয়া যায় না। সরানো **শেষ** (Done) হলে database আবার সরানো যায়, প্রথম server-এ ফেরতও।
+
+<Aside type="note">
+[Backup location](/guides/data/backups/) একটা server-এর হয়। সরানোর পরে database-এর backup হয় শুধু তখনই, যদি নতুন
+server-এ কোনো backup location থাকে। পুরোনো backup-গুলো পুরোনো server-এর location-এই থাকে।
+</Aside>
+
+## সরানো ব্যর্থ হলে
+
+সরানো ব্যর্থ হলে database যেখানে ছিল সেখানেই থাকে।
+
+- **কপি হওয়ার সময়** (যেমন কোনো server-এর connection চলে গেলে): নতুন server যা পেয়েছিল তা মুছে ফেলে। আর কিছু বদলায় না।
+- **বদলানোর সময়** (যেমন নতুন server database engine install করতে পারেনি, বা dump load হয়নি): panel-এ database পুরোনো
+  server-এ ফিরে যায়, আর নতুন server তার আধা-বানানো কপি মুছে ফেলে। পুরোনো কপি পুরোটা সময় সেখানেই ছিল।
+
+Card-এ **ব্যর্থ** (Failed) আর কারণ দেখায়। কারণটা ঠিক করে আবার **সরান…** (Move…)-এ click করুন।
+
+<Aside type="caution">
+সরানো চলার সময় panel update বা restart এড়িয়ে চলুন। Panel restart হলে সরানোর কাজ আর এগোয় না: সেটা **ব্যর্থ** (Failed)
+হিসেবে চিহ্নিত হয় ("the panel restarted during the move; it stays where it was"), আর আপনি আবার সরানো শুরু করতে পারেন।
+</Aside>
+
+## API বা ekctl দিয়ে
+
+`databases` scope-এর একটা admin-এর [API token](/guides/security/api-tokens/) দিয়ে database সরানো যায়। Customer-দের token
+দিয়ে যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/databases/{id}/move` | সরানো শুরু করে। Body: `{"server_id": "…"}`। সরানোর কাজটা সহ `202` উত্তর দেয়। |
+| `GET /api/v1/databases/{id}/moves` | Database-এর নিজের সরানোর কাজগুলো, নতুনটা আগে (২০টা পর্যন্ত), `phase`, `error` আর `bytes` সহ। যে সরানোয় database কোনো website-এর সাথে গেছে, সেটা website-এর তালিকায় থাকে। |
+| `POST /api/v1/moves/{id}/cleanup` | পুরোনো কপি মোছে (scope `databases`, `sites` বা `apps`)। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+
+[ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api POST databases/<database id>/move --data '{"server_id":"<server id>"}'
+ekctl api GET databases/<database id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## সীমা আর যা এখনো নেই
+
+- আলাদাভাবে সরা database-এর পেছনে website আর app যায় না; ওপরের সতর্কবার্তা দেখুন।
+- কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
+- শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
+- মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
+- একটা database অন্য মালিকের কাছে সরানো, আর অন্য server-এ backup restore করা: এখনো নেই (দেখুন
+  [roadmap](/project/roadmap/))।
+- Panel-এর automated test দিয়ে check করা; এখনো দুটো server দিয়ে, বা PostgreSQL দিয়ে চালিয়ে দেখা হয়নি।
+
+## সমস্যা সমাধান
+
+এই message-গুলোর কোনো একটা দিয়ে panel সরানো শুরু করতে রাজি হয় না:
+
+| Message (error code) | যা করবেন |
+| --- | --- |
+| "সরানোর আগে বেছে নেওয়া ডেটাবেস ঠিকমতো চলতে হবে।" (`database_not_active`) | Database খুলে তার অবস্থা যা দেখায় তা ঠিক করুন, বা **প্রস্তুত** (Ready) হওয়া পর্যন্ত অপেক্ষা করুন। |
+| "এটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
+| "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | **যেখানে সরাবেন** (Move to)-এ একটা server বেছে নিন। API দিয়ে করলে server ID check করুন। |
+| "গ্রাহকের প্যাকেজে এই সার্ভার নেই। আগে প্যাকেজে যোগ করুন।" (`server_not_in_package`) | Customer-এর [package](/guides/admin/customers/)-এ server টা যোগ করুন, বা অন্য server বেছে নিন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | দুটো server-এর একটা offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "নতুন সার্ভারে আগে থেকেই একই নামের ডেটাবেস বা ইউজার আছে।" (`database_name_taken`) | নতুন server-এ ওই database বা user মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
+| "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | Database নিজের কোনো সরানোয় আছে, বা কোনো website-এর সাথে সরেছে। ওই সরানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা তার পুরোনো কপি মুছে ফেলুন (website-এর সাথে গিয়ে থাকলে website-এর পাতা থেকে)। |
+| "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা database সরাতে পারেন। |
+
+পুরোনো কপি মোছার সময় উত্তর আসতে পারে "মুছে ফেলার মতো কোনো পুরোনো কপি নেই।" (`move_not_moved`): সরানো ব্যর্থ হয়েছিল, বা
+পুরোনো কপি আগেই মোছা হয়ে গেছে।
+
+**"the new server could not set up the database …" দিয়ে সরানো ব্যর্থ হয়েছে।** নতুন server database তৈরি করতে পারেনি, প্রায়ই
+MariaDB বা PostgreSQL install ব্যর্থ হওয়ায়। নতুন server-এর internet access আর disk জায়গা check করে আবার সরান।
+
+**একটা website এখনো পুরোনো data দেখায়।** সেটা পুরোনো server-এ চলে আর পুরোনো কপি ব্যবহার করে। Website টাও একই server-এ
+সরান (এই database-এ tick না দিয়ে, কারণ সেটা আগেই সেখানে আছে), বা website-কে তার নিজের server-এর একটা database ব্যবহার করতে দিন।
+
+**পুরোনো কপি মোছার সময় error দেখায়।** Card-এ কারণটা থেকে যায়। Panel যতবার পুরোনো server-এর state apply করে, ততবার server
+আবার চেষ্টা করে; এখনই চেষ্টা করাতে card-এর মোছার button-এ আবার click করুন (error দেখানোর সময় button-টা থাকে)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Database" href="/guides/data/databases/" />
+	<LinkCard title="Website সরান" href="/guides/websites/move/" description="Website তার database সহ সরান: সাধারণত এটাই চান।" />
+	<LinkCard title="Customer সরান" href="/guides/admin/move-customer/" description="একজন customer-এর এক server-এর সবকিছু সরান।" />
+	<LinkCard title="Backup" href="/guides/data/backups/" />
+</CardGrid>

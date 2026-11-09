@@ -1,0 +1,204 @@
+---
+title: Move a database to another server
+description: Move one MariaDB or PostgreSQL database, with its user and password, to another of your servers, and remove the old copy once nothing uses it.
+sidebar:
+  order: 3
+  label: Move a database
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+You can move a database on its own, with its data, its user and its password, from one of your
+servers to another. The copy goes straight from server to server, and the old copy stays on the
+old server until you remove it.
+
+You rarely need this. A website or app reaches its database on its own server (`localhost`), so
+when a database moves on its own, the websites and apps on the old server **do not follow it**:
+they keep using the old copy. To move a website together with its databases,
+[move the website](/guides/websites/move/) and tick them. To move everything a customer has on a
+server, [move the customer](/guides/admin/move-customer/).
+
+## When to use it
+
+- A website was [moved](/guides/websites/move/) without one of its databases, and now shows a
+  database error on the new server. Move the missing database to the same server.
+- You are emptying an old server, and a database there is no longer used by anything on it.
+- A customer has a database on a server where they have no website.
+
+## Before you start
+
+- You are an **administrator**. Customers do not see this; they can ask you to move a database.
+- For a customer's database, the new server is one their package allows (otherwise: "The
+  customer's package does not include this server. Add it to the package first.").
+- **Both servers are connected.** The new server is [added to the panel](/start/add-server/)
+  and shows **Online** on the **Servers** page, and so does the database's current server. The
+  new server does not need MariaDB or PostgreSQL yet: it is installed during the move.
+- **The database is working**: it shows **Ready**, not **Applying…** or **Problem**.
+- **The name is free on the new server.** The database keeps its name and its user, so the new
+  server must not have a database or a user of the same name (for the same engine) yet.
+- **The new server has enough free disk space** for the database and its dump, which is kept on
+  the new server until it is loaded. Check **Disk** on the server's page.
+- **Nothing should write to the database during the move.** Changes made to the old copy after
+  the copy starts are not carried over.
+
+<Aside type="caution">
+"Websites and apps on the old server connect to the database there and keep using the old copy,
+and changes made to it after the copy starts are not carried over. To move a website with its
+database, move the website instead."
+</Aside>
+
+## Move a database
+
+<Steps>
+
+1. Open **Databases**, then the database. Find the **Move to another server** card and click
+   **Move…**.
+
+2. In **Move to**, choose the server. Only servers other than the current one are listed;
+   servers that are not connected show **(Offline)** and cannot be chosen.
+
+3. Read the steps and the warning, then click **Start the move**.
+
+</Steps>
+
+The card now shows the move: its phase, the two servers (**old → new**), when it started, and
+how much was copied. It updates by itself.
+
+## What happens during a move
+
+| Phase | What happens |
+| --- | --- |
+| **Copying** | The old server dumps the database and sends the dump, through the panel, to the new server, which keeps it in `/srv/ekpanel/incoming/<move>/`. |
+| **Switching over** | In the panel, the database now belongs to the new server. The new server sets it up as a new database (installing MariaDB or PostgreSQL if it is missing, with the same name, user and password) and loads the dump. The old server keeps its copy. |
+| **Moved** | The database runs on the new server. The old copy is still on the old server, and websites and apps there still use it. |
+| **Removing the old copy** | After you choose to remove it: the old server deletes its copy. |
+| **Done** | Only the new server has the database. |
+| **Failed** | The error is shown on the card. See [When a move fails](#when-a-move-fails). |
+
+The panel checks that the new server set the database up and loaded the dump. It does not check
+that a website or app can use it.
+
+### What is copied
+
+- **Data**: a dump of the database, taken the same way as when a
+  [website moves](/guides/websites/move/#what-is-copied) with its databases, loaded into the new
+  server's database of the same name.
+- **User and password**: the user keeps its name, and the panel gives the new server the same
+  password hash, so the password stays the same. Connection details do not change: host
+  `localhost`, the same database name, user and password.
+
+## Remove the old copy
+
+Remove the old copy only when nothing uses it any more: no website or app on the old server
+connects to it.
+
+<Steps>
+
+1. On the database's page, in the **Move to another server** card, click
+   **Remove the old copy on _server_**.
+
+2. Confirm: "Remove the old copy of the database on _server_? It is deleted there. Only do this
+   once nothing uses it any more."
+
+</Steps>
+
+The phase changes to **Removing the old copy**, then **Done**. The old server deletes the
+database, all its data there, and its user. This cannot be undone.
+
+Until the old copy is removed, nobody (not even the database's owner) can delete the database:
+the panel answers "This is being moved, or its old copy is still on the other server. Finish
+the move first." It also cannot be ticked for a [website move](/guides/websites/move/). Once
+the move is **Done**, the database can be moved again, back to its first server too.
+
+<Aside type="note">
+[Backup locations](/guides/data/backups/) belong to a server. After the move, the database is
+backed up only if the new server has a backup location. Its older backups stay in the old
+server's location.
+</Aside>
+
+## When a move fails
+
+A failed move leaves the database where it was.
+
+- **During Copying** (for example, a server lost its connection): the new server deletes what
+  it received. Nothing else changed.
+- **During Switching over** (for example, the new server could not install the database
+  engine, or the dump did not load): the database goes back to the old server in the panel, and
+  the new server deletes its half-made copy. The old copy was there all along.
+
+The card shows **Failed** and the reason. Fix the cause, then click **Move…** again.
+
+<Aside type="caution">
+Avoid updating or restarting the panel while a move runs. A move is not continued after the
+panel restarts: it is marked **Failed** ("the panel restarted during the move; it stays where
+it was"), and you can start the move again.
+</Aside>
+
+## With the API or ekctl
+
+An administrator's [API token](/guides/security/api-tokens/) with the `databases` scope can move
+databases. Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/databases/{id}/move` | Start a move. Body: `{"server_id": "…"}`. Answers `202` with the move. |
+| `GET /api/v1/databases/{id}/moves` | The database's own moves, newest first (up to 20), with `phase`, `error` and `bytes`. Moves in which the database went along with a website are listed on the website instead. |
+| `POST /api/v1/moves/{id}/cleanup` | Remove the old copy (scope `databases`, `sites` or `apps`). Answers `202` with a [task](/reference/api/#tasks-following-slow-work). |
+
+With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api POST databases/<database id>/move --data '{"server_id":"<server id>"}'
+ekctl api GET databases/<database id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## Limits and what is not there yet
+
+- Websites and apps do not follow a database that moves on its own; see the caution above.
+- Changes made to the old copy after the copy starts are not carried over.
+- The panel does not check free disk space on the new server before it starts.
+- A move that takes longer than 11 hours in all is stopped and fails.
+- Moving a database to another owner, and restoring a backup onto another server: not yet
+  (see the [roadmap](/project/roadmap/)).
+- Checked with the panel's automated tests; not yet tried with two servers, or with
+  PostgreSQL.
+
+## Troubleshooting
+
+The panel refuses to start a move with one of these messages:
+
+| Message (error code) | What to do |
+| --- | --- |
+| "A chosen database must be working before it can move." (`database_not_active`) | Open the database and fix what its state shows, or wait until it is **Ready**. |
+| "It is already on this server." (`same_server`) | Choose another server. |
+| "Choose a server to move to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
+| "The customer's package does not include this server. Add it to the package first." (`server_not_in_package`) | Add the server to the customer's [package](/guides/admin/customers/), or choose another server. |
+| "The server's agent is not connected." (`agent_offline`) | One of the two servers is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+| "The target server already has a database or user with the same name." (`database_name_taken`) | Delete or rename that database or user on the new server, or move to another server. |
+| "This is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | The database is in a move of its own or went along with a website's move. Wait for that move to finish, or remove its old copy (from the website's page if it went with a website). |
+| "You do not have permission to do that." (`forbidden`) | Only administrators can move databases. |
+
+Removing the old copy can answer "There is no old copy to remove." (`move_not_moved`): the move
+failed, or the old copy is already gone.
+
+**The move failed with "the new server could not set up the database …".** The new server could
+not create the database, often because installing MariaDB or PostgreSQL failed. Check the new
+server's internet access and disk space, then move again.
+
+**A website still shows the old data.** It runs on the old server and uses the old copy. Move the
+website to the same server too (without ticking this database, which is already there), or
+change the website to use a database on its own server.
+
+**Removing the old copy shows an error.** The card keeps the reason. The old server tries again
+each time the panel applies its state; to try at once, click the remove button on the card again
+(it stays there while the error is shown).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Databases" href="/guides/data/databases/" />
+	<LinkCard title="Move a website" href="/guides/websites/move/" description="Move a website with its databases: usually what you want." />
+	<LinkCard title="Move a customer" href="/guides/admin/move-customer/" description="Move everything a customer has on one server." />
+	<LinkCard title="Backups" href="/guides/data/backups/" />
+</CardGrid>

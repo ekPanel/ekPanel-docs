@@ -169,6 +169,9 @@ Customer-দের জন্য [package](/guides/admin/customers/#package-limit
 
 Data আবার লাগতে পারে মনে হলে আগে একটা [backup](/guides/data/backups/) নিন।
 
+যে database [অন্য server-এ সরানো](/guides/data/move-database/) হচ্ছে, বা যার পুরোনো কপি এখনো অন্য server-এ আছে, সেটা delete
+করা যায় না: "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।"
+
 ## Backup
 
 একটা server-এর প্রতিটা database ওই server-এর [backup](/guides/data/backups/)-এ থাকে,
@@ -191,7 +194,8 @@ Data আবার লাগতে পারে মনে হলে আগে এ
 - কোনো remote access নেই, আর প্রতি database-এ একজন user।
 - শুধু MariaDB আর PostgreSQL, আপনার distribution যে version দেয় সেটাই। Redis-এর জন্য দেখুন
   [app catalogue](/guides/apps/catalog/)।
-- একটা database অন্য server-এ বা অন্য মালিকের কাছে সরানো: এখনো নেই। দেখুন [roadmap](/project/roadmap/)।
+- একটা database [অন্য server-এ সরানো](/guides/data/move-database/) যায়, আলাদাভাবে বা যে [website](/guides/websites/move/)
+  এটা ব্যবহার করে তার সাথে। অন্য মালিকের কাছে সরানো: এখনো নেই। দেখুন [roadmap](/project/roadmap/)।
 
 ## সমস্যা সমাধান
 
@@ -209,4 +213,5 @@ database app-এর ভেতরেই চালান, যেমন catalogue s
 ## সম্পর্কিত
 
 - [Backup](/guides/data/backups/): Backup থেকে একটা database restore করুন।
+- [Database সরান](/guides/data/move-database/): একটা database আলাদাভাবে অন্য server-এ সরান।
 - [WordPress](/guides/websites/wordpress/): এক click-এর WordPress আপনার জন্য database তৈরি করে।

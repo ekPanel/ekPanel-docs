@@ -1,0 +1,184 @@
+---
+title: একজন customer অন্য server-এ সরান
+description: একজন customer-এর এক server-এর সবকিছু (website, database আর app) একবারে অন্য server-এ সরান, তারপর পুরোনো কপিগুলো মুছে ফেলুন।
+sidebar:
+  order: 2
+  label: Customer সরান
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা server খালি করতে, বা একজন customer-কে তাঁর নিজের server দিতে, তাঁর এক server-এর সবকিছু একবারে অন্য server-এ সরাতে
+পারেন: তাঁর website, database আর app। Panel আগে সবকিছু check করে, তারপর একটার পর একটা সরায়।
+
+প্রতিটা জিনিস ঠিক সেভাবেই সরে, যেভাবে তার নিজের পাতা থেকে সরানো শুরু করলে সরত। কী কপি হয় আর DNS কীভাবে পেছনে যায়, তা
+জানতে এই guide-গুলো পড়ুন: [Website সরান](/guides/websites/move/), [Database সরান](/guides/data/move-database/) আর
+[App সরান](/guides/apps/move/)।
+
+## শুরু করার আগে
+
+- আপনি **admin**। **গ্রাহক** (Customers) পাতা মেনুতে **অ্যাডমিন** (Administration)-এর নিচে।
+- **দুটো server-ই connected**, আর নতুন server customer-এর package-এ আছে।
+- **পুরোনো server-এ customer-এর সবকিছু সরানো যায়।** কিছু শুরু হওয়ার আগে panel ওই server-এ customer-এর প্রতিটা website,
+  database আর app check করে:
+  - প্রতিটা ঠিকমতো চলছে (set up হওয়ার মাঝখানে নেই, কোনো error নেই);
+  - কোনো app-এ pull request preview নেই (আগে preview বন্ধ করে preview-গুলো মুছে ফেলুন);
+  - নতুন server-এ একই নামের কোনো database বা database user নেই, আর একই নামের কোনো app নেই;
+  - কোনোটাই আগে থেকে সরানো হচ্ছে না, বা মোছার মতো পুরোনো কপি নেই।
+
+  একটা check ব্যর্থ হলে কিছুই সরে না, আর panel বলে কী ভুল (দেখুন [সমস্যা সমাধান](#troubleshooting))।
+- **নতুন server-এ সবকিছুর জন্য যথেষ্ট disk জায়গা আছে।** [Website](/guides/websites/move/#before-you-start) আর
+  [app](/guides/apps/move/#before-you-start) guide-এ disk জায়গার কথা দেখুন।
+- **শান্ত সময় বেছে নিন।** সরানোর সময় app বন্ধ থাকে, আর কপি শুরু হওয়ার পরে website আর database-এ যা বদলায়, তা নতুনটায় যায় না।
+
+<Aside type="tip">
+যে domain-এর DNS panel চালায় না, এক দিন আগে DNS provider-এ তার `A` আর `AAAA` record-এর TTL কমিয়ে 300 second করুন। তাহলে
+visitor-রা কয়েক মিনিটের মধ্যে নতুন address-এ চলে আসেন।
+</Aside>
+
+## Customer সরান
+
+<Steps>
+
+1. **গ্রাহক** (Customers) খুলুন। Customer-এর পাশে **সরান…** (Move…)-এ click করুন।
+
+2. **যেখান থেকে সরাবেন** (Move from)-এ সেই server বেছে নিন, যেখানে এখন তাঁর জিনিসগুলো আছে।
+
+3. **যেখানে সরাবেন** (Move to)-এ নতুন server বেছে নিন। Connected নয় এমন server **(অফলাইন)** ((Offline)) দেখায়, সেগুলো
+   বেছে নেওয়া যায় না।
+
+4. সতর্কবার্তা পড়ে **সরানো শুরু করুন** (Start the move)-এ click করুন।
+
+5. Dialog-এ লেখা আসে "সরানো শুরু হয়েছে। প্রতিটা ওয়েবসাইট, ডেটাবেস আর অ্যাপ তার নিজের পাতায় অগ্রগতি দেখায়; সরানো হয়ে গেলে
+   সেখান থেকেই পুরোনো কপি মুছতে পারবেন।" **বন্ধ করুন** (Close)-এ click করুন।
+
+</Steps>
+
+পুরো সরানোর জন্য আলাদা কোনো পাতা নেই। প্রতিটা website, database বা app খুলে তার নিজের সরানোর card দেখুন। সরানো চলার সময়
+চলমান কাজের তালিকা (প্রতিটা পাতার নিচের কোণে) এটাকে `customer.move` হিসেবে দেখায়।
+
+## কোন ক্রমে সরে
+
+Panel একবারে একটা জিনিস সরায়, এই ক্রমে:
+
+<Steps>
+
+1. **প্রথম website** (domain-এর নাম অনুযায়ী, বর্ণক্রমে), ওই server-এ customer-এর **সব** database সহ। Website তার database-এ
+   পৌঁছায় নিজের server-এই, তাই database-গুলো প্রথমে, একসাথে যায়।
+
+2. **বাকি website-গুলো**, একটার পর একটা। তাদের database আগেই নতুন server-এ পৌঁছে গেছে।
+
+3. **আলাদাভাবে database**, শুধু যদি ওই server-এ customer-এর কোনো website না থাকে।
+
+4. **App-গুলো**, একটার পর একটা। প্রতিটা app সরানোর সময় বন্ধ থাকে।
+
+</Steps>
+
+প্রতিটা সরানো **সরানো হয়েছে** (Moved) পর্যন্ত চলে: নতুন server set up আর check করা হয়েছে, আর panel যে DNS record চালায়
+সেগুলো সেখানে point করে। তারপর পরেরটা শুরু হয়।
+
+<Aside type="caution">
+প্রথম website সরার সময় তার সাথে database-গুলোও চলে যায়। Customer-এর বাকি website-গুলো নিজেদের পালা না আসা পর্যন্ত ওই
+database-এর পুরোনো কপিই ব্যবহার করে। ওই সময়ে তারা database-এ যা লেখে, তা পুরোনো কপিতেই থেকে যায়।
+</Aside>
+
+## কিছু ব্যর্থ হলে
+
+প্রথম ব্যর্থতাতেই সরানো থেমে যায়:
+
+- যেটা ব্যর্থ হয়েছে সেটা যেখানে ছিল সেখানেই থাকে, তার নিজের সরানো ব্যর্থ হলে যেমন হয়। তার card-এ **ব্যর্থ** (Failed) আর কারণ
+  দেখায়।
+- তার আগে যা সরেছে, তা **সরানোই থাকে**, পুরোনো কপি এখনো পুরোনো server-এ।
+- তার পরের কিছুতে হাত পড়েনি, সেগুলো এখনো পুরোনো server-এ।
+
+কারণটা ঠিক করে একই server দুটো দিয়ে customer-কে আবার সরান। শুধু যা এখনো পুরোনো server-এ আছে, সেটুকুই সরে।
+
+কিছু ব্যর্থ হলে admin-রা একটা **কাজ ব্যর্থ** (Task failed) [notification](/guides/admin/notifications/) পান, যার message
+শুরু হয় কয়টা সরেছে তা দিয়ে, যেমন "after 2 of 5 moved: …"।
+
+<Aside type="danger">
+প্রথম website-এর পরে সরানো থেমে গেলে customer-এর database-গুলো আগেই নতুন server-এ, অথচ তাঁর কিছু website এখনো পুরোনো
+server-এ আর পুরোনো কপি ব্যবহার করে। বাকি website-গুলো না সরা পর্যন্ত **প্রথম website-এর পুরোনো কপি মুছবেন না**: সেটা
+মুছলে পুরোনো server থেকে ওই database-গুলোও মুছে যায়। Panel আগে জিজ্ঞেস করে: একই customer-এর website বা app এখনো পুরোনো
+server-এ থাকলে, database-সহ পুরোনো কপি মোছার সময় panel সেগুলোর নাম দেখায় আর দ্বিতীয়বার নিশ্চিত করতে বলে।
+</Aside>
+
+সরানোর সময় panel update বা restart এড়িয়ে চলুন। ওই মুহূর্তে যা সরছিল তা ব্যর্থ হয় ("the panel restarted during the move;
+it stays where it was"), আর বাকিগুলো সরে না; customer-কে আবার সরান।
+
+## পুরোনো কপিগুলো মুছুন
+
+যে website, database আর app সরেছে, প্রত্যেকটার পুরোনো server-এ নিজের পুরোনো কপি আছে। প্রতিটা যাচাই করার পরে তার নিজের
+পাতার **অন্য সার্ভারে সরান** (Move to another server) card থেকে মুছুন:
+
+- **Website**: domain নতুন server-এ point করার পরে। দেখুন
+  [কতক্ষণ অপেক্ষা করবেন](/guides/websites/move/#how-long-to-wait)।
+- **App**: নতুন server-এ app তার data সহ কাজ করার পরে। দেখুন [পুরোনো কপি মুছুন](/guides/apps/move/#remove-the-old-copy)।
+- **প্রথম website-এর সাথে যাওয়া database** তার সরানোরই অংশ: ওই website-এর পুরোনো কপির সাথেই এদের পুরোনো কপি মোছে।
+  Database-এর নিজের পাতায় কোনো সরানো দেখায় না।
+- **আলাদাভাবে সরা database** (যখন কোনো website নেই): database-এর পাতা থেকে। দেখুন
+  [পুরোনো কপি মুছুন](/guides/data/move-database/#remove-the-old-copy)।
+
+পুরোনো কপি মোছা না হওয়া পর্যন্ত একটা website, database বা app delete করা বা আবার সরানো যায় না।
+
+## API বা ekctl দিয়ে
+
+`customers` scope-এর একটা admin-এর [API token](/guides/security/api-tokens/) দিয়ে সরানো শুরু করা যায়:
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/customers/{id}/move` | সরানো শুরু করে। Body: `{"from_server_id": "…", "server_id": "…"}`। আগে সবকিছু check করে, তারপর `customer.move` ধরনের একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+| `GET /api/v1/tasks/{id}` | এর খোঁজ রাখুন। `succeeded` হলে `result.moves`-এ এর বানানো সরানোর কাজগুলোর ID থাকে। `failed` হলে `error` বলে কয়টা সরেছে আর কেন থেমেছে। |
+
+তারপর প্রতিটা সরানোর খোঁজ রাখা আর শেষ করা একটা আলাদা সরানোর মতোই: `GET /sites/{id}/moves`, `/databases/{id}/moves` বা
+`/apps/{id}/moves`, আর `POST /moves/{id}/cleanup`। পুরোনো কপি মুছতে `sites`, `databases` বা `apps` scope লাগে, `customers`
+নয়।
+
+[ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api POST customers/<customer id>/move --data '{"from_server_id":"<old server id>","server_id":"<new server id>"}'
+ekctl api GET tasks/<task id> | jq '.status, .result, .error'
+```
+
+## সীমা আর যা এখনো নেই
+
+- একবারে একটা server: কয়েকটা server-এ জিনিস থাকা customer-এর জন্য প্রতি server-এ একবার করে সরাতে হয়।
+- ওই server-এ customer-এর সব database প্রথম website-এর সাথে যায়, যে website-ই সেগুলো ব্যবহার করুক।
+- Email domain আর mailbox সরে না। Cron job তার website বা app-এর সাথে সরে।
+- পুরো সরানোর কোনো overview নেই; প্রতিটা জিনিস তার নিজের সরানো দেখায়।
+- শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
+- পুরো customer সরানো ১২ ঘণ্টা পরে থেমে যায়; ওই মুহূর্তে যা সরছিল তা ব্যর্থ হয়।
+- অন্য server-এ backup restore করা (যে server আর নেই তার জন্য): এখনো নেই। এটা plan করা আছে; দেখুন
+  [roadmap](/project/roadmap/)।
+- Panel-এর automated test দিয়ে check করা; এখনো দুটো server দিয়ে চালিয়ে দেখা হয়নি।
+
+## সমস্যা সমাধান
+
+এই message-গুলোর কোনো একটা দিয়ে panel সরানো শুরু করতে রাজি হয় না। API দিয়ে করলে `message`-এ website, database বা app-এর
+নামও থাকে।
+
+| Message (error code) | যা করবেন |
+| --- | --- |
+| "ওই সার্ভারে এই গ্রাহকের কিছু নেই।" (`nothing_to_move`) | **যেখান থেকে সরাবেন** (Move from)-এ সেই server বেছে নিন, যেখানে customer-এর জিনিস আছে। |
+| "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | দুটো server-ই বেছে নিন। API দিয়ে করলে দুটো server ID-ই check করুন। |
+| "এটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | আলাদা দুটো server বেছে নিন। |
+| "গ্রাহকের প্যাকেজে এই সার্ভার নেই। আগে প্যাকেজে যোগ করুন।" (`server_not_in_package`) | Customer-এর [package](/guides/admin/customers/)-এ server টা যোগ করুন, বা অন্য server বেছে নিন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | দুটো server-এর একটা offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "সরানোর আগে ওয়েবসাইটটা ঠিকমতো চলতে হবে।" (`site_not_active`) | ওই server-এ customer-এর website-গুলো খুলে যেটার status সমস্যা দেখায় সেটা ঠিক করুন, বা set up শেষ হওয়া পর্যন্ত অপেক্ষা করুন। |
+| "সরানোর আগে বেছে নেওয়া ডেটাবেস ঠিকমতো চলতে হবে।" (`database_not_active`) | **ডাটাবেস** (Databases) খুলে customer-এর যে database **প্রস্তুত** (Ready) নয় সেটা ঠিক করুন। |
+| "নতুন সার্ভারে আগে থেকেই একই নামের ডেটাবেস বা ইউজার আছে।" (`database_name_taken`) | নতুন server-এ ওই database বা user মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
+| "সরানোর আগে অ্যাপটা ঠিকমতো চলতে হবে।" (`app_not_active`) | ওই server-এ customer-এর app-গুলো খুলে যেটা সমস্যা দেখায় সেটা ঠিক করুন। |
+| "পুল রিকোয়েস্ট প্রিভিউ আছে এমন অ্যাপ সরানো যায় না। আগে প্রিভিউ বন্ধ করে বাকি প্রিভিউগুলো মুছে ফেলুন।" (`app_has_previews`) | App-এর **সেটিং** (Settings)-এ **প্রতিটি pull request-এর প্রিভিউ** (Preview each pull request) বন্ধ করুন আর তার preview-গুলো মুছে ফেলুন। |
+| "নতুন সার্ভারে এই নামের অ্যাপ আগে থেকেই আছে।" (`app_name_taken`) | নতুন server-এর অন্য app টা মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
+| "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | Customer-এর কোনো একটা জিনিস এখনো সরানোর মধ্যে আছে। সেটা শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা তার পুরোনো কপি মুছে ফেলুন। |
+| "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা customer সরাতে পারেন। |
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+	<LinkCard title="Website সরান" href="/guides/websites/move/" />
+	<LinkCard title="Database সরান" href="/guides/data/move-database/" />
+	<LinkCard title="App সরান" href="/guides/apps/move/" />
+</CardGrid>

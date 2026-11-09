@@ -183,7 +183,7 @@ server-এ আবার চালু হয়।
 | --- | --- |
 | `POST /api/v1/apps/{id}/move` | সরানো শুরু করে। Body: `{"server_id": "…"}`। সরানোর কাজটা সহ `202` উত্তর দেয়। |
 | `GET /api/v1/apps/{id}/moves` | App-এর সরানোর কাজগুলো, নতুনটা আগে (২০টা পর্যন্ত), `phase`, `error` আর `bytes` সহ। |
-| `POST /api/v1/moves/{id}/cleanup` | পুরোনো কপি মোছে (scope `apps` বা `sites`)। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+| `POST /api/v1/moves/{id}/cleanup` | পুরোনো কপি মোছে (scope `apps`, `sites` বা `databases`)। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
 
 [ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
 
@@ -207,7 +207,8 @@ ekctl api POST moves/<move id>/cleanup
 - সরানোর সময় app বন্ধ থাকে; আগে কপি করে শুধু শেষ পরিবর্তনগুলোর জন্য বন্ধ করার উপায় এখনো নেই।
 - শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
 - মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
-- শুধু একটা database সরানো, অন্য server-এ backup restore করা আর পুরো একজন customer সরানো এখনো নেই (দেখুন
+- একটা database [আলাদাভাবেও সরানো](/guides/data/move-database/) যায়, আর একজন customer-এর এক server-এর সবকিছু
+  [একবারে সরানো](/guides/admin/move-customer/) যায়। অন্য server-এ backup restore করা এখনো নেই; এটা plan করা আছে (দেখুন
   [roadmap](/project/roadmap/))।
 - দুটো VM দিয়ে test করা হয়েছে (একটা volume-সহ একটা nginx image app), এখনো আসল server-এ, Compose app বা Git app দিয়ে না।
 
@@ -245,6 +246,7 @@ Docker-এর, app বানানোর সময়ের মতোই: image-
 
 <CardGrid>
 	<LinkCard title="Website সরান" href="/guides/websites/move/" description="Website-এর জন্য একই কাজ, তার database সহ।" />
+	<LinkCard title="Customer সরান" href="/guides/admin/move-customer/" description="একজন customer-এর এক server-এর সবকিছু।" />
 	<LinkCard title="Docker app" href="/guides/apps/docker-apps/" />
 	<LinkCard title="Git deploy" href="/guides/apps/git-deploys/" />
 	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />

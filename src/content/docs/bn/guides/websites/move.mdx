@@ -207,8 +207,9 @@ ekctl api POST moves/<move id>/cleanup
 
 - **App** আলাদাভাবে সরে, app-এর পাতা থেকে: দেখুন [App সরান](/guides/apps/move/)। একসাথে কাজ করা একটা website আর একটা app
   একটার পর একটা সরে।
-- শুধু একটা database সরানো, অন্য server-এ backup restore করা আর পুরো একজন customer সরানো এখনো নেই (দেখুন
-  [roadmap](/project/roadmap/))।
+- একটা database [আলাদাভাবেও সরানো](/guides/data/move-database/) যায়, আর একজন customer-এর এক server-এর সবকিছু
+  [একবারে সরানো](/guides/admin/move-customer/) যায়।
+- অন্য server-এ backup restore করা এখনো নেই; এটা plan করা আছে (দেখুন [roadmap](/project/roadmap/))।
 - কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
 - Domain-এর email সরানোর অংশ না; সেটা তার email server-এই থাকে।
 - WordPress-এর staging copy আলাদা একটা website, সেটা যেখানে আছে সেখানেই থাকে।
@@ -239,10 +240,10 @@ ekctl api POST moves/<move id>/cleanup
 website error দিয়েছে, প্রায়ই এমন কোনো database ব্যবহার করে বলে যেটায় আপনি tick দেননি। Website এখনো পুরোনো server-এই আছে;
 যত database লাগে সবগুলো সহ আবার সরান।
 
-**সরানো Moved, কিন্তু নতুন server-এ website database error দেখায়।** দরকারি কোনো database পুরোনো server-এ রয়ে গেছে। পুরোনো
-কপি মোছার পরেই কেবল নতুন করে সরানো শুরু করা যায়, আর মোছার সময় tick না দেওয়া database মোছে না। তাই হয় পুরোনো কপি মুছে
-website-টা পুরোনো server-এ ফেরত সরান (সাথে যাওয়া database-গুলোতে tick দিয়ে), নয়তো হারানো database টা হাতে করে নতুন
-server-এ কপি করুন।
+**সরানো Moved, কিন্তু নতুন server-এ website database error দেখায়।** দরকারি কোনো database পুরোনো server-এ রয়ে গেছে। ওই
+database টা [আলাদাভাবে](/guides/data/move-database/) নতুন server-এ সরান: সেখানকার website সাথে সাথেই সেটা পায়, একই নাম, user
+আর password-এ। Website-এর পুরোনো কপি মুছলে tick না দেওয়া database মোছে না, তাই database-এর পুরোনো কপিও তার নিজের পাতা
+থেকে মুছে ফেলুন।
 
 **পুরোনো কপি মোছার সময় error দেখায়।** Card-এ কারণটা থেকে যায়। Panel যতবার পুরোনো server-এর state apply করে, ততবার server
 আবার চেষ্টা করে; এখনই চেষ্টা করাতে card-এর মোছার button-এ আবার click করুন (error দেখানোর সময় button-টা থাকে)।
@@ -252,6 +253,8 @@ server-এ কপি করুন।
 <CardGrid>
 	<LinkCard title="Website" href="/guides/websites/websites/" />
 	<LinkCard title="App সরান" href="/guides/apps/move/" description="Docker, Compose আর Git app-এর জন্য একই কাজ।" />
+	<LinkCard title="Database সরান" href="/guides/data/move-database/" description="আলাদাভাবে একটা database।" />
+	<LinkCard title="Customer সরান" href="/guides/admin/move-customer/" description="একজন customer-এর এক server-এর সবকিছু।" />
 	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />
 	<LinkCard title="Built-in name server" href="/guides/dns/name-servers/" />
 	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />

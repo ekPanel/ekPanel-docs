@@ -227,8 +227,10 @@ ekctl api POST moves/<move id>/cleanup
 
 - **Apps** move on their own, from the app's page: see [Move an app](/guides/apps/move/). A
   website and an app that work together move one after the other.
-- Moving a database on its own, restoring a backup onto another server and moving a whole
-  customer are not there yet (see the [roadmap](/project/roadmap/)).
+- A database can also [move on its own](/guides/data/move-database/), and everything a customer
+  has on one server can [move in one go](/guides/admin/move-customer/).
+- Restoring a backup onto another server is not there yet; it is planned (see the
+  [roadmap](/project/roadmap/)).
 - Changes made on the old copy after the copy starts are not carried over.
 - Email for the domain is not part of the move; it stays on its email server.
 - A WordPress staging copy is a website of its own and stays where it is.
@@ -261,10 +263,10 @@ more).** The website gave an error on the new server, often because it uses a da
 not tick. The website is still on the old server; move it again with every database it needs.
 
 **The move is Moved, but the website shows a database error on the new server.** A database it
-needs stayed on the old server. A new move can start only once the old copy is removed, and
-removing it does not delete databases you did not tick. So either remove the old copy and move
-the website back to the old server (ticking the databases that went along), or copy the
-missing database to the new server by hand.
+needs stayed on the old server. Move that database to the new server
+[on its own](/guides/data/move-database/): the website there reaches it at once, with the same
+name, user and password. Removing the website's old copy does not delete a database you did not
+tick, so remove the database's old copy from its own page too.
 
 **Removing the old copy shows an error.** The card keeps the reason. The old server tries
 again each time the panel applies its state; to try at once, click the remove button on the
@@ -275,6 +277,8 @@ card again (it stays there while the error is shown).
 <CardGrid>
 	<LinkCard title="Websites" href="/guides/websites/websites/" />
 	<LinkCard title="Move an app" href="/guides/apps/move/" description="The same for Docker, Compose and Git apps." />
+	<LinkCard title="Move a database" href="/guides/data/move-database/" description="A database on its own." />
+	<LinkCard title="Move a customer" href="/guides/admin/move-customer/" description="Everything a customer has on one server." />
 	<LinkCard title="Servers" href="/guides/admin/servers/" description="Add, watch and remove servers." />
 	<LinkCard title="Built-in name servers" href="/guides/dns/name-servers/" />
 	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />

@@ -2,7 +2,7 @@
 title: Servers
 description: Watch your servers' live and historical metrics, see and restart their services, set public addresses for NAT, and remove a server.
 sidebar:
-  order: 2
+  order: 3
 ---
 
 import { Steps, Aside } from '@astrojs/starlight/components';
@@ -185,10 +185,11 @@ another server.
 
 ## Limits and what is not there yet
 
-- Websites (with their databases) and apps can be moved to another server, one at a time: see
-  [Move a website](/guides/websites/move/) and [Move an app](/guides/apps/move/). Moving a
-  database on its own, or all of a server's websites at once: not yet (see the
-  [roadmap](/project/roadmap/)).
+- Websites (with their databases), databases and apps can be moved to another server, one at a
+  time: see [Move a website](/guides/websites/move/), [Move a database](/guides/data/move-database/)
+  and [Move an app](/guides/apps/move/). Everything one customer has on a server moves in one go:
+  see [Move a customer](/guides/admin/move-customer/). Moving all of a server's websites at once,
+  and restoring a backup onto another server: not yet (see the [roadmap](/project/roadmap/)).
 - Agents are updated from the **Updates** page, together with the panel, not from a server's
   page. See [Updates](/guides/admin/updates/).
 
@@ -197,5 +198,6 @@ another server.
 - [Add a server](/start/add-server/): Connect a new server with one command.
 - [Move a website](/guides/websites/move/): Move a website and its databases to another server.
 - [Move an app](/guides/apps/move/): Move an app and its data to another server.
+- [Move a customer](/guides/admin/move-customer/): Move everything a customer has on one server.
 - [Web terminal](/guides/apps/terminal/): A root shell on a server, in the browser.
 - [Notifications](/guides/admin/notifications/): Hear about offline servers and full disks.
