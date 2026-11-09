@@ -163,8 +163,8 @@ ekctl api GET tasks/<task id> | jq '.status, .result, .error'
 - There is no overview of the whole move; each thing shows its own move.
 - The panel does not check free disk space on the new server before it starts.
 - The whole customer move stops after 12 hours; the thing moving at that moment fails.
-- Restoring a backup onto another server (for a server that is gone): not yet. It is planned;
-  see the [roadmap](/project/roadmap/).
+- A move needs the old server online. For a server that is gone, rebuild the customer's
+  websites one at a time [from a backup](/guides/websites/rebuild/).
 - Checked with the panel's automated tests; not yet tried with two servers.
 
 ## Troubleshooting

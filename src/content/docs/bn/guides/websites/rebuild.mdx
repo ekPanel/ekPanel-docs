@@ -1,0 +1,262 @@
+---
+title: Backup থেকে আবার বানান
+description: একটা server আর না থাকলে, তার website-গুলো database সহ সবচেয়ে নতুন S3 backup থেকে অন্য server-এ আবার বানান।
+sidebar:
+  order: 10
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা server হারিয়ে গেলে (disk নষ্ট হয়েছে, provider মুছে দিয়েছে, আর চালু হয় না), তার website-গুলো
+[সরানো](/guides/websites/move/) যায় না: সরানোর সময় পুরোনো server থেকে কপি হয়, আর সেখানে কপি করার মতো কিছু নেই। তার
+বদলে প্রতিটা website তার সবচেয়ে নতুন [backup](/guides/data/backups/) থেকে অন্য server-এ আবার বানান: panel সেখানে website
+আগের মতো set up করে, তার file আর database backup থেকে ফেরত আনে, আর panel যে DNS চালায় তা নতুন server-এ point করে।
+
+আবার বানানো তখনই কাজ করে, যদি server হারানোর **আগেই** আপনি প্রস্তুতি নিয়ে রাখেন। Server-গুলো চালু থাকতেই এখন
+[শুরু করার আগে](#before-you-start) পড়ে নিন।
+
+## শুরু করার আগে
+
+Server চালু থাকতেই এগুলো তৈরি রাখুন:
+
+- **Server-এ একটা S3 backup location।** Website আর তার ব্যবহার করা প্রতিটা database
+  [S3-compatible storage](/guides/data/backups/#where-to-keep-backups)-এ backup হতে হবে, আর শেষ backup-গুলো সফল হতে হবে।
+  **এই সার্ভারে** (This server) রাখা backup কোনো কাজে আসে না: সেটা হারানো server-এর disk-এই ছিল, তার সাথেই চলে গেছে।
+- **Recovery key, server-এর বাইরে রাখা**, যেমন একটা password manager-এ। Backup location তৈরির সময় এটা একবারই দেখানো
+  হয়েছিল। এটা ছাড়া কেউ backup খুলতে পারে না। দেখুন [Recovery key](/guides/data/backups/#the-recovery-key)।
+- **Bucket-এর জন্য একটা S3 access key।** Location-কে দেওয়া key panel রাখে না; শুধু হারানো server-এর কাছে ছিল। একটা copy
+  রেখে দিন, বা storage provider-এ একই bucket পড়তে আর লিখতে পারে এমন নতুন key বানাতে তৈরি থাকুন।
+
+Server হারানোর পর আরও লাগবে:
+
+- আপনি **admin**। Customer-রা এটা দেখেন না; করতে হলে তাঁরা আপনাকে বলতে পারেন।
+- **একটা নতুন server**, [panel-এ যোগ করা](/start/add-server/) আর **সার্ভার** (Servers) পাতায় **অনলাইন** (Online)। কোনো
+  customer-এর website হলে, server টা তাঁর package-এ থাকতে হবে।
+- **পুরোনো server অফলাইন (Offline) দেখায়।** Website-এর server offline থাকলেই শুধু আবার বানানোর button দেখা যায়। পুরোনো
+  server এখনো চললে তার বদলে [website সরান](/guides/websites/move/): সরানোয় এই মুহূর্ত পর্যন্ত সবকিছু কপি হয়, আবার বানানোয়
+  শুধু সবচেয়ে নতুন backup-এ যা আছে।
+- **নতুন server-এ database-এর নামগুলো খালি।** প্রতিটা database তার নাম আর user একই রাখে, তাই নতুন server-এ (একই
+  engine-এর) ওই নামে কোনো database বা user আগে থেকে থাকা চলবে না।
+
+<Aside type="tip">
+এখনই দেখে নিন আপনার backup যথেষ্ট কিনা। **ব্যাকআপ** (Backups) খুলে S3 location-টা খুলুন, তারপর তার backup-এর তালিকা
+দেখুন: আপনার দরকারি প্রতিটা website আর database-এর একটা সাম্প্রতিক backup থাকা উচিত।
+</Aside>
+
+## নতুন server-এ backup storage connect করুন
+
+নতুন server-এর একই storage-এর সাথে নিজের একটা connection লাগে, recovery key দিয়ে খোলা।
+
+<Steps>
+
+1. **ব্যাকআপ** (Backups) খুলে **ব্যাকআপের জায়গা যোগ করুন** (Add backup location)-এ click করুন।
+
+2. নতুন server বেছে নিন। **ব্যাকআপ কোথায় থাকবে** (Where to keep the backups)-এর নিচে **S3-এর মতো স্টোরেজে**
+   (S3-compatible storage) বেছে নিন।
+
+3. হারানো server-এর location-এর মতোই **এন্ডপয়েন্ট** (Endpoint), **বাকেট** (Bucket), **বাকেটের ভেতরের ফোল্ডার (ঐচ্ছিক)**
+   (Folder in the bucket (optional)) আর **রিজিয়ন (ঐচ্ছিক)** (Region (optional)) দিন, সাথে bucket পড়তে আর লিখতে পারে এমন
+   একটা **অ্যাক্সেস কী আইডি** (Access key ID) আর **সিক্রেট অ্যাক্সেস কী** (Secret access key)।
+
+4. যেকোনো backup location-এর মতো একটা **নাম** (Name) দিন, আর কত ঘন ঘন আর কতগুলো রাখা হবে বেছে নিন।
+
+5. **আগে বানানো ব্যাকআপ রিকভারি কী দিয়ে যুক্ত করুন** (Connect backups made earlier, using their recovery key)-এ tick
+   দিয়ে **রিকভারি কী** (Recovery key) দিন।
+
+6. **যুক্ত করুন** (Connect)-এ click করুন। নতুন server check করে যে key দিয়ে backup খোলে কিনা; ভুল key নেওয়া হয় না।
+
+</Steps>
+
+এখন থেকে এই location নতুন server-এর নিজের website আর database-এরও backup নেয়, একই storage-এ। দেখুন
+[আগে বানানো backup connect করুন](/guides/data/backups/#connect-backups-made-earlier)।
+
+## Website আবার বানান
+
+<Steps>
+
+1. Website খুলুন। এর server offline, তাই **অন্য সার্ভারে সরান** (Move to another server) card-এ লেখা থাকে: "_server_
+   অফলাইন। সেটা আর না থাকলে, এই ওয়েবসাইট এর সবচেয়ে নতুন ব্যাকআপ থেকে অন্য সার্ভারে আবার বানান।" **ব্যাকআপ থেকে আবার
+   বানান…** (Rebuild from a backup…)-এ click করুন।
+
+2. **যেখানে সরাবেন** (Move to)-এ নতুন server বেছে নিন। শুধু online server-গুলো তালিকায় থাকে।
+
+3. **নতুন সার্ভারে ব্যাকআপ স্টোরেজ** (Backup storage on the new server)-এ আপনার connect করা storage বেছে নিন। শুধু বেছে
+   নেওয়া server-এ connect করা S3 storage তালিকায় থাকে। কোনোটা না থাকলে dialog বলে: "আগে নতুন সার্ভারে একই S3 স্টোরেজ যুক্ত
+   করুন (ব্যাকআপ → ব্যাকআপের জায়গা যোগ করুন, এর রিকভারি কী দিয়ে)।"
+
+4. **সাথে যে ডেটাবেসগুলো যাবে** (Databases to move with it)-এর নিচে website যে database-গুলো ব্যবহার করে, সবগুলোতে tick দিন।
+   তালিকায় পুরোনো server-এ website-এর মালিকের সব database থাকে, শুধু এই website-এর না। Tick দেওয়া প্রতিটার backup storage-এ
+   থাকতে হবে।
+
+5. সতর্কবার্তা পড়ুন: "সবচেয়ে নতুন ব্যাকআপের পরে যা হয়েছে তা হারাবে। পুরোনো সার্ভার ফিরে এলে, এই পাতা থেকে মুছে না ফেলা
+   পর্যন্ত এর কপি থাকে।" তারপর **আবার বানান** (Rebuild)-এ click করুন।
+
+</Steps>
+
+এবার card-এ সরানোর মতোই আবার বানানোর কাজটা দেখায়: তার phase, দুটো server (**পুরোনো → নতুন**) আর কখন শুরু হয়েছে। এটা
+নিজে থেকেই update হয়। হারানো server-এ যত website ছিল, প্রতিটার জন্য এটা আবার করুন।
+
+## আবার বানানোর সময় কী হয়
+
+পুরোনো server থেকে কিছু কপি হয় না; সবকিছু আসে backup storage থেকে।
+
+| Phase | যা হয় |
+| --- | --- |
+| **কপি হচ্ছে** (Copying), তারপর **বদলানো হচ্ছে** (Switching over) | শুরুর আগে নতুন server storage-এর backup-এর তালিকা পড়ে, আর website-এর ও tick দেওয়া প্রতিটা database-এর সবচেয়ে নতুন backup খুঁজে নেয়। Panel-এ website আর ওই database-গুলো এখন নতুন server-এর। নতুন server এগুলো নতুন website-এর মতো set up করে (একই নামের Linux account, PHP version, database server না থাকলে সেটা, একই user আর password-এর database), website-এর পুরো home folder তার সবচেয়ে নতুন backup থেকে ফেরত আনে, আর প্রতিটা database তার সবচেয়ে নতুন backup থেকে load করে। |
+| **সরানো হয়েছে** (Moved) | Website নতুন server-এ চলছে। Panel যে DNS record চালায়, সেগুলো এখন সেখানে point করে। |
+| **ব্যর্থ** (Failed) | Card-এ error দেখায়। দেখুন [আবার বানানো ব্যর্থ হলে](#when-a-rebuild-fails)। |
+
+দুটো VM আর একটা S3 test server (SeaweedFS) দিয়ে একটা test-এ, একটা website আর তার MariaDB database এক server থেকে backup
+নেওয়া হয়েছে, ওই server বন্ধ করা হয়েছে, recovery key দিয়ে storage অন্য server-এ connect করা হয়েছে, আর website সেখানে
+প্রায় ১০ second-এ আবার বানানো হয়েছে, একই file (checksum দিয়ে মেলানো), owner, ACL আর data সহ।
+
+### কী ফেরত আসে
+
+- **File**: website-এর পুরো home folder (`/home/<account>`), যেমন backup হয়েছিল: `public_html`, তার পাশে রাখা file (যেমন
+  Moodle-এর `moodledata` folder বা আপনার নিজের file) আর তার log। নতুন, খালি account-এ যা ছিল, এগুলো তার জায়গা নেয়।
+  File-গুলোর owner হয় website-এর account, আর web server আবার `public_html` পড়তে পারে।
+- **Database**: আপনার tick দেওয়া প্রতিটা database, তার সবচেয়ে নতুন backup থেকে, একই নাম আর user-এ, তাই website তার
+  বর্তমান password দিয়েই কাজ করতে থাকে।
+- **Settings আর cron job**: Panel website-এর যা কিছু রাখে (PHP version আর settings, extra domain, redirect, SFTP access)
+  সব নতুন server-এ apply হয়, আর এর [cron job](/guides/websites/cron/) সেখানে চলে।
+
+### কী ফেরত আসে না
+
+- **সবচেয়ে নতুন backup-এর পরের সবকিছু।** শেষ backup চলার পরে আসা order, comment, upload আর অন্য পরিবর্তন হারিয়ে যায়।
+  প্রতিদিন backup নিলে এক দিন পর্যন্ত হারাতে পারেন।
+- **Home folder-এর `tmp` folder আর trash।** Backup-এ এগুলো বাদ থাকে
+  ([কীসের backup হয়](/guides/data/backups/#what-is-backed-up)), তাই এগুলো খালি দিয়ে শুরু হয়।
+- **যে database-এ tick দেননি।** Panel-এ সেগুলো পুরোনো server-এই থেকে যায়।
+- **Certificate।** Domain নতুন server-এ point করলে নতুন server Let's Encrypt থেকে নতুন certificate নেয়। ততক্ষণ নতুন
+  server-এ HTTPS certificate error দেখায়।
+- **App।** Docker আর Git app-এর backup হয় না, তাই সেগুলো আবার বানানো যায় না। দেখুন
+  [সীমা](#limits-and-what-is-not-there-yet)।
+
+## Domain নতুন server-এ দিন
+
+Domain panel-এর নিজের [name server](/guides/dns/name-servers/)-এ থাকলে বা [Cloudflare](/guides/dns/cloudflare/) দিয়ে
+connected থাকলে, আবার বানানো **সরানো হয়েছে** (Moved) হলেই এর `A` আর `AAAA` record নিজে থেকে website-এর পেছনে যায়।
+
+না হলে card-এ লেখা থাকে: "এই ডোমেইনের DNS প্যানেল না চালালে, এখনই এর রেকর্ড …-এ দিন" (If the panel does not manage this
+domain's DNS, point its records to …), সাথে নতুন server-এর address। আপনার DNS provider-এ domain-এর আর প্রতিটা extra
+domain-এর (যেমন `www`) `A` record (আর থাকলে `AAAA`) বদলে ওই address দিন। Website সরানোর পাতায় আছে
+[নতুন server কীভাবে যাচাই করবেন আর কতক্ষণ অপেক্ষা করবেন](/guides/websites/move/#point-the-domain-to-the-new-server)।
+
+## পুরোনো server ফিরে এলে
+
+আবার বানানো সফল হলে, panel পুরোনো server-এর যে backup location একই storage ব্যবহার করে, সেগুলোর schedule বন্ধ করে দেয়
+(সেগুলো **শুধু আমি চালালে** (Only when I start it)-তে চলে যায়)। তাই পুরোনো server ফিরে এলেও, নতুন server এখন যে storage
+ব্যবহার করে, তাতে সে backup নেয় না বা সেখান থেকে backup মোছে না। পুরোনো location-টা পরে
+[সরিয়ে দিতে](/guides/data/backups/#remove-a-backup-location) পারেন; storage-এর backup থেকে যায়।
+
+কখনো কখনো যে server গেছে ভেবেছিলেন, সেটা আবার চালু হয়। Website-এর তার কপি তখনো সেখানে আছে, আর panel নিজে থেকে সেটা মোছে
+না: card **সরানো হয়েছে** (Moved)-এ থাকে আর **_server_-এর পুরোনো কপি মুছে ফেলুন** (Remove the old copy on _server_)
+দেখায়। যাদের DNS এখনো পুরোনো server-এ point করে, পুরোনো কপি তাদের পুরোনো data দিয়েই উত্তর দেয়।
+
+পুরোনো server আবার online হলেই তার কপি মুছে ফেলুন:
+
+<Steps>
+
+1. Website-এর পাতায়, **অন্য সার্ভারে সরান** (Move to another server) card-এ **_server_-এর পুরোনো কপি মুছে ফেলুন** (Remove
+   the old copy on _server_)-এ click করুন।
+
+2. নিশ্চিত করুন। পুরোনো server website-এর Linux account, তার home folder, তার web server আর PHP settings, আর tick দেওয়া
+   database-গুলোর কপি মুছে ফেলে।
+
+</Steps>
+
+Phase বদলে হয় **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy), তারপর **শেষ** (Done)। এটা আর ফেরানো যায় না, তাই আগে
+পুরোনো কপি থেকে যা এখনো দরকার তা নিয়ে নিন (যেমন শেষ backup-এর পরে আসা order)।
+
+পুরোনো server offline থাকতেই button-এ click করলে, server আবার connect না হওয়া পর্যন্ত card **পুরোনো কপি মোছা হচ্ছে**
+(Removing the old copy) দেখায়, আর তখনই কপি মোছা হয়। এটা VM test-এর অংশ ছিল না।
+
+পুরোনো কপি মোছা না হওয়া পর্যন্ত website delete করা, সরানো বা আবার বানানো যায় না।
+
+## আবার বানানো ব্যর্থ হলে
+
+আবার বানানো ব্যর্থ হলে panel-এ website যেখানে ছিল সেখানেই থাকে: website আর তার database পুরোনো server-এ ফিরে যায়, আর
+নতুন server তার আধা-বানানো কপি মুছে ফেলে। Card-এ **ব্যর্থ** (Failed) আর কারণ দেখায়, যেমন:
+
+- "set up the site on the new server: …" বা "the new server could not set up the site": নতুন server কিছু install বা set up
+  করতে পারেনি;
+- "restore the files: …": backup থেকে file পড়া বা জায়গামতো বসানো যায়নি;
+- "restore the database _name_: …": একটা database-এর backup পড়া বা load করা যায়নি।
+
+কারণটা ঠিক করে আবার **ব্যাকআপ থেকে আবার বানান…** (Rebuild from a backup…)-এ click করুন।
+
+<Aside type="caution">
+আবার বানানো চলার সময় panel update বা restart এড়িয়ে চলুন। Panel restart হলে কাজটা আর এগোয় না: সেটা **ব্যর্থ** (Failed)
+হিসেবে চিহ্নিত হয় ("the panel restarted during the move; it stays where it was"), আর আপনি আবার শুরু করতে পারেন।
+</Aside>
+
+## API বা ekctl দিয়ে
+
+`sites` scope-এর একটা admin-এর [API token](/guides/security/api-tokens/) দিয়ে website আবার বানানো যায়। Customer-দের token
+দিয়ে যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/sites/{id}/rebuild` | আবার বানানো শুরু করে। Body: `{"server_id": "…", "repo_id": "…", "database_ids": ["…"]}`, যেখানে `repo_id` হলো নতুন server-এ connect করা backup location। সরানোর কাজটা সহ `202` উত্তর দেয়। |
+| `GET /api/v1/sites/{id}/moves` | Website-এর সরানো আর আবার বানানোর কাজগুলো, নতুনটা আগে, `phase` আর `error` সহ। |
+| `POST /api/v1/moves/{id}/cleanup` | পুরোনো server ফিরে এলে পুরোনো কপি মোছে। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+
+[ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api GET backups | jq '.[] | {id, name, server_id}'
+ekctl api POST sites/<site id>/rebuild --data '{"server_id":"<server id>","repo_id":"<backup location id>","database_ids":["<database id>"]}'
+ekctl api GET sites/<site id>/moves | jq '.[0].phase'
+```
+
+Backup location-এর তালিকা (`GET /backups`) পেতে `backups` scope লাগে। API নতুন server-এর যেকোনো backup location নেয়, কিন্তু
+ফেরত আনার মতো কিছু থাকে শুধু সেই S3 location-এ, যেখানে পুরোনো server-এর backup আছে।
+
+## সীমা আর যা এখনো নেই
+
+- **App আবার বানানো হয় না।** Docker আর Git app, তাদের volume, আর catalogue-এর service-এর backup হয় না, তাই server হারালে
+  সেগুলো নিজে আবার set up করতে হয়। Mailbox-এরও backup হয় না। দেখুন [Backup](/guides/data/backups/#what-is-backed-up)।
+- একবারে একটা website; "এই server-এ যা ছিল সব আবার বানান" নেই।
+- প্রতিটার শুধু সবচেয়ে নতুন backup ব্যবহার হয়; পুরোনো একটা বেছে নেওয়া যায় না।
+- একটা database শুধু একটা website-এর সাথেই আবার বানানো যায়।
+- দুটো VM আর একটা S3 test server দিয়ে test করা হয়েছে (MariaDB database-সহ একটা PHP website), এখনো আসল server-এ, আসল
+  storage provider-এ, বা PostgreSQL database দিয়ে না।
+
+## সমস্যা সমাধান
+
+এই message-গুলোর কোনো একটা দিয়ে panel আবার বানানো শুরু করতে রাজি হয় না:
+
+| Message (error code) | যা করবেন |
+| --- | --- |
+| "এই ব্যাকআপ স্টোরেজে _name_-এর কোনো ব্যাকআপ নেই।" (`no_snapshot`) | যে website বা database-এর নাম আছে, তার কখনো এই storage-এ backup হয়নি (যেমন, শেষ backup-এর পরে তৈরি)। ওই database-এর tick তুলে দিন, বা যে storage-এ তার backup আছে সেটা বেছে নিন। |
+| "নতুন সার্ভারে যুক্ত একটা ব্যাকআপ স্টোরেজ বেছে নিন।" (`invalid_repo`) | নতুন server-এ [storage connect করুন](#connect-the-backup-storage-on-the-new-server), তারপর সেটা বেছে নিন। |
+| "নতুন সার্ভার ব্যাকআপ পড়তে পারেনি।" (`backup_unreadable`) | নতুন server storage-এ পৌঁছাতে বা তার backup-এর তালিকা পড়তে পারেনি। Location-এর endpoint, bucket আর access key check করুন, আর নতুন server storage-এ পৌঁছাতে পারে কিনা দেখুন। |
+| "নতুন সার্ভারে আগে থেকেই একই নামের ডেটাবেস বা ইউজার আছে।" (`database_name_taken`) | নতুন server-এ ওই database বা user মুছে ফেলুন বা নাম বদলান, বা অন্য server বেছে নিন। |
+| "গ্রাহকের প্যাকেজে এই সার্ভার নেই। আগে প্যাকেজে যোগ করুন।" (`server_not_in_package`) | নতুন server customer-এর package-এ যোগ করুন, বা package-এ আছে এমন server বেছে নিন। |
+| "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | চলতে থাকা সরানো বা আবার বানানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা পুরোনো কপি মুছে ফেলুন। |
+| "এটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
+| "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | **যেখানে সরাবেন** (Move to)-এ একটা server বেছে নিন। API দিয়ে করলে server ID check করুন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | নতুন server offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "বেছে নেওয়া একটা ডেটাবেস ওয়েবসাইটের সার্ভারে নেই, বা অন্য কারো।" (`invalid_database`) | শুধু পুরোনো server-এ website-এর মালিকের database বেছে নিন। |
+| "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা website আবার বানাতে পারেন। |
+
+**ব্যাকআপ থেকে আবার বানান… (Rebuild from a backup…) button নেই।** Website-এর server online (তার বদলে **সরান…** (Move…)
+ব্যবহার করুন), বা website-এর কোনো সরানো বা আবার বানানো এখনো খোলা আছে: আগে সেটা শেষ করুন বা তার পুরোনো কপি মুছে ফেলুন।
+
+**আবার বানানোর পরে website database error দেখায়।** দরকারি কোনো database-এ tick দেওয়া হয়নি, তাই সেটা হারানো server-এই রয়ে
+গেছে। আলাদাভাবে একটা database এখনো আবার বানানো যায় না: নতুন server-এ একটা নতুন database তৈরি করুন, backup থেকে তার dump
+[হাতে](/guides/data/backups/#restoring-by-hand) load করুন, আর website-এর settings (যেমন WordPress-এর `wp-config.php`)
+নতুন database-এর নাম, user আর password-এ বদলে দিন।
+
+**HTTPS certificate error দেখায়।** Domain এখনো নতুন server-এ point করে না, তাই সেটা certificate নিতে পারে না। দেখুন
+[Domain নতুন server-এ দিন](#point-the-domain-to-the-new-server)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Backup" href="/guides/data/backups/" description="S3 storage, recovery key আর restore।" />
+	<LinkCard title="অন্য server-এ সরান" href="/guides/websites/move/" description="পুরোনো server যখন এখনো চলছে।" />
+	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />
+	<LinkCard title="Built-in name server" href="/guides/dns/name-servers/" />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />
+</CardGrid>

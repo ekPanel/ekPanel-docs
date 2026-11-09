@@ -17,7 +17,8 @@ import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components'
 - কোনো customer-এর website হলে, নতুন server তাঁর package-এ থাকতে হবে (না থাকলে: "গ্রাহকের প্যাকেজে এই সার্ভার নেই।
   আগে প্যাকেজে যোগ করুন।")।
 - **দুটো server-ই connected।** নতুন server [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায়
-  **অনলাইন** (Online) দেখায়, website-এর বর্তমান server-ও তাই।
+  **অনলাইন** (Online) দেখায়, website-এর বর্তমান server-ও তাই। বর্তমান server একেবারে চলে গেলে তার বদলে
+  [backup থেকে website আবার বানান](/guides/websites/rebuild/)।
 - **Website ঠিকমতো চলছে**: তার পাতায় কোনো error নেই, আর সেটা set up হওয়ার মাঝখানে নেই। সাথে নেওয়া প্রতিটা database-এর
   ক্ষেত্রেও একই কথা।
 - **নতুন server-এ database-এর নামগুলো খালি।** নতুন server-এ database তার নাম আর user একই রাখে, তাই নতুন server-এ (একই
@@ -209,7 +210,8 @@ ekctl api POST moves/<move id>/cleanup
   একটার পর একটা সরে।
 - একটা database [আলাদাভাবেও সরানো](/guides/data/move-database/) যায়, আর একজন customer-এর এক server-এর সবকিছু
   [একবারে সরানো](/guides/admin/move-customer/) যায়।
-- অন্য server-এ backup restore করা এখনো নেই; এটা plan করা আছে (দেখুন [roadmap](/project/roadmap/))।
+- পুরোনো server আর না থাকলে, তার বদলে website-টা
+  [তার S3 backup থেকে অন্য server-এ আবার বানানো](/guides/websites/rebuild/) যায়।
 - কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
 - Domain-এর email সরানোর অংশ না; সেটা তার email server-এই থাকে।
 - WordPress-এর staging copy আলাদা একটা website, সেটা যেখানে আছে সেখানেই থাকে।
@@ -252,6 +254,7 @@ database টা [আলাদাভাবে](/guides/data/move-database/) ন�
 
 <CardGrid>
 	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="Backup থেকে আবার বানান" href="/guides/websites/rebuild/" description="পুরোনো server যখন আর নেই।" />
 	<LinkCard title="App সরান" href="/guides/apps/move/" description="Docker, Compose আর Git app-এর জন্য একই কাজ।" />
 	<LinkCard title="Database সরান" href="/guides/data/move-database/" description="আলাদাভাবে একটা database।" />
 	<LinkCard title="Customer সরান" href="/guides/admin/move-customer/" description="একজন customer-এর এক server-এর সবকিছু।" />

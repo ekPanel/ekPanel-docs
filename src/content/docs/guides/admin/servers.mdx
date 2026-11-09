@@ -125,6 +125,9 @@ While a server is offline, websites and apps on it keep running (the agent is no
 web requests), but the panel cannot change anything on it. Changes made meanwhile are applied when
 the agent comes back.
 
+If the server is gone for good, you can
+[rebuild its websites on another server](/guides/websites/rebuild/) from their S3 backups.
+
 The panel also warns administrators when a server's disk is **90% full**. That warning is sent once,
 and again only after the disk has dropped below 85% and filled up again.
 
@@ -188,8 +191,9 @@ another server.
 - Websites (with their databases), databases and apps can be moved to another server, one at a
   time: see [Move a website](/guides/websites/move/), [Move a database](/guides/data/move-database/)
   and [Move an app](/guides/apps/move/). Everything one customer has on a server moves in one go:
-  see [Move a customer](/guides/admin/move-customer/). Moving all of a server's websites at once,
-  and restoring a backup onto another server: not yet (see the [roadmap](/project/roadmap/)).
+  see [Move a customer](/guides/admin/move-customer/). When a server is gone, its websites can be
+  [rebuilt on another server from a backup](/guides/websites/rebuild/), one at a time. Moving or
+  rebuilding all of a server's websites at once: not yet (see the [roadmap](/project/roadmap/)).
 - Agents are updated from the **Updates** page, together with the panel, not from a server's
   page. See [Updates](/guides/admin/updates/).
 

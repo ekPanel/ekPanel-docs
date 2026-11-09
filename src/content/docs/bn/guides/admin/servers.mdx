@@ -123,6 +123,9 @@ Panel প্রতি মিনিটে check করে। Agent **3 মিন�
 Server offline থাকা অবস্থায় তার website আর app চলতে থাকে (web request-এর পথে agent নেই), কিন্তু panel
 সেখানে কিছু বদলাতে পারে না। এর মধ্যে করা পরিবর্তনগুলো agent ফিরে এলে apply হয়।
 
+Server একেবারে চলে গেলে, তার website-গুলো তাদের S3 backup থেকে
+[অন্য server-এ আবার বানাতে](/guides/websites/rebuild/) পারেন।
+
 কোনো server-এর disk **90% ভরে** গেলেও panel admin-দের সতর্ক করে। এই সতর্কবার্তা একবার পাঠানো হয়, আর
 আবার পাঠানো হয় শুধু disk 85%-এর নিচে নেমে আবার ভরে গেলে।
 
@@ -184,8 +187,9 @@ location, mail setting আর metric-এর ইতিহাস panel থেক�
 
 - Website (তার database সহ), database আর app অন্য server-এ সরানো যায়, একবারে একটা করে: দেখুন
   [Website সরান](/guides/websites/move/), [Database সরান](/guides/data/move-database/) আর [App সরান](/guides/apps/move/)।
-  একজন customer-এর এক server-এর সবকিছু একবারে সরে: দেখুন [Customer সরান](/guides/admin/move-customer/)। একটা server-এর সব
-  website একসাথে সরানো, আর অন্য server-এ backup restore করা: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+  একজন customer-এর এক server-এর সবকিছু একবারে সরে: দেখুন [Customer সরান](/guides/admin/move-customer/)। Server চলে গেলে
+  তার website-গুলো [backup থেকে অন্য server-এ আবার বানানো](/guides/websites/rebuild/) যায়, একবারে একটা। একটা server-এর সব
+  website একসাথে সরানো বা আবার বানানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
 - Agent update হয় **আপডেট** (Updates) page থেকে, panel-এর সাথে, server page থেকে নয়। দেখুন
   [আপডেট](/guides/admin/updates/)।
 

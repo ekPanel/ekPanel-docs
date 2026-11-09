@@ -13,9 +13,9 @@ outside service, the list says so.
 
 <Aside type="note">
 Everything on this page is in v0.1.0, the first release, except
-[API and command line](#api-and-command-line) and moving websites, apps, databases and
-customers to another server (under [Many servers](#many-servers)), which come with the next
-release. You can
+[API and command line](#api-and-command-line), moving websites, apps, databases and
+customers to another server, and rebuilding a website from a backup (under
+[Many servers](#many-servers)), which come with the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -156,6 +156,8 @@ release. You can
 - Hourly, daily, weekly or manual, with daily, weekly and monthly copies kept.
 - The encryption key is a recovery key shown once. The panel never stores it.
 - Restore a website into a new folder or over the current files, and a database in place.
+- <Badge text="next release" variant="note" /> When a server is lost,
+  [rebuild its websites on another server](/guides/websites/rebuild/) from their S3 backups.
 
 ## Cloudflare DNS
 
@@ -239,7 +241,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -265,6 +267,9 @@ has not been tried yet.
 - <Badge text="next release" variant="note" /> Moving everything a customer has on one server
   (websites, databases and apps) in one go: all of it is checked first, then moved one thing
   after the other, stopping at the first failure.
+- <Badge text="next release" variant="note" /> Rebuilding a website, with the databases you
+  choose, on another server from its newest S3 backup when its server is gone. DNS the panel
+  manages follows. Tested with two VMs and an S3 test server.
 
 ## API and command line
 
@@ -296,7 +301,6 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Moving | Restore a backup onto another server, for a server that is gone. (Websites, apps, databases and whole customers can be moved already.) |
 | Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |

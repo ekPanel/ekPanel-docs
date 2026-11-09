@@ -149,8 +149,8 @@ ekctl api GET tasks/<task id> | jq '.status, .result, .error'
 - পুরো সরানোর কোনো overview নেই; প্রতিটা জিনিস তার নিজের সরানো দেখায়।
 - শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
 - পুরো customer সরানো ১২ ঘণ্টা পরে থেমে যায়; ওই মুহূর্তে যা সরছিল তা ব্যর্থ হয়।
-- অন্য server-এ backup restore করা (যে server আর নেই তার জন্য): এখনো নেই। এটা plan করা আছে; দেখুন
-  [roadmap](/project/roadmap/)।
+- সরাতে পুরোনো server online থাকতে হয়। যে server আর নেই, তার জন্য customer-এর website-গুলো একটা একটা করে
+  [backup থেকে আবার বানান](/guides/websites/rebuild/)।
 - Panel-এর automated test দিয়ে check করা; এখনো দুটো server দিয়ে চালিয়ে দেখা হয়নি।
 
 ## সমস্যা সমাধান

@@ -114,7 +114,7 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 | Scope | কী করতে দেয় | Path |
 | --- | --- | --- |
 | `read` | মালিক যা দেখতে পারেন তার প্রতিটা `GET`, নিচের সব অংশে। কিছু বদলায় না। | সবগুলো |
-| `sites` | Website, WordPress, PHP app, PHP version, cron job আর website সরানো | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
+| `sites` | Website, WordPress, PHP app, PHP version, cron job, আর website সরানো বা আবার বানানো | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
 | `databases` | Database আর তাদের user, আর database সরানো | `/databases`, `/moves` |
 | `apps` | Docker আর Git app, deploy, app catalogue, cron job আর app সরানো | `/apps`, `/catalog`, `/cron`, `/moves` |
 | `dns` | Cloudflare আর hosted DNS zone, record, template, name server | `/dns` |
@@ -223,7 +223,7 @@ password বা two-factor setting বদলাতে, বা তাঁর জ�
 | Backup, restore, service restart, PHP extension, malware scan, panel update, [customer সরানো](/guides/admin/move-customer/) | Task-টা, তার `id`-সহ | `GET /tasks/{id}`, যতক্ষণ না `status` হয় `succeeded` বা `failed` |
 | Website, database বা app (বানানো বা বদলানো) | জিনিসটা, `state` `pending` | `GET /sites/{id}` (বা `/databases/{id}`, `/apps/{id}`), যতক্ষণ না `state` হয় `active` আর `applied_generation` পৌঁছায় `generation`-এ; `error` মানে ব্যর্থ হয়েছে, কারণ থাকে `message`-এ |
 | Git deploy | Deployment-টা | `GET /apps/{id}/deployments/{did}`, যতক্ষণ না `status` হয় `live` বা `failed` |
-| [Website](/guides/websites/move/), [app](/guides/apps/move/) বা [database সরানো](/guides/data/move-database/) | সরানোর কাজটা, `phase` `copying` | `GET /sites/{id}/moves` (বা `/apps/{id}/moves`, `/databases/{id}/moves`), যতক্ষণ না সবচেয়ে নতুনটার `phase` হয় `moved` বা `failed`। পুরোনো কপি মোছা (`POST /moves/{id}/cleanup`) একটা task দিয়ে উত্তর দেয় |
+| [Website](/guides/websites/move/), [app](/guides/apps/move/) বা [database সরানো](/guides/data/move-database/), বা [website আবার বানানো](/guides/websites/rebuild/) | সরানোর কাজটা, `phase` `copying` | `GET /sites/{id}/moves` (বা `/apps/{id}/moves`, `/databases/{id}/moves`), যতক্ষণ না সবচেয়ে নতুনটার `phase` হয় `moved` বা `failed`। পুরোনো কপি মোছা (`POST /moves/{id}/cleanup`) একটা task দিয়ে উত্তর দেয় |
 
 একটা task দেখতে এরকম:
 
@@ -427,6 +427,7 @@ certificate বিশ্বাস করে।
 | Notification setting | `/settings/notifications` |
 | Audit log | `/audit` |
 | Website সরানো | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Website সরান](/guides/websites/move/#with-the-api-or-ekctl)। |
+| Backup থেকে website আবার বানানো | `POST /sites/{id}/rebuild`, সাথে `{"server_id": "…", "repo_id": "…", "database_ids": ["…"]}` (scope `sites`), তারপর `GET /sites/{id}/moves`। দেখুন [Backup থেকে আবার বানান](/guides/websites/rebuild/#with-the-api-or-ekctl)। |
 | App সরানো | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [App সরান](/guides/apps/move/#with-the-api-or-ekctl)। |
 | Database সরানো | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Database সরান](/guides/data/move-database/#with-the-api-or-ekctl)। |
 | Customer সরানো | `POST /customers/{id}/move`। দেখুন [Customer সরান](/guides/admin/move-customer/#with-the-api-or-ekctl)। |

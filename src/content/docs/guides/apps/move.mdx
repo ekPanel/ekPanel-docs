@@ -233,8 +233,9 @@ ekctl api POST moves/<move id>/cleanup
 - The panel does not check free disk space on the new server before it starts.
 - A move that takes longer than 11 hours in all is stopped and fails.
 - A database can also [move on its own](/guides/data/move-database/), and everything a customer
-  has on one server can [move in one go](/guides/admin/move-customer/). Restoring a backup onto
-  another server is not there yet; it is planned (see the [roadmap](/project/roadmap/)).
+  has on one server can [move in one go](/guides/admin/move-customer/).
+- Apps are not backed up, so when an app's server is gone it cannot be
+  [rebuilt from a backup](/guides/websites/rebuild/) like a website; set it up again yourself.
 - Tested with two VMs (an nginx image app with one volume), not yet on real servers, with
   Compose apps or with Git apps.
 

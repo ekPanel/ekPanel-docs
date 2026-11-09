@@ -208,8 +208,9 @@ ekctl api POST moves/<move id>/cleanup
 - শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
 - মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
 - একটা database [আলাদাভাবেও সরানো](/guides/data/move-database/) যায়, আর একজন customer-এর এক server-এর সবকিছু
-  [একবারে সরানো](/guides/admin/move-customer/) যায়। অন্য server-এ backup restore করা এখনো নেই; এটা plan করা আছে (দেখুন
-  [roadmap](/project/roadmap/))।
+  [একবারে সরানো](/guides/admin/move-customer/) যায়।
+- App-এর backup হয় না, তাই app-এর server চলে গেলে website-এর মতো সেটা [backup থেকে আবার বানানো](/guides/websites/rebuild/)
+  যায় না; নিজে আবার set up করুন।
 - দুটো VM দিয়ে test করা হয়েছে (একটা volume-সহ একটা nginx image app), এখনো আসল server-এ, Compose app বা Git app দিয়ে না।
 
 ## সমস্যা সমাধান

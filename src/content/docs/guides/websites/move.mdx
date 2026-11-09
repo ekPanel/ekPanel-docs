@@ -18,7 +18,9 @@ and the old copy keeps serving until you remove it.
 - For a customer's website, the new server is one their package allows (otherwise: "The customer's
   package does not include this server. Add it to the package first.").
 - **Both servers are connected.** The new server is [added to the panel](/start/add-server/)
-  and shows **Online** on the **Servers** page, and so does the website's current server.
+  and shows **Online** on the **Servers** page, and so does the website's current server. If
+  the current server is gone for good, [rebuild the website from a backup](/guides/websites/rebuild/)
+  instead.
 - **The website is working**: its page shows no error and it is not being set up. The same
   goes for every database you take along.
 - **The database names are free on the new server.** A database keeps its name and its user
@@ -229,8 +231,8 @@ ekctl api POST moves/<move id>/cleanup
   website and an app that work together move one after the other.
 - A database can also [move on its own](/guides/data/move-database/), and everything a customer
   has on one server can [move in one go](/guides/admin/move-customer/).
-- Restoring a backup onto another server is not there yet; it is planned (see the
-  [roadmap](/project/roadmap/)).
+- When the old server is gone, a website can be
+  [rebuilt on another server from its S3 backup](/guides/websites/rebuild/) instead.
 - Changes made on the old copy after the copy starts are not carried over.
 - Email for the domain is not part of the move; it stays on its email server.
 - A WordPress staging copy is a website of its own and stays where it is.
@@ -276,6 +278,7 @@ card again (it stays there while the error is shown).
 
 <CardGrid>
 	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="Rebuild from a backup" href="/guides/websites/rebuild/" description="When the old server is gone." />
 	<LinkCard title="Move an app" href="/guides/apps/move/" description="The same for Docker, Compose and Git apps." />
 	<LinkCard title="Move a database" href="/guides/data/move-database/" description="A database on its own." />
 	<LinkCard title="Move a customer" href="/guides/admin/move-customer/" description="Everything a customer has on one server." />

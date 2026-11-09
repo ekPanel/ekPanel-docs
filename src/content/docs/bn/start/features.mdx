@@ -12,8 +12,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 সাথে এখনো চালিয়ে দেখা না হয়ে থাকে, তালিকায় সেটা বলা আছে।
 
 <Aside type="note">
-এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line) আর website, app, database ও customer অন্য
-server-এ সরানো ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
+server-এ সরানো, আর backup থেকে website আবার বানানো ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -154,6 +154,8 @@ server-এ সরানো ([অনেক server](#many-servers)-এর নি�
 - Encryption key হলো একটা recovery key, যা একবারই দেখানো হয়। Panel এটা কখনো রাখে না।
 - একটা website নতুন folder-এ বা বর্তমান file-এর ওপরে restore করুন, আর database restore করুন
   তার জায়গাতেই।
+- <Badge text="পরের release" variant="note" /> একটা server হারিয়ে গেলে, তার website-গুলো তাদের S3 backup থেকে
+  [অন্য server-এ আবার বানান](/guides/websites/rebuild/)।
 
 ## Cloudflare DNS
 
@@ -240,7 +242,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -260,6 +262,9 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   না মোছা পর্যন্ত পুরোনো কপি থাকে।
 - <Badge text="পরের release" variant="note" /> একজন customer-এর এক server-এর সবকিছু (website, database আর app) একবারে
   সরানো: আগে সব check করা হয়, তারপর একটার পর একটা সরে, প্রথম ব্যর্থতায় থেমে যায়।
+- <Badge text="পরের release" variant="note" /> Server চলে গেলে আপনার বেছে নেওয়া database সহ একটা website তার সবচেয়ে
+  নতুন S3 backup থেকে অন্য server-এ আবার বানানো। Panel যে DNS চালায় তা পেছনে যায়। দুটো VM আর একটা S3 test server দিয়ে
+  test করা।
 
 ## API আর command line
 
@@ -289,7 +294,6 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| সরানো | যে server আর নেই তার জন্য একটা backup অন্য server-এ restore করা। (Website, app, database আর পুরো customer এখনই সরানো যায়।) |
 | Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |

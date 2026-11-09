@@ -116,7 +116,7 @@ segment of the path: `/sites/{id}/files` belongs to `sites`.
 | Scope | What it allows | Paths |
 | --- | --- | --- |
 | `read` | Every `GET` its owner may see, in all the areas below. Changes nothing. | all of them |
-| `sites` | Websites, WordPress, PHP apps, PHP versions, cron jobs and moving websites | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
+| `sites` | Websites, WordPress, PHP apps, PHP versions, cron jobs, and moving or rebuilding websites | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
 | `databases` | Databases and their users, and moving databases | `/databases`, `/moves` |
 | `apps` | Docker and Git apps, deploys, the app catalogue, cron jobs and moving apps | `/apps`, `/catalog`, `/cron`, `/moves` |
 | `dns` | Cloudflare and hosted DNS zones, records, templates, name servers | `/dns` |
@@ -228,7 +228,7 @@ What you get back depends on the endpoint:
 | A backup, a restore, a service restart, a PHP extension, a malware scan, a panel update, a [customer move](/guides/admin/move-customer/) | The task, with its `id` | `GET /tasks/{id}` until `status` is `succeeded` or `failed` |
 | A website, database or app (create or change) | The item, with `state` `pending` | `GET /sites/{id}` (or `/databases/{id}`, `/apps/{id}`) until `state` is `active` and `applied_generation` has reached `generation`; `error` means it failed, with the reason in `message` |
 | A Git deploy | The deployment | `GET /apps/{id}/deployments/{did}` until `status` is `live` or `failed` |
-| A [website move](/guides/websites/move/), [app move](/guides/apps/move/) or [database move](/guides/data/move-database/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` (or `/apps/{id}/moves`, `/databases/{id}/moves`) until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
+| A [website move](/guides/websites/move/) or [rebuild](/guides/websites/rebuild/), [app move](/guides/apps/move/) or [database move](/guides/data/move-database/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` (or `/apps/{id}/moves`, `/databases/{id}/moves`) until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
 
 A task looks like this:
 
@@ -440,6 +440,7 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Notification settings | `/settings/notifications` |
 | Audit log | `/audit` |
 | Moving websites | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a website](/guides/websites/move/#with-the-api-or-ekctl). |
+| Rebuilding a website from a backup | `POST /sites/{id}/rebuild` with `{"server_id": "…", "repo_id": "…", "database_ids": ["…"]}` (scope `sites`), then `GET /sites/{id}/moves`. See [Rebuild from a backup](/guides/websites/rebuild/#with-the-api-or-ekctl). |
 | Moving apps | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move an app](/guides/apps/move/#with-the-api-or-ekctl). |
 | Moving databases | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a database](/guides/data/move-database/#with-the-api-or-ekctl). |
 | Moving customers | `POST /customers/{id}/move`. See [Move a customer](/guides/admin/move-customer/#with-the-api-or-ekctl). |

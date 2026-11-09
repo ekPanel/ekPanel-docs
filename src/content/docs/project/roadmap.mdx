@@ -11,10 +11,10 @@ ekPanel is built in phases. Each phase ends with something you can install on a 
 use. **Phases 0 to 3 are done**, and so is the first part of phase 4: releases and updates (4a).
 The first release, v0.1.0, came out of it on 9 November 2026. Since then the API part of 4b
 (API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
-the next release, and so is most of 4c: moving a website, an app, a database or everything a
-customer has on a server to another server. Next in 4c is restoring a backup onto another
-server. The full plan, with every decision and
-test, is
+the next release, and so is 4c: moving a website, an app, a database or everything a
+customer has on a server to another server, and rebuilding a website on another server from
+its backup when its server is gone. Next is 4d, importers. The full plan, with every decision
+and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -120,10 +120,11 @@ Still to come:
 - One way to follow slow work: a `task_id` on every answer that starts it (today some answers
   are a task, some an item with its state, some a deployment)
 
-### 4c. Moving between servers <Badge text="partly done" variant="caution" />
+### 4c. Moving between servers <Badge text="done" variant="success" />
 
-Done in the `dev` branch; it comes with the **next release**. Website and app moves were tested
-with two VMs; database and customer moves so far only with the panel's automated tests:
+Done in the `dev` branch; it comes with the **next release**. Website and app moves, and
+rebuilding from a backup, were tested with two VMs; database and customer moves so far only
+with the panel's automated tests:
 
 - [Move a website](/guides/websites/move/), with the databases you choose, to another ekPanel
   server: files with owners and ACLs, databases, certificate, settings and cron jobs. The new
@@ -141,12 +142,20 @@ with two VMs; database and customer moves so far only with the panel's automated
 - [Move a customer](/guides/admin/move-customer/): everything a customer has on one server, one
   thing at a time (the first website takes all their databases along), all checked before the
   first move starts, stopping at the first failure; what moved stays moved
+- [Rebuild a website from a backup](/guides/websites/rebuild/) on another server, with the
+  databases you choose, when its server is gone: the S3 storage is connected on the new server
+  with its recovery key, and the website's home folder and databases come back from their
+  newest backups. Only for S3 storage, since a local backup location is on the lost server.
+  Tried with two VMs and an S3 test server: rebuilt in about 10 seconds with the same files,
+  owners, ACLs and data
 - The copy goes over the agents' own connections to the panel, not public SSH
 
-Still to come:
+Left for later:
 
-- Restore a backup onto another server, for a server that is gone (planned for backups kept in
-  S3 storage, since a local backup location is on the lost server)
+- Checking the new server's free disk space before a move, and suggesting the databases a
+  website really uses instead of all of its owner's
+- For app moves: fetching the app's page after the move, and taking a Git app's kept builds
+  along (until then, deploy again before rolling back)
 
 ### 4d. Importers
 

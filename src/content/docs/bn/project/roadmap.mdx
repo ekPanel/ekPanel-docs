@@ -10,8 +10,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
-description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর বেশিরভাগও তাই: একটা website, app, database বা একজন customer-এর এক server-এর সবকিছু অন্য
-server-এ সরানো। 4c-তে এরপর আসছে অন্য server-এ backup restore করা।
+description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-ও তাই: একটা website, app, database বা একজন customer-এর এক server-এর সবকিছু অন্য
+server-এ সরানো, আর server চলে গেলে একটা website তার backup থেকে অন্য server-এ আবার বানানো। এরপর আসছে 4d, importer।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -115,10 +115,10 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 - ধীর কাজের খোঁজ রাখার একটাই উপায়: কাজ শুরু করে এমন প্রতিটা উত্তরে একটা `task_id` (আজ কোনো উত্তর task, কোনোটা
   state-সহ জিনিস, কোনোটা deployment)
 
-### 4c. Server-এর মধ্যে সরানো <Badge text="আংশিক শেষ" variant="caution" />
+### 4c. Server-এর মধ্যে সরানো <Badge text="শেষ" variant="success" />
 
-`dev` branch-এ শেষ; আসবে **পরের release-এ**। Website আর app সরানো দুটো VM দিয়ে test করা হয়েছে; database আর customer
-সরানো এখন পর্যন্ত শুধু panel-এর automated test দিয়ে:
+`dev` branch-এ শেষ; আসবে **পরের release-এ**। Website আর app সরানো, আর backup থেকে আবার বানানো দুটো VM দিয়ে test করা
+হয়েছে; database আর customer সরানো এখন পর্যন্ত শুধু panel-এর automated test দিয়ে:
 
 - আপনার বেছে নেওয়া database সহ একটা [website অন্য ekPanel server-এ সরানো](/guides/websites/move/): owner আর ACL-সহ
   file, database, certificate, settings আর cron job। কিছু বদলানোর আগে নতুন server যাচাই করা হয়, panel যে DNS চালায় তা
@@ -132,12 +132,18 @@ build attestation যোগ করে, আর release publish করে। `v1.2
   website টাই তার database সহ সরান
 - একজন [customer সরানো](/guides/admin/move-customer/): তাঁর এক server-এর সবকিছু, একবারে একটা করে (প্রথম website তাঁর সব
   database সাথে নেয়), প্রথম সরানো শুরুর আগে সব check করা, প্রথম ব্যর্থতায় থেমে যায়; যা সরেছে তা সরানোই থাকে
+- Server চলে গেলে আপনার বেছে নেওয়া database সহ একটা [website backup থেকে অন্য server-এ আবার বানানো](/guides/websites/rebuild/):
+  recovery key দিয়ে নতুন server-এ S3 storage connect করা হয়, আর website-এর home folder আর database তাদের সবচেয়ে নতুন
+  backup থেকে ফেরত আসে। শুধু S3 storage-এর জন্য, কারণ local backup location হারানো server-এই থাকে। দুটো VM আর একটা S3
+  test server দিয়ে চালিয়ে দেখা: একই file, owner, ACL আর data সহ প্রায় ১০ second-এ আবার বানানো
 - Copy যায় panel-এর সাথে agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
 
-এখনো বাকি:
+পরের জন্য রাখা:
 
-- অন্য server-এ backup restore করা, যে server আর নেই তার জন্য (S3 storage-এ রাখা backup-এর জন্য plan করা, কারণ local
-  backup location হারানো server-এই থাকে)
+- সরানোর আগে নতুন server-এর খালি disk জায়গা check করা, আর মালিকের সব database-এর বদলে website আসলে যেগুলো ব্যবহার করে
+  সেগুলো দেখানো
+- App সরানোয়: সরানোর পরে app-এর পাতা খুলে দেখা, আর Git app-এর রাখা build-গুলোও সাথে নেওয়া (ততদিন rollback-এর আগে আবার
+  deploy করুন)
 
 ### 4d. Importer
 
