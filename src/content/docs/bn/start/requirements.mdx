@@ -33,8 +33,8 @@ Installer (`deploy/install.sh`) এগুলো check করে, আর অন�
 - **Root access**, সরাসরি বা `sudo` দিয়ে।
 - **systemd।** ekPanel তার service, cron job আর customer limit systemd দিয়ে চালায়, তাই systemd
   ছাড়া সাধারণ container-এ এটা চলে না। সাধারণ VPS বা virtual machine-এ চলে।
-- Server থেকে **internet access**, package (PostgreSQL, Caddy, PHP, Docker ইত্যাদি), certificate
-  আর Docker image download করার জন্য।
+- Server থেকে **internet access**, ekPanel-এর release (GitHub থেকে), package (PostgreSQL, Caddy, PHP,
+  Docker ইত্যাদি), certificate আর Docker image download করার জন্য।
 
 ### Memory আর disk
 
@@ -100,6 +100,8 @@ group"), সেখানেও এই port-গুলো allow করুন। uf
 
 - যেসব server-এ agent আছে, সেগুলো TCP port 7443-এ panel-এর দিকে **বাইরে** connect করে। এর জন্য
   কোনো incoming port লাগে না, তাই এগুলো NAT-এর পেছনেও থাকতে পারে।
+- প্রতিটা server HTTPS-এ `github.com` থেকে ekPanel-এর release আর update download করে, আর panel
+  সেখানেই নতুন release খোঁজে।
 - Mail পৌঁছে দিতে mail server-এর outgoing port 25 লাগে। অনেক cloud provider আপনি না চাওয়া পর্যন্ত
   এটা block করে রাখে; panel-এর delivery check আপনাকে সেটা জানিয়ে দেয়।
 
@@ -121,7 +123,8 @@ Website-এর ক্ষেত্রে, প্রতিটা domain-এর DNS
 
 ## আপনার নিজের computer
 
-Download করার মতো কোনো release এখনো নেই, তাই ekPanel আপনাকে source থেকে build করতে হবে। যা লাগবে:
+Release publish হওয়ার পরে আপনার শুধু একটা SSH client, একটা web browser আর একটা authenticator app লাগবে:
+server নিজেই সব download করে নেয়। প্রথম release-এর আগ পর্যন্ত ekPanel আপনাকে source থেকে build করতে হবে, আর যা লাগবে:
 
 - **Linux** (build শুধু Linux-এই ব্যবহার করা হয়েছে)।
 - **Go 1.27 বা নতুন।** পুরোনো `go` ekPanel build করার সময় নিজে থেকেই 1.27 download করে নেয়।
@@ -132,7 +135,7 @@ Download করার মতো কোনো release এখনো নেই, ত
   Authenticator, Aegis, 1Password বা এ রকম কিছু)।
 
 Server-এ Go আর Node.js install করলে server-এই build করতে পারেন।
-[Install guide](/start/install/)-এ দুই উপায়ই দেখানো আছে।
+[Install guide](/start/install/#install-from-your-own-build)-এ দুই উপায়ই দেখানো আছে।
 
 ## এরপর
 

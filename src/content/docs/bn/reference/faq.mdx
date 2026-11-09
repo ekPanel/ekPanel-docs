@@ -19,8 +19,8 @@ import { Aside } from '@astrojs/starlight/components';
 internet থেকে mail আসা দিয়ে email চেষ্টা করা হয়নি।
 
 এটা দিয়ে জিনিস চেষ্টা করে দেখুন, test করুন, আর সমস্যা খুঁজে পেতে আমাদের সাহায্য করুন। প্রথম release-এর
-আগে এতে গুরুত্বপূর্ণ কিছু host করবেন না। তার আগে কী কী আসছে, [roadmap](/project/roadmap/) দেখায়:
-signed release, সেগুলো download করে এমন installer, আর self-update।
+আগে এতে গুরুত্বপূর্ণ কিছু host করবেন না। Signed release, সেগুলো download করে এমন installer, আর
+self-update তৈরি হয়ে গেছে; এরপরই আসছে প্রথম release। দেখুন [roadmap](/project/roadmap/)।
 
 ## "ek" মানে কী?
 
@@ -133,6 +133,11 @@ Caddy-র, CrowdSec-এর আর PHP-এর package repository, WP-CLI, Railpac
 project-গুলোর নিজস্ব release page (প্রতিটা তার প্রকাশিত checksum-এর সাথে মিলিয়ে দেখা হয়), আর
 country blocking ব্যবহার করলে মাসে একবার DB-IP-এর country list। Panel-এর font self-hosted, তাই এটা
 font CDN-এ call করে না।
+
+Release থেকে install করা panel প্রতি 6 ঘণ্টায় ekPanel-এর নতুন release-ও খোঁজে। এটা GitHub-এর release
+page থেকে ছোট একটা file (`release.json`) download করে; এই request-এ আপনার panel-এর version বা অন্য কোনো
+তথ্য যায় না। `EKPANEL_UPDATE_CHECK=false` দিলে এটা বন্ধ হয় (দেখুন [আপডেট](/guides/admin/updates/))।
+Update নিজেও একই জায়গা থেকে release download করে।
 
 ## আমার data কোথায় থাকে?
 

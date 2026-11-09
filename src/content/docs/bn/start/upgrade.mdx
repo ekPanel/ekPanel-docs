@@ -1,65 +1,227 @@
 ---
 title: Upgrade করা
-description: Panel-এর server-এ ekPanel-এর নতুন build install করুন, আর আপনার অন্য server-গুলোর agent update করুন।
+description: Panel থেকেই panel আর প্রতিটা server-এর agent ekPanel-এর নতুন release-এ update করুন, দরকার হলে আগের version-এ ফিরে যান, অথবা installer আবার চালিয়ে upgrade করুন।
 sidebar:
   order: 7
 ---
 
 import { Steps, Aside } from '@astrojs/starlight/components';
 
-আজকের দিনে ekPanel upgrade করতে আপনি নতুন version build করে installer আবার চালান। আপনার data
-থেকে যায়। অন্য server-গুলোর agent update হয় তাদের কাছে নতুন program copy করে।
+Release থেকে install করা panel নিজেকে নিজেই update করে। আপনি **আপডেট** (Updates) page-এ
+**…-এ আপডেট করুন** (Update to …)-এ click করেন; panel তার নিজের server-এ নতুন version install করে,
+তারপর একটা একটা করে প্রতিটা server-এর agent update করে। প্রতিটা server-এ আগের version রেখে দেওয়া
+হয়, আর নতুনটা চালু না হলে আগেরটা নিজে থেকেই ফিরিয়ে আনা হয়।
 
-<Aside type="note" title="Self-update পরে আসবে">
-এখনো কোনো update button নেই, automatic update-ও নেই। [Roadmap](/project/roadmap/)-এর phase 4a-তে
-আসবে signed release, এমন একটা panel যা নতুন release দেখায় আর নিজেকে update করে (ফিরে যাওয়ার জন্য
-পুরোনো program রেখে দিয়ে), আর panel একটা একটা করে server-এর agent update করবে।
+<Aside type="note" title="প্রথম release-এর আগে">
+এখনো কোনো official release নেই, তাই update করার মতো কিছু নেই। Source থেকে build করা panel নিজেকে
+update করতে পারে না; নতুন code চালাতে আবার build করে
+[installer আবার চালান](#run-the-installer-again)।
 </Aside>
 
 ## শুরু করার আগে
 
-- আপনার build-এর পরে কী বদলেছে পড়ে নিন। Release notes না আসা পর্যন্ত সেটা হলো repository-র commit
-  history।
-- **Panel-এর নিজের data-র backup নিন।** ekPanel-এর [backup](/guides/data/backups/) আপনার website
-  আর database-এর জন্য, panel-এর database-এর জন্য না। Database-এর পরিবর্তন শুধু সামনের দিকে চলে,
-  তাই নতুন panel যে database বদলে ফেলেছে, পুরোনো panel সেটা ব্যবহার করতে পারে না। Panel-এর
-  server-এ:
+- আপনি একজন administrator। **আপডেট** (Updates) page শুধু administrator-রাই দেখেন।
+- Panel একটা release থেকে install করা। **আপডেট** page তার version দেখায়, যেমন `v0.1.0`। যদি লেখা
+  থাকে "এই প্যানেল কোনো রিলিজ থেকে নয়, সোর্স থেকে বানানো, তাই এটা নিজে নিজে আপডেট হয় না", তাহলে এর
+  বদলে [installer](#run-the-installer-again) ব্যবহার করুন।
+- Panel-এর নিজের server-এর agent connected। Installer এটা set up করে; নতুন panel install করে এই
+  agent-ই।
+- Panel-এর server আর আপনার অন্য server-গুলো HTTPS-এ `github.com` (বা
+  [`EKPANEL_RELEASES_URL`](/reference/configuration/)-এর mirror) পর্যন্ত পৌঁছাতে পারে। প্রতিটা
+  server নিজের update নিজেই download করে।
+- কী বদলেছে পড়ে নিন: update button-এর পাশের **কী নতুন** (What is new) release notes খোলে।
 
-  ```bash
-  sudo -u postgres pg_dump -Fc ekpanel > ekpanel-db.dump
-  sudo tar -czf ekpanel-data.tar.gz /var/lib/ekpanel /etc/ekpanel
-  ```
+Update নিজে থেকেই panel-এর database-এর একটা কপি রাখে। Panel-এর data folder-এর কপি রাখে না, কারণ
+update সেটা বদলায় না। তবু এর একটা কপি নিরাপদ আর গোপন কোথাও রাখা ভালো, কারণ এতে আছে panel-এর রাখা
+secret খোলার key আর সেই certificate authority, যাকে আপনার agent-রা বিশ্বাস করে:
 
-  দুটো file-ই নিরাপদ আর গোপন কোথাও রাখুন: `/var/lib/ekpanel`-এ আছে সেই key, যা panel-এর রাখা
-  secret-গুলো খোলে, আর সেই certificate authority, যাকে আপনার agent-রা বিশ্বাস করে।
+```bash
+sudo tar -czf ekpanel-data.tar.gz /var/lib/ekpanel /etc/ekpanel
+```
 
-## Panel-এর server upgrade করুন
+## Panel থেকে update করুন
 
 <Steps>
 
-1. নতুন version build করুন, [install](/start/install/#build-ekpanel)-এর মতো করে:
+1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **আপডেট** (Updates) খুলুন (address
+   `/settings/updates`)। **এই প্যানেল চলছে** (This panel runs) panel-এর version দেখায়।
 
-   ```bash
-   git pull
-   make release
-   ```
+2. নতুন কোনো version না দেখালে **আপডেট খুঁজুন** (Check for updates)-এ click করুন। Panel নিজেও
+   প্রতি 6 ঘণ্টায় খোঁজে। নতুন release থাকলে page-এ দেখায় **ekPanel … এসেছে** (ekPanel … is
+   available), সাথে update-টা যে চারটা কাজ করে সেগুলো।
 
-2. আপনার server-এর CPU type-এর archive-টা server-এ copy করে unpack করুন:
+3. **…-এ আপডেট করুন** (Update to …)-এ click করে নিশ্চিত করুন: "ekPanel …-এ আপডেট করবেন? আপডেটের
+   সময় প্যানেল আবার চালু হবে।"
 
-   ```bash
-   tar -xzf ekpanel-*-linux-amd64.tar.gz
-   cd ekpanel-*-linux-amd64
-   ```
+4. Page খোলা রাখুন। এটা দেখায় **প্যানেল …-এ আপডেট হচ্ছে…** (Updating the panel to …)। Panel
+   আবার চালু হওয়ার সময় দেখায় "প্যানেল আবার চালু হচ্ছে। এই পাতা নিজে থেকেই এগোবে।" Update
+   server-এ চলে, তাই page বন্ধ করলেও থামে না।
 
-3. Installer আবার চালান, **প্রথমবারের মতো একই option দিয়ে**:
+5. এরপর আসে **এজেন্টগুলো …-এ আপডেট হচ্ছে…** (Updating the agents to …), প্রতিটা server আর তার
+   ফলাফল সহ, যেমন যেমন শেষ হয়।
 
-   ```bash
-   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
-   ```
-
-4. Browser-এ panel reload করুন।
+6. শেষে page দেখায় **…-এ আপডেট হয়েছে** (Updated to …), আর একটা সবুজ bar: "প্যানেল এখন …-এ
+   চলছে। এই ইন্টারফেসের নতুন ভার্সন পেতে পাতাটা রিলোড করুন।" **রিলোড** (Reload)-এ click করুন।
 
 </Steps>
+
+Progress card database-এর কপি কোথায় আছে সেটাও দেখায়: "আপডেটের আগে রাখা ডেটাবেসের কপি:
+/var/backups/ekpanel/…"।
+
+পুরো সময় website, database আর app চালু থাকে। শুধু panel আর agent program restart হয়। Panel restart
+হওয়ার সময় কয়েক সেকেন্ড পাওয়া যায় না। কোনো server-এর agent restart হওয়ার সময় সেই server-এর খোলা web
+terminal আর চলতে থাকা Git build শেষ হয়ে যায়; পরে আবার শুরু করুন।
+
+## ধাপে ধাপে কী হয়
+
+<Steps>
+
+1. **Download আর check।** Panel-এর নিজের server-এর agent release download করে তার signature আর
+   checksum check করে, ঠিক যেমন [installer](/start/install/#how-the-download-is-checked) করে।
+   Check fail করলে কিছুই বদলায় না।
+
+2. **পরীক্ষামূলক চালানো।** নতুন program-টা একবার চালায়: `ekpanel version`-কে release-এর version
+   দেখাতে হবে। না দেখালে update এখানেই থামে।
+
+3. **Database-এর কপি।** `pg_dump -Fc` দিয়ে panel-এর database dump করে
+   `/var/backups/ekpanel/ekpanel-db-<old version>-<UTC time>.dump`-এ। সবচেয়ে নতুন তিনটা dump রাখা
+   হয়; পুরোনোগুলো মুছে যায়।
+
+4. **বদল আর restart।** `/usr/local/bin/ekpanel` বদলে দেয়, পুরোনো program রাখে
+   `/usr/local/bin/ekpanel.prev` হিসেবে, আর panel restart করে। চালু হওয়ার সময় নতুন panel তার
+   [database পরিবর্তন](#database-changes-run-by-themselves) apply করে।
+
+5. **Health check।** Agent panel-এর health check
+   (`http://127.0.0.1:8080/api/v1/health`)-এর কাছে তার version জানতে চায়। **90 সেকেন্ডের** মধ্যে
+   নতুন version সাড়া না দিলে agent পুরোনো program ফিরিয়ে আনে (নতুনটা রাখে `ekpanel.failed`
+   হিসেবে) আর সেটা restart করে। তখন page দেখায় **…-এ আপডেট ব্যর্থ** (Update to … failed), সাথে
+   কারণ।
+
+6. **Agent।** নতুন panel একটা একটা করে প্রতিটা server-এর agent update করে, panel-এর নিজের server
+   দিয়ে শুরু করে। প্রতিটা agent release download করে check করে, পুরোনো program রাখে
+   `/usr/local/bin/ekpanel-agent.prev` হিসেবে, একটা systemd timer (`ekpanel-agent-rollback`) চালু
+   করে, তারপর restart হয়। নতুন agent panel-এ পৌঁছালে timer থামিয়ে দেয়। **3 মিনিটের** মধ্যে panel-এ
+   না পৌঁছালে timer পুরোনো agent ফিরিয়ে আনে (নতুনটা রাখে `ekpanel-agent.failed` হিসেবে) আর
+   restart করে। প্রতিটা server-এর জন্য panel 4 মিনিট পর্যন্ত অপেক্ষা করে।
+
+</Steps>
+
+Update শুধু সামনের দিকে যায়, আর শুধু panel যে সবচেয়ে নতুন release খুঁজে পেয়েছে সেটায়। `v1.2.3-rc.1`-এর
+মতো suffix-ওয়ালা release হলো test release, এগুলো কখনো দেখানো হয় না।
+
+## প্রতিটা server-এর ফলাফল
+
+| ফলাফল | মানে |
+| --- | --- |
+| **আপডেট হয়েছে** (Updated) | Agent নতুন version নিয়ে ফিরে এসেছে। |
+| **আগেই হালনাগাদ** (Already current) | Agent-এ আগে থেকেই এই version বা এর চেয়ে নতুন ছিল। |
+| **অফলাইন** (Offline) | Server-এর agent connected ছিল না, তাই বাদ গেছে। [পরে](#servers-that-were-offline) update করুন। |
+| **ব্যর্থ** (Failed) | Update কাজ করেনি; পাশে কারণ দেখায়। নতুন agent আগেই install হয়ে গিয়ে থাকলে server নিজে থেকেই আগেরটা ফিরিয়ে আনে। |
+
+Agent-দের কাজ শেষ হলে administrator-রা **ekPanel আপডেট হয়েছে** (ekPanel updated) notification পান,
+কয়টা server আর তার কয়টায় সমস্যা হয়েছে সহ। Notification আর page-এর বাকি অংশের জন্য দেখুন
+[আপডেট](/guides/admin/updates/)।
+
+## Update ব্যর্থ হলে
+
+আগের version চলতে থাকে, আর administrator-রা **ekPanel আপডেট ব্যর্থ** (ekPanel update failed)
+notification পান।
+
+- **Download, signature বা পরীক্ষামূলক চালানো fail করেছে**: server-এ কিছুই বদলায়নি। Page কারণ
+  দেখায়, যেমন download error। সেটা ঠিক করুন (প্রায়ই outgoing HTTPS) আর আবার **…-এ আপডেট করুন**-এ
+  click করুন।
+- **Panel চালু হয়নি**: page দেখায় **…-এ আপডেট ব্যর্থ**, আর যেমন "the panel is still at v0.1.0:
+  version v0.2.0 did not start, so the previous one was kept"। নতুন program দেখার জন্য রাখা থাকে
+  `/usr/local/bin/ekpanel.failed` হিসেবে। কেন চালু হয়নি, panel-এর log বলে:
+
+  ```bash
+  sudo journalctl -u ekpanel --since "30 min ago"
+  ```
+
+- **কোনো agent ব্যর্থ (Failed) দেখায়**: 3 মিনিটের মধ্যে তার timer পুরোনো agent ফিরিয়ে আনে। নতুনটা
+  রাখা থাকে `/usr/local/bin/ekpanel-agent.failed` হিসেবে। ওই server-এ
+  `sudo journalctl -u ekpanel-agent` দেখুন। তখন ওই server-এর agent panel-এর চেয়ে পুরোনো দেখায়; কারণ
+  ঠিক হলে **1টা এজেন্ট আপডেট করুন** (Update 1 agent) দিয়ে আবার চেষ্টা করুন।
+
+আরও আছে [সমস্যা সমাধান](/reference/troubleshooting/#updates)-এ।
+
+## যে server-গুলো offline ছিল
+
+Update-এর সময় offline থাকা server তার পুরোনো agent রেখে দেয়। **আপডেট** page-এর **এজেন্ট**
+(Agents) card প্রতিটা server-কে তার **এজেন্টের ভার্সন** (Agent version)-সহ দেখায়, আর যে agent
+**প্যানেলের চেয়ে পুরোনো** (Older than the panel), সেটা চিহ্নিত করে। Server আবার online হলে
+**1টা এজেন্ট আপডেট করুন** (বা **…টা এজেন্ট আপডেট করুন**)-এ click করুন। এটা update-এর agent অংশটা
+আবার চালায়; যেসব server আগে থেকেই হালনাগাদ, সেগুলো বাদ যায়।
+
+Panel-এর পরপরই agent-গুলো update করুন। নতুন panel এমন কাজ চাইতে পারে যা পুরোনো agent এখনো জানে
+না; agent সেগুলো নেয় না, আর আপনি update না করা পর্যন্ত panel সংশ্লিষ্ট জিনিসগুলোতে "the agent does
+not support email; update the agent"-এর মতো একটা message দেখায়।
+
+## হাতে আগের version-এ ফেরা
+
+এটা খুব কমই লাগবে, কারণ ব্যর্থ update নিজে থেকেই আগের version ফিরিয়ে আনে। সফল একটা update-এর পরে
+ফিরে যেতে চাইলে, panel-এর server-এ:
+
+```bash
+sudo mv /usr/local/bin/ekpanel.prev /usr/local/bin/ekpanel && sudo systemctl restart ekpanel
+```
+
+যেকোনো server-এ agent-এর জন্যও একইভাবে:
+
+```bash
+sudo mv /usr/local/bin/ekpanel-agent.prev /usr/local/bin/ekpanel-agent && sudo systemctl restart ekpanel-agent
+```
+
+Database-এর পরিবর্তন শুধু নতুন জিনিস যোগ করে (নতুন table আর column), তাই এক version পিছিয়ে যেতে
+সাধারণত database restore লাগে না। Release notes-এ যদি বলা থাকে যে কোনো version database এমনভাবে
+বদলেছে যা পুরোনোটা ব্যবহার করতে পারে না, তাহলে panel বন্ধ রেখে update-এর রাখা কপিটা restore করুন।
+Dump folder শুধু root পড়তে পারে, তাই `sudo cat` file-টা `pg_restore`-কে দেয়:
+
+```bash
+sudo systemctl stop ekpanel
+sudo -u postgres dropdb ekpanel
+sudo -u postgres createdb -O ekpanel ekpanel
+sudo -u postgres psql -q -c "REVOKE ALL ON DATABASE ekpanel FROM PUBLIC"
+sudo cat /var/backups/ekpanel/ekpanel-db-<old version>-<time>.dump | sudo -u postgres pg_restore -d ekpanel
+sudo mv /usr/local/bin/ekpanel.prev /usr/local/bin/ekpanel
+sudo systemctl start ekpanel
+```
+
+Dump নেওয়ার পরে panel-এ যা বদলেছে (নতুন website, setting), এই restore-এ panel-এর database থেকে তা
+হারিয়ে যায়। এই পথ কোনো আসল server-এ পরীক্ষা করা হয়নি।
+
+## Installer আবার চালান
+
+Installer আবার চালালেও upgrade হয়: এটা যে version download করে (বা `--local-dir`-এ যেটা আছে) সেটা
+install করে, আর সব data রেখে দেয়। Source থেকে build করা panel-এর জন্য, বা command line পছন্দ করলে
+এটা ব্যবহার করুন।
+
+**আপডেট** button-এর মতো installer আগে database-এর কপি রাখে না। নিজে একটা কপি রাখুন:
+
+```bash
+sudo -u postgres pg_dump -Fc ekpanel > ekpanel-db.dump
+```
+
+তারপর panel-এর server-এ installer চালান, **প্রথমবারের মতো একই option দিয়ে**:
+
+- Release থেকে:
+
+  ```bash
+  curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com --email you@example.com
+  ```
+
+- নিজের build থেকে: আবার build করুন (`git pull` আর `make release VERSION=…`),
+  [Install](/start/install/#install-from-your-own-build)-এর মতো archive copy করে unpack করুন, আর
+  চালান `sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com`।
+
+Installer শুধু panel আর panel-এর server-এর agent update করে। আপনার অন্য server-গুলোর জন্য, panel
+release হলে **আপডেট** page-এর **…টা এজেন্ট আপডেট করুন** ব্যবহার করুন। না হলে প্রতিটা server-এ
+`--agent` আর একই `--local-dir` build দিয়ে installer চালান (বা release-এর `--agent` command); আগে থেকে
+connect থাকা server-এর জন্য কোনো token লাগে না:
+
+```bash
+sudo ./install.sh --agent --local-dir .
+```
 
 ### Installer আবার চালালে কী হয়
 
@@ -67,7 +229,8 @@ Installer একাধিকবার চালানোর মতো করে�
 
 - যে package নেই সেগুলো install করে, আর PostgreSQL-এর `ekpanel` database আর `ekpanel` user যেমন
   আছে তেমনই রাখে;
-- `/usr/local/bin/ekpanel` আর `/usr/local/bin/ekpanel-agent`-এর জায়গায় নতুন program বসায়;
+- `/usr/local/bin/ekpanel` আর `/usr/local/bin/ekpanel-agent`-এর জায়গায় নতুন program বসায়, আর
+  বদলে যাওয়া program রেখে দেয় `ekpanel.prev` বা `ekpanel-agent.prev` হিসেবে;
 - `/etc/ekpanel/panel.env`, `ekpanel.service` আর `ekpanel-agent.service` আবার লেখে, আর panel
   restart করে;
 - Enrolment বাদ দেয়, কারণ agent-এর credential আগে থেকেই আছে, আর panel-এর server-এর নিজের agent
@@ -85,71 +248,42 @@ Installer প্রতিবার Caddyfile আর panel-এর setting file �
 `/etc/caddy/Caddyfile` বা `/etc/ekpanel/panel.env`-এ হাতে করা পরিবর্তনও মুছে যায়।
 </Aside>
 
-### Database-এর পরিবর্তন নিজে থেকেই চলে
+## Database-এর পরিবর্তন নিজে থেকেই চলে
 
 নতুন panel চালু হলে, অন্য কিছু করার আগে নতুন database পরিবর্তনগুলো (migration) apply করে। প্রতিটা
 পরিবর্তন একবারই চলে, ক্রমানুসারে, একটা transaction-এর ভেতরে, আর panel মনে রাখে কোনগুলো হয়ে গেছে।
 আপনাকে হাতে কিছু চালাতে হয় না। কোনো পরিবর্তন ব্যর্থ হলে panel চালু হয় না; কেন, তা দেখায়
-`sudo journalctl -u ekpanel`।
-
-## অন্য server-এর agent update করুন
-
-Installer শুধু panel-এর নিজের server-এর agent update করে। বাকি প্রতিটা server-এ program বদলে
-agent restart করুন:
-
-<Steps>
-
-1. ওই server-এর CPU type-এর নতুন `ekpanel-agent` server-এ copy করুন।
-
-2. এটা install করে agent restart করুন:
-
-   ```bash
-   sudo install -m 0755 ekpanel-agent /usr/local/bin/ekpanel-agent
-   sudo systemctl restart ekpanel-agent
-   ```
-
-3. Panel-এ server-টা খুলুন। Agent আবার connect হলে **সিস্টেম** (System)-এর নিচে **এজেন্ট ভার্সন**
-   (Agent version)-এ নতুন version দেখাবে।
-
-</Steps>
-
-Agent তার credential রাখে `/etc/ekpanel/agent.json`-এ, তাই তাকে আবার enrol করতে হয় না। আবার
-connect হলে panel server-এর setting আবার apply করে।
-
-Panel-এর পরপরই agent-গুলো update করুন। নতুন panel এমন কাজ চাইতে পারে যা পুরোনো agent এখনো জানে
-না; agent সেগুলো নেয় না, আর আপনি update না করা পর্যন্ত panel সংশ্লিষ্ট জিনিসগুলোতে "the agent does
-not support email; update the agent"-এর মতো একটা message দেখায়।
-
-<Aside type="tip">
-Agent restart হওয়ার সময় এক মিনিটের জন্য server offline হলে "offline" notification যায় না:
-alert পাঠানোর আগে panel তিন মিনিট অপেক্ষা করে।
-</Aside>
+`sudo journalctl -u ekpanel`। Panel থেকে update করলে agent তখন ওপরে যেমন বলা আছে, আগের version ফিরিয়ে
+আনে।
 
 ## Version check করুন
 
-যেকোনো server-এ:
+**আপডেট** page panel-এর version আর প্রতিটা agent-এর version দেখায়। কোনো server-এর নিজের page-এ
+**সিস্টেম** (System)-এর নিচে তার agent version দেখায়। Server-এ:
 
 ```bash
 ekpanel version          # on the panel's server
 ekpanel-agent version
 ```
 
-Git checkout থেকে করা build-এর নাম হয় সবচেয়ে কাছের tag আর commit দিয়ে (`git describe` থেকে),
-আর Git না থাকলে `dev`।
+Release তার version দেখায়, যেমন `v0.1.0`। Git checkout থেকে করা build-এর নাম হয় সবচেয়ে কাছের tag আর
+commit দিয়ে (`git describe` থেকে), আর Git না থাকলে `dev`।
 
 ## সমস্যা হলে
 
-- **Upgrade-এর পরে panel চালু হয় না**: `sudo journalctl -u ekpanel` পড়ুন। Database-এর কোনো
-  পরিবর্তন ব্যর্থ হলে সেখানে লেখা থাকে।
-- **একটা server offline-ই থেকে যায়**: ওই server-এ `sudo systemctl status ekpanel-agent` check
-  করুন। ভুল CPU type-এর জন্য build করা agent চালু হতে পারে না।
-- **পুরোনো version-এ ফিরে যাওয়া**: downgrade-এর কোনো command নেই। Panel বন্ধ করুন, upgrade-এর
-  আগে বানানো dump থেকে তার database restore করুন (`pg_restore` দিয়ে), পুরোনো program install
-  করুন, আর আবার চালু করুন। এই পথ পরীক্ষা করা হয়নি; dump ছাড়া পুরোনো panel নতুন database-এর সাথে
-  হয়তো একদমই কাজ করবে না।
+- **"প্যানেল যে সার্ভারে চলছে, তার এজেন্ট যুক্ত নেই, তাই আপডেট বসানো যাচ্ছে না।"** (The agent on
+  the panel's own server is not connected, so it cannot install the update.): panel-এর server-এ
+  `sudo systemctl status ekpanel-agent` দেখুন।
+- **Installer আবার চালানোর পরে panel চালু হয় না**: `sudo journalctl -u ekpanel` পড়ুন। Database-এর
+  কোনো পরিবর্তন ব্যর্থ হলে সেখানে লেখা থাকে।
+- **Agent update হওয়ার পরে একটা server offline-ই থেকে যায়**: rollback timer-এর জন্য 3 মিনিট অপেক্ষা
+  করুন, তারপর ওই server-এ `sudo systemctl status ekpanel-agent` দেখুন।
+
+আরও আছে [সমস্যা সমাধান](/reference/troubleshooting/#updates)-এ।
 
 ## আরও দেখুন
 
+- [আপডেট](/guides/admin/updates/): Updates page, update খোঁজা আর notification।
 - [Install করা](/start/install/)
 - [Server যোগ করা](/start/add-server/)
 - [Roadmap](/project/roadmap/)

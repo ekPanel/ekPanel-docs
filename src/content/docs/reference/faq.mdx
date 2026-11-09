@@ -19,8 +19,8 @@ service: Cloudflare's API was tested against a fake copy of it, and email was no
 mail to and from the internet.
 
 Use it to try things out, test, and help us find problems. Do not host anything important on
-it until the first release. The [roadmap](/project/roadmap/) shows what comes before that:
-signed releases, an installer that downloads them, and self-updates.
+it until the first release. Signed releases, an installer that downloads them, and
+self-updates are ready; the first release comes next. See the [roadmap](/project/roadmap/).
 
 ## What does "ek" mean?
 
@@ -135,6 +135,12 @@ Caddy's, CrowdSec's and the PHP package repositories, the projects' own release 
 tools such as WP-CLI, Railpack and Stalwart (each checked against its published checksum), and
 DB-IP's country list once a month if you use country blocking. The panel's fonts are
 self-hosted, so it does not call font CDNs.
+
+A panel installed from a release also looks for a new ekPanel release every 6 hours. It
+downloads one small file (`release.json`) from GitHub's release page; the request carries no
+version or other data about your panel. `EKPANEL_UPDATE_CHECK=false` turns this off (see
+[Updates](/guides/admin/updates/)). Updates themselves download the release from the same
+place.
 
 ## Where is my data?
 

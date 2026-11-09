@@ -13,7 +13,7 @@ outside service, the list says so.
 
 <Aside type="note">
 ekPanel has no release yet. "Works today" means it works when you
-[build and install it from source](/start/install/).
+[build and install it from source](/start/install/#install-from-your-own-build).
 </Aside>
 
 ## Websites
@@ -230,10 +230,14 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/)
 
-- Add servers with one command. The agent dials out to the panel over mutual TLS, so it
-  works behind NAT.
+- Add servers with one command, which installs the agent and the web server. The agent dials
+  out to the panel over mutual TLS, so it works behind NAT.
+- Signed releases and a one-line installer that checks the signature. The panel finds new
+  releases, updates itself and then every server's agent from one page, keeps the previous
+  version, and puts it back if the new one does not start. (The first release is not
+  published yet.)
 - Live CPU, memory, disk, network, load and uptime, with 30 days of history.
 - Services on each server (Caddy, PostgreSQL, cron and others) with restart.
 - Background tasks with their progress shown in the panel.
@@ -250,7 +254,6 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 
 | Area | What is planned |
 | --- | --- |
-| Releases <Badge text="next" variant="note" /> | Signed release builds, a one-line installer that downloads them, self-update of the panel and agents, an installer for an agent alone, versions shown per server |
 | API | API tokens with scopes, an OpenAPI description, an `ekpanel` command-line tool, later a Terraform provider |
 | Moving | Move a website, app or database to another server; restore a backup onto another server; move a whole customer |
 | Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |

@@ -25,6 +25,8 @@ Panel একটাই program, `/usr/local/bin/ekpanel`। এটা web UI আ�
 | `EKPANEL_DEV_DB` | `--dev-db` | `false` | Data folder-এর ভেতরে একটা আলাদা, embedded PostgreSQL চালু করে। শুধু development-এর জন্য। |
 | `EKPANEL_DATA_DIR` | `--data-dir` | `/var/lib/ekpanel` | Panel-এর যেসব state database-এ নেই, সেগুলোর folder (নিচে দেখুন)। |
 | `EKPANEL_SECURE_COOKIES` | `--secure-cookies` | `true` | Session cookie-কে `Secure` চিহ্ন দেয় আর এর নাম রাখে `__Host-ekpanel_session`। শুধু plain-HTTP development-এ এটা বন্ধ করুন। |
+| `EKPANEL_RELEASES_URL` | `--releases-url` | `https://github.com/ekPanel/ekpanel/releases` | ekPanel-এর release কোথায় publish হয়: update খোঁজা, update আর **সার্ভার যোগ করুন** (Add server)-এর command-এর জন্য। Mirror-এর layout একই হতে হবে; download তখনও release key দিয়ে check হয়। Installer যে address ব্যবহার করেছে সেটাই লেখে। |
+| `EKPANEL_UPDATE_CHECK` | `--update-check` | `true` | চালু হওয়ার এক মিনিট পরে আর প্রতি 6 ঘণ্টায় নতুন release খোঁজে (শুধু release build-এ)। `false` দিলে নিজে থেকে খোঁজা বন্ধ হয়; [আপডেট](/guides/admin/updates/) page-এর **আপডেট খুঁজুন** (Check for updates) তবু কাজ করে। |
 
 True বা false value সাধারণ সব রূপে লেখা যায় (`true`, `false`, `1`, `0`)। পড়া যায় না এমন value
 দিলে default ব্যবহার হয়।
@@ -128,7 +130,8 @@ atomically আবার লেখে, তাই crash হলেও কখনো 
 
 ## Installer যেসব file লেখে
 
-`deploy/install.sh` panel-এর server set up করে। এটা যেসব setting রেখে যায়:
+`deploy/install.sh` panel-এর server set up করে। এটা যেসব setting রেখে যায় সেগুলো নিচে। `--agent` দিয়ে
+set up করা server-এ এটা শুধু `ekpanel-agent.service` আর Caddyfile লেখে (যাতে panel থাকে না)।
 
 <Tabs>
 <TabItem label="/etc/ekpanel/panel.env">
@@ -138,6 +141,7 @@ EKPANEL_LISTEN=127.0.0.1:8080
 EKPANEL_AGENT_LISTEN=:7443
 EKPANEL_DATABASE_URL=postgres:///ekpanel?host=/var/run/postgresql
 EKPANEL_DATA_DIR=/var/lib/ekpanel
+EKPANEL_RELEASES_URL=https://github.com/ekPanel/ekpanel/releases
 ```
 
 Database URL-টা PostgreSQL-এর local socket আর peer authentication ব্যবহার করে, তাই কোনো database
@@ -175,24 +179,21 @@ server-এর address-গুলোতে `/etc/ekpanel/tls/`-এর একটা
 `install.sh` আবার চালালে (upgrade করতে) `panel.env`, দুটো service file আর Caddyfile আবার লেখা
 হয়। নিজে হাতে করা পরিবর্তন হারিয়ে যায়। এগুলো বদলালে, কী বদলেছেন লিখে রাখুন আর প্রতিটা
 upgrade-এর পরে আবার করুন। আর `EKPANEL_LISTEN` `127.0.0.1:8080`-এই রাখুন: Caddyfile আর
-installer-এর start check panel-কে সেখানেই আশা করে।
+installer-এর start check panel-কে সেখানেই আশা করে। **আপডেট** (Updates) page থেকে update করলে শুধু
+program বদলায়; এই file-গুলো আবার লেখা হয় না।
 </Aside>
 
 ### Installer-এর option
 
 ```bash
-sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- [options]
+sudo ./install.sh --local-dir DIR [options]
 ```
 
-| Option | কী করে |
-| --- | --- |
-| `--local-dir DIR` | যে folder-এ `ekpanel` আর `ekpanel-agent` binary আছে। আপাতত এটা দিতেই হবে: release download করার সুবিধা আসবে প্রথম release-এর সাথে। |
-| `--domain NAME` | এমন একটা DNS name যা এই server-এর দিকে point করে। Caddy এর জন্য একটা trusted certificate নেয়। না দিলে browser certificate warning দেখায়। |
-| `--email ADDRESS` | Let's Encrypt-এর মেয়াদ শেষের notice-এর জন্য যোগাযোগের address। ঐচ্ছিক। |
-| `-h`, `--help` | ব্যবহারের নিয়ম দেখায়। |
-
-পুরো প্রক্রিয়ার জন্য [Install](/start/install/) আর আবার চালানোর জন্য [Upgrade](/start/upgrade/)
-দেখুন।
+Option-গুলো হলো `--domain`, `--email`, `--agent` (`--panel`, `--token` আর `--ca-pin`-সহ),
+`--version`, `--local-dir`, `--release-url` আর `--release-key`। প্রতিটার ব্যাখ্যা আছে
+[Install করা](/start/install/#installer-options)-তে। পুরো প্রক্রিয়ার জন্য [Install করা](/start/install/)
+আর আবার চালানোর জন্য [Upgrade করা](/start/upgrade/) দেখুন।
 
 ## Server-এ একটা setting বদলানো
 

@@ -16,6 +16,7 @@ to look when you want to change something.
 <FileTree>
 
 - .github/workflows/ci.yml CI: Go checks and tests, UI typecheck, translations, build
+- .github/workflows/release.yml builds, signs and publishes a release for a vX.Y.Z tag
 - assets/brand/ logo files and their rules (README.md)
 - cmd/
   - ekpanel/ the panel program
@@ -26,6 +27,7 @@ to look when you want to change something.
   - TRANSLATING.md how to translate the UI
 - internal/ all Go packages (see below)
 - scripts/
+  - release-notes.sh a version's release notes from CHANGELOG.md
   - test-vm.sh disposable Ubuntu test VM
 - web/ React and TypeScript UI
 - CONTRIBUTING.md
@@ -66,14 +68,16 @@ Each line comes from the package's own doc comment.
 | `hub` | Live state of connected servers (online status, recent metrics), fan-out to browsers, and routing operations to agents. |
 | `notify` | Notifications: the panel's inbox and channels (email, Telegram, Discord, Slack, webhooks), in each user's language (`locales/`). |
 | `pki` | The panel's private certificate authority for agent connections. |
+| `release` | Finds, downloads and checks ekPanel releases: the signed `SHA256SUMS`, the archives, and version comparison. `release.pub` is the release signing key. |
 | `secretbox` | Encrypts small secrets the panel must reuse, so a copy of the database alone does not reveal them. |
 | `store` | The data access layer over PostgreSQL: one file per area (`sites.go`, `apps.go`, `customers.go`…). |
-| `tasks` | Background work stored in the `tasks` table: anything slow, and anything that asks an agent to change a server. Includes the reconcile that builds a server's desired state. |
+| `tasks` | Background work stored in the `tasks` table: anything slow, and anything that asks an agent to change a server. Includes the reconcile that builds a server's desired state, and the self-update (`update.go`). |
+| `updates` | Looks for new ekPanel releases and tells the administrators about them. |
 | `webui` | Embeds the built web app. `make ui` copies `web/dist` into `internal/webui/dist`. |
 
 ### Migrations
 
-`internal/db/migrations/` holds SQL files named `0001_init.sql` to (today) `0028_name_servers.sql`.
+`internal/db/migrations/` holds SQL files named `0001_init.sql` to (today) `0029_updates.sql`.
 The panel applies new ones in name order when it starts. Add a new file with the next number;
 never change one that is already on `dev`.
 

@@ -15,6 +15,7 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 <FileTree>
 
 - .github/workflows/ci.yml CI: Go check আর test, UI typecheck, অনুবাদ, build
+- .github/workflows/release.yml vX.Y.Z tag-এর জন্য release build, sign আর publish করে
 - assets/brand/ logo file আর সেগুলোর নিয়ম (README.md)
 - cmd/
   - ekpanel/ panel program
@@ -25,6 +26,7 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
   - TRANSLATING.md UI কীভাবে অনুবাদ করবেন
 - internal/ সব Go package (নিচে দেখুন)
 - scripts/
+  - release-notes.sh CHANGELOG.md থেকে একটা version-এর release notes
   - test-vm.sh ফেলে দেওয়ার মতো Ubuntu test VM
 - web/ React আর TypeScript UI
 - CONTRIBUTING.md
@@ -65,14 +67,16 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 | `hub` | Connect থাকা server-গুলোর live state (online status, সাম্প্রতিক metric), browser-গুলোতে fan-out, আর agent-এ operation routing। |
 | `notify` | Notification: panel-এর inbox আর channel (email, Telegram, Discord, Slack, webhook), প্রতিটা user-এর ভাষায় (`locales/`)। |
 | `pki` | Agent connection-এর জন্য panel-এর private certificate authority। |
+| `release` | ekPanel-এর release খোঁজে, download করে আর check করে: sign করা `SHA256SUMS`, archive, আর version তুলনা। `release.pub` হলো release sign করার key। |
 | `secretbox` | Panel-কে যে ছোট secret আবার ব্যবহার করতে হয় সেগুলো encrypt করে, যাতে শুধু database-এর একটা copy থেকে সেগুলো জানা না যায়। |
 | `store` | PostgreSQL-এর ওপর data access layer: প্রতিটা area-র জন্য একটা file (`sites.go`, `apps.go`, `customers.go`…)। |
-| `tasks` | `tasks` table-এ রাখা background কাজ: যা কিছু ধীর, আর যা কিছু agent-কে server বদলাতে বলে। এতে সেই reconcile-ও আছে যা একটা server-এর desired state বানায়। |
+| `tasks` | `tasks` table-এ রাখা background কাজ: যা কিছু ধীর, আর যা কিছু agent-কে server বদলাতে বলে। এতে সেই reconcile-ও আছে যা একটা server-এর desired state বানায়, আর self-update (`update.go`)। |
+| `updates` | ekPanel-এর নতুন release খোঁজে আর administrator-দের সে খবর দেয়। |
 | `webui` | Build করা web app embed করে। `make ui` `web/dist`-কে `internal/webui/dist`-এ copy করে। |
 
 ### Migration
 
-`internal/db/migrations/`-এ `0001_init.sql` থেকে (আজকের হিসেবে) `0028_name_servers.sql` নামের SQL file আছে।
+`internal/db/migrations/`-এ `0001_init.sql` থেকে (আজকের হিসেবে) `0029_updates.sql` নামের SQL file আছে।
 Panel চালু হওয়ার সময় নতুনগুলো নামের ক্রমে apply করে। পরের number দিয়ে একটা নতুন file যোগ করুন; যেটা আগেই
 `dev`-এ আছে সেটা কখনো বদলাবেন না।
 

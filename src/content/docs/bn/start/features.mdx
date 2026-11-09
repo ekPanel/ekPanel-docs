@@ -13,7 +13,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Aside type="note">
 ekPanel-এর এখনো কোনো release নেই। "আজ কাজ করে" মানে, আপনি যখন
-[source থেকে build করে install করেন](/start/install/), তখন কাজ করে।
+[source থেকে build করে install করেন](/start/install/#install-from-your-own-build), তখন কাজ করে।
 </Aside>
 
 ## Website
@@ -236,10 +236,13 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/)
 
-- একটা command দিয়ে server যোগ করুন। Agent নিজে mutual TLS দিয়ে panel-এ connect করে, তাই NAT-এর
-  পেছনেও কাজ করে।
+- একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
+  panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
+- Sign করা release, আর এক লাইনের installer যা signature check করে। Panel নতুন release খুঁজে পায়, এক
+  page থেকে নিজেকে আর তারপর প্রতিটা server-এর agent update করে, আগের version রেখে দেয়, আর নতুনটা চালু
+  না হলে আগেরটা ফিরিয়ে আনে। (প্রথম release এখনো publish হয়নি।)
 - Live CPU, memory, disk, network, load আর uptime, 30 দিনের history-সহ।
 - প্রতিটা server-এর service (Caddy, PostgreSQL, cron আর অন্যান্য), restart-সহ।
 - Background task, panel-এ তাদের অগ্রগতি দেখা যায়।
@@ -256,7 +259,6 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 | বিষয় | যা plan করা আছে |
 | --- | --- |
-| Release <Badge text="পরের ধাপ" variant="note" /> | Signed release build, সেগুলো download করে এমন এক লাইনের installer, panel আর agent-এর self-update, শুধু agent-এর জন্য একটা installer, প্রতিটা server-এ version দেখানো |
 | API | Scope-সহ API token, একটা OpenAPI description, একটা `ekpanel` command-line tool, পরে একটা Terraform provider |
 | সরানো | একটা website, app বা database অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো |
 | Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |

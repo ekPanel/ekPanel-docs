@@ -1,29 +1,31 @@
 ---
 title: Server যোগ করা
-description: Agent install করে আর একবারের একটা token দিয়ে enrol করে আপনার panel-এ আরেকটা Linux server connect করুন।
+description: এক command-এ আরেকটা Linux server আপনার panel-এ connect করুন; command-টা agent আর web server install করে, আর একবারের একটা token দিয়ে enrol করে।
 sidebar:
   order: 6
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside } from '@astrojs/starlight/components';
 
-একটা panel অনেক server চালাতে পারে। একটা server যোগ করতে আপনি তাতে ekPanel agent বসান আর panel
-থেকে পাওয়া একটা command চালান, তারপর server-টা live পরিসংখ্যান-সহ দেখা যায়। এরপর তাতে website,
-database আর app host করতে পারবেন।
+একটা panel অনেক server চালাতে পারে। একটা server যোগ করতে আপনি panel-এ তার একটা নাম দেন, আর panel
+যে একটা command দেখায় সেটা নতুন server-এ চালান। Command-টা ekPanel agent আর web server install করে,
+server-টাকে panel-এর সাথে connect করে, তারপর server-টা live পরিসংখ্যান-সহ দেখা যায়। এরপর তাতে
+website, database আর app host করতে পারবেন।
 
-<Aside type="note" title="ভবিষ্যতের চেয়ে বেশি হাতের কাজ">
-শুধু agent-এর জন্য কোনো installer এখনো নেই; এটা আসবে প্রথম release-এর সাথে
-([roadmap](/project/roadmap/), phase 4a)। আজকের দিনে agent program-টা আপনাকে নিজেই copy করতে
-হয়, আর server-টা website host করলে তাতে Caddy তৈরি করে নিতে হয়। এই page-এ প্রতিটা ধাপ দেখানো আছে।
+<Aside type="note" title="প্রথম release-এর আগে">
+এই একটা command GitHub থেকে panel-এর নিজের release download করে। প্রথম release publish না হওয়া
+পর্যন্ত আপনার panel source থেকে build করা, তাই
+[Panel যখন publish করা release নয়](#when-the-panel-is-not-a-published-release)-এর ধাপগুলো ব্যবহার
+করুন।
 </Aside>
 
 ## Enrolment কীভাবে কাজ করে
 
 1. Panel-এ আপনি একটা নাম দিয়ে server যোগ করেন। Panel উত্তরে দেয় একটা **একবারের token**
    (one-time token) আর **CA pin**, অর্থাৎ panel-এর private certificate authority-র fingerprint।
-2. নতুন server-এ `ekpanel-agent enroll` TCP port 7443-এ panel-এর সাথে connect করে। এটা panel-এর
-   certificate-কে CA pin-এর সাথে মিলিয়ে দেখে, তাই কেউ ধোঁকা দিয়ে একে অন্য machine-এর সাথে কথা
-   বলাতে পারে না।
+2. নতুন server-এ `ekpanel-agent enroll` (installer আপনার হয়ে এটা চালায়) TCP port 7443-এ panel-এর
+   সাথে connect করে। এটা panel-এর certificate-কে CA pin-এর সাথে মিলিয়ে দেখে, তাই কেউ ধোঁকা দিয়ে
+   একে অন্য machine-এর সাথে কথা বলাতে পারে না।
 3. Agent একটা private key বানায়, যা কখনো server ছেড়ে যায় না, আর একটা certificate request-এর
    সাথে token পাঠায়। Panel token check করে 90 দিনের জন্য বৈধ একটা client certificate sign করে
    দেয়। এরপর token-টা আর কাজে লাগে না।
@@ -48,92 +50,14 @@ Panel-এর server-এ:
 নতুন server-এ:
 
 - amd64 বা arm64-এ Ubuntu 24.04+ বা Debian 12+, systemd-সহ, ঠিক
-  [panel-এর server](/start/requirements/)-এর মতো। Feature-গুলোর যা লাগে, যেমন PHP, MariaDB বা
-  Docker, agent সেগুলো `apt` দিয়ে install করে।
+  [panel-এর server](/start/requirements/)-এর মতো। নতুন একটা server নিন: ekPanel-এর web server-এর
+  port 80 আর 443 লাগে। Feature-গুলোর যা লাগে, যেমন PHP, MariaDB বা Docker, agent সেগুলো `apt`
+  দিয়ে install করে।
 - Root access। Agent root হিসেবে চলে, কারণ এটাই server চালায়।
-- Port 7443-এ panel-এর দিকে, আর package-এর জন্য internet-এর দিকে outgoing access।
-- এর CPU type-এর জন্য build করা `ekpanel-agent` program। এটা panel-এর মতোই একই
-  [release archive](/start/install/#build-ekpanel)-এ আছে (`make release`)।
+- Port 7443-এ panel-এর দিকে, release-এর জন্য HTTPS-এ `github.com`-এর দিকে, আর package-এর জন্য
+  internet-এর দিকে outgoing access।
 
-## Server তৈরি করুন
-
-<Steps>
-
-1. Agent-টা server-এ copy করে install করুন:
-
-   ```bash
-   scp ekpanel-agent root@new-server:
-   ```
-
-   তারপর নতুন server-এ:
-
-   ```bash
-   sudo install -m 0755 ekpanel-agent /usr/local/bin/ekpanel-agent
-   sudo install -d -m 0755 /etc/ekpanel
-   ```
-
-   দ্বিতীয় command-টা agent-এর folder এমনভাবে তৈরি করে যাতে web server সেটা পড়তে পারে, যেমনটা
-   panel-এর installer করে। Agent নিজে এটা তৈরি করলে root ছাড়া সবার জন্য বন্ধ থাকত, আর agent
-   সেখানে যে website file লেখে Caddy সেগুলো পড়তে পারত না।
-
-2. এই server যদি **domain-সহ website বা app** host করে, তাহলে Caddy আর `acl` package install
-   করুন, আর Caddy-কে সেই folder দেখিয়ে দিন যেখানে agent প্রতিটা website-এর জন্য একটা করে file
-   লেখে। Panel-এর installer panel-এর server-এ এটা করে দেয়; অন্য server-এ আপাতত আপনি একবার
-   হাতে করবেন:
-
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y curl gnupg acl
-   curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-   curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-   sudo apt-get update
-   sudo apt-get install -y caddy
-   sudo install -d -m 0755 /etc/ekpanel/caddy/sites
-   ```
-
-   তারপর `/etc/caddy/Caddyfile`-এর জায়গায় এটা দিন:
-
-   ```text
-   # Websites are in /etc/ekpanel/caddy/sites.
-   import /etc/ekpanel/caddy/sites/*.caddy
-   ```
-
-   আর `sudo systemctl reload caddy` দিয়ে Caddy reload করুন। Ubuntu-তে
-   `software-properties-common`-ও install করুন, PHP package repository যোগ করতে agent এটা ব্যবহার
-   করে।
-
-3. Agent-এর systemd service তৈরি করুন, যাতে boot-এর সময় এটা চালু হয় আর থেমে গেলে আবার চালু হয়।
-   Panel-এর server-এ installer ঠিক এই unit-ই লেখে। এটা
-   `/etc/systemd/system/ekpanel-agent.service` নামে save করুন:
-
-   ```ini
-   [Unit]
-   Description=ekPanel agent
-   After=network-online.target
-   Wants=network-online.target
-
-   [Service]
-   # The agent manages this server (websites, services, files), so it runs as root.
-   ExecStart=/usr/local/bin/ekpanel-agent run --config /etc/ekpanel/agent.json
-   Restart=always
-   RestartSec=3
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-   তারপর `sudo systemctl daemon-reload` চালান। এখনই এটা চালু করবেন না।
-
-</Steps>
-
-<Aside type="caution" title="Recipe হিসেবে পরীক্ষা করা হয়নি">
-ধাপ 2 panel-এর installer যা set up করে সেটাই নকল করে, আর agent ঠিক সেটাই আশা করে (Caddy-র
-configuration `/etc/caddy/Caddyfile`-এ, website file `/etc/ekpanel/caddy/sites`-এ, আর `acl`
-package থেকে `setfacl`)। আলাদা recipe হিসেবে এটা এখনো পরীক্ষা করা হয়নি। নতুন server-এর কোনো
-website যদি **সমস্যা** (Problem) দেখায়, website-এর page-এর message বলে দেয় কী নেই।
-</Aside>
-
-## Panel-এর সাথে connect করুন
+## Server যোগ করুন
 
 <Steps>
 
@@ -142,24 +66,22 @@ website যদি **সমস্যা** (Problem) দেখায়, website-�
 2. চিনতে পারবেন এমন একটা **সার্ভারের নাম** (Server name) দিন, যেমন "Singapore web 1", আর
    **এগিয়ে যান** (Continue)-এ click করুন।
 
-3. **… যুক্ত করুন** (Connect) dialog-এ server-এ চালানোর command দেখায়। দেখতে এ রকম:
+3. **… যুক্ত করুন** (Connect …) dialog-এ **বসান আর যুক্ত করুন** (Install and connect)-এর নিচে একটা
+   command দেখায়। দেখতে এ রকম:
 
    ```bash
-   sudo ekpanel-agent enroll \
+   curl -fsSL https://github.com/ekPanel/ekpanel/releases/download/v0.1.0/install.sh | sudo bash -s -- --agent \
      --panel panel.example.com:7443 \
      --token <one-time token> \
      --ca-pin sha256:<fingerprint>
    ```
 
-   Browser-এ আপনি যে host নামে panel খুলেছেন, panel সেটা আর agent port নিজেই বসিয়ে দেয়। Copy
-   button দিয়ে command-টা copy করে নতুন server-এ চালান। এটা উত্তর দেয় `Enrolled as server …`।
+   Address-এর version-টা আপনার panel-এর নিজের version, তাই নতুন server panel-এর মতো একই version-এর
+   agent পায়। Browser-এ আপনি যে host নামে panel খুলেছেন, panel সেটা আর agent port নিজেই বসিয়ে
+   দেয়।
 
-4. Agent চালু করুন। Dialog-এ `sudo ekpanel-agent run` দেখায়, যা এটাকে foreground-এ চালায়। তার
-   বদলে ওপরের ধাপের service ব্যবহার করুন, যাতে reboot-এর পরেও এটা চলে:
-
-   ```bash
-   sudo systemctl enable --now ekpanel-agent
-   ```
+4. Copy button দিয়ে command-টা copy করে নতুন server-এ root হিসেবে চালান। কয়েক মিনিট লাগে, বেশিরভাগই
+   package download, আর শেষে দেখায় "This server is connected to the panel."
 
 5. Panel-এ ফিরে দেখবেন, কয়েক সেকেন্ডের মধ্যে dialog **এজেন্ট যুক্ত হওয়ার অপেক্ষা করছি…** (Waiting
    for the agent to connect…) থেকে বদলে **যুক্ত হয়েছে!** (Connected!) হয়ে যায়। **সম্পন্ন**
@@ -169,6 +91,82 @@ website যদি **সমস্যা** (Problem) দেখায়, website-�
 
 Server-টা এখন **সার্ভার** page-এ **অনলাইন** (Online) দেখায়, আর website, database বা app যোগ
 করার সময় এটা বেছে নিতে পারবেন।
+
+### Command-টা কী করে
+
+এটা panel-এর মতো একই installer চালায়, `--agent`-সহ। নতুন server-এ এটা:
+
+- `ca-certificates`, `curl`, `gnupg`, `openssl`, `acl` আর Ubuntu-তে `software-properties-common`
+  install করে, আর Caddy আগে থেকে না থাকলে Caddy-র official package repository থেকে সেটাও।
+  PostgreSQL বা panel install করে না;
+- Panel-এর release থেকে agent download করে check করে, ঠিক যেমন
+  [panel-এর install](/start/install/#how-the-download-is-checked) করে;
+- এটাকে `/usr/local/bin/ekpanel-agent` হিসেবে বসায়, `/etc/ekpanel` আর `/etc/ekpanel/caddy/sites`
+  তৈরি করে (web server পড়তে পারে এমনভাবে), আর `ekpanel-agent` systemd service লেখে;
+- Token আর CA pin দিয়ে agent enrol করে, তারপর service চালু আর enable করে, যাতে reboot-এর পরেও
+  agent চলে;
+- `/etc/caddy/Caddyfile` লেখে, যা `/etc/ekpanel/caddy/sites/*.caddy` import করে (প্রতিটা
+  website-এর জন্য একটা file, agent লেখে)। Server-এ আগে থেকে নিজস্ব Caddyfile থাকলে installer শুধু
+  তাতে `import` line-টা যোগ করে। তারপর configuration check করে Caddy reload করে;
+- ufw চালু থাকলে তাতে port 80 আর 443 খোলে।
+
+আগে থেকে connect থাকা server-এ একই command আবার চালালে agent আবার install হয়, connection থেকে যায়;
+দ্বিতীয়বার enrol হয় না। Panel-এর নিজের server-এ `--agent` দিয়ে installer চলতে রাজি হয় না, কারণ
+সেখানকার agent panel-এর installer আগেই set up করেছে।
+
+## Panel যখন publish করা release নয়
+
+একটা command-এর জন্য দরকার আপনার panel-এর version GitHub-এ release হিসেবে থাকা। আপনি
+[নিজে panel build করলে](/start/install/#install-from-your-own-build) সেটা থাকে না:
+
+- **Source থেকে** build করা panel (`make build` দিয়ে, বা release নয় এমন version) এর বদলে দুটো command
+  দেখায়, সাথে এই note: "এই প্যানেল সোর্স থেকে বানানো, তাই বসানোর মতো কোনো রিলিজ নেই। আগে
+  ekpanel-agent ফাইলটা নতুন সার্ভারের /usr/local/bin-এ কপি করুন।"
+- `make release VERSION=…` দিয়ে build করা panel একটা command-ই দেখায়, কিন্তু তার download GitHub-এ
+  নেই, তাই 404 error দিয়ে fail করে।
+
+দুই ক্ষেত্রেই dialog-এর value দিয়ে নিজের build থেকে installer চালান:
+
+<Steps>
+
+1. যে archive থেকে panel install করেছিলেন (একই version) সেটা নতুন server-এ copy করে সেখানে unpack
+   করুন:
+
+   ```bash
+   scp dist/ekpanel-v0.0.1-linux-amd64.tar.gz root@new-server:
+   ```
+
+   ```bash
+   tar -xzf ekpanel-v0.0.1-linux-amd64.tar.gz
+   cd ekpanel-v0.0.1-linux-amd64
+   ```
+
+   `make build`-এর build হলে এর বদলে `bin/ekpanel-agent` আর `deploy/install.sh` নতুন server-এ এক
+   folder-এ copy করুন।
+
+2. Panel-এ **সার্ভার যোগ করুন** (Add server)-এ click করে নাম দিন, **এগিয়ে যান** (Continue)-এ click
+   করুন। Dialog যে command দেখায়, তা থেকে `--panel`, `--token` আর `--ca-pin`-এর value নিন।
+
+3. `--agent` আর ওই value-গুলো দিয়ে installer চালান:
+
+   ```bash
+   sudo ./install.sh --agent --local-dir . \
+     --panel panel.example.com:7443 \
+     --token <one-time token> \
+     --ca-pin sha256:<fingerprint>
+   ```
+
+   [Command-টা কী করে](#what-the-command-does)-এ লেখা সবই এটা করে, শুধু download ছাড়া।
+
+4. Dialog-এ **যুক্ত হয়েছে!** (Connected!) আসা পর্যন্ত অপেক্ষা করে **সম্পন্ন** (Done)-এ click করুন।
+
+</Steps>
+
+Source থেকে build করা panel-এর দুটো command (`sudo ekpanel-agent enroll …`, তারপর
+`sudo ekpanel-agent run`)-ও কাজ করে, যদি `ekpanel-agent` আগে `/usr/local/bin`-এ থাকে। এরা শুধু
+agent connect করে: কোনো web server, `acl` package বা systemd service set up করে না, আর `run`
+agent-কে আপনার SSH session-এর foreground-এ রাখে। দ্রুত একটা test-এর জন্য এগুলো ব্যবহার করুন, website
+host করবে এমন server-এর জন্য নয়।
 
 ### `enroll` command
 
@@ -213,20 +211,33 @@ Agent-রা panel-এর নিজস্ব certificate authority দিয়�
 - **Token-এর মেয়াদ শেষ, বা command হারিয়ে গেছে।** **সার্ভার** page-এ server-টা খুলে **নতুন সংযোগ
   কমান্ড** (New connection command)-এ click করুন। এটা নতুন token বানায় আর server-এর বর্তমান
   certificate বাতিল করে, তাই আগে থেকে connect থাকা agent বিচ্ছিন্ন হয়ে যায়, যতক্ষণ না আপনি আবার
-  enrol করেন।
-- **"panel refused the request"**: token আগেই ব্যবহার হয়ে গেছে বা মেয়াদ শেষ। নতুন connection
-  command বানান।
+  enrol করেন। যে server-এ agent আগে থেকেই install করা, সেখানে এক লাইনের command আবার enrol করে না
+  (আগের credential রেখে দেয়), তাই নতুন command-এর value দিয়ে `enroll` অংশটা নিজে চালান, তারপর agent
+  restart করুন:
+
+  ```bash
+  sudo ekpanel-agent enroll --panel panel.example.com:7443 --token <one-time token> --ca-pin sha256:<fingerprint>
+  sudo systemctl restart ekpanel-agent
+  ```
+- **"the panel did not accept this server. The token works once and expires; create a new one
+  in the panel."** (installer থেকে), বা **"panel refused the request"** (`enroll` থেকে): token
+  আগেই ব্যবহার হয়ে গেছে বা মেয়াদ শেষ। নতুন connection command বানান।
 - **"contact panel" error বা timeout**: server port 7443-এ panel পর্যন্ত পৌঁছাতে পারছে না।
   Panel-এর firewall আর আপনার provider-এর cloud firewall check করুন।
+- **`curl: (22) The requested URL returned error: 404`**: আপনার panel-এর version কোনো publish করা
+  release নয়। দেখুন
+  [Panel যখন publish করা release নয়](#when-the-panel-is-not-a-published-release)।
+- **"this server runs the panel; its agent is already set up."**: আপনি panel-এর নিজের server-এ
+  `--agent` command চালিয়েছেন। সেখানে আর কিছু লাগে না।
 - **Server অফলাইন (Offline) দেখায়**: agent চলছে না বা connect করতে পারছে না। Server-এ
   `sudo systemctl status ekpanel-agent` আর `sudo journalctl -u ekpanel-agent` দেখুন।
 - **একটা server সরাতে** সেটা খুলে delete করুন। Panel server-টাকে ভুলে যায় আর তার agent আর
   connect করতে পারে না। Server-এর ভেতরের কিছুই delete হয় না; সেখানে agent service নিজেই stop
-  আর disable করুন।
+  আর disable করুন (`sudo systemctl disable --now ekpanel-agent`)।
 
 ## আরও দেখুন
 
 - [Server guide](/guides/admin/servers/)
 - [Architecture](/concepts/architecture/): panel আর agent কীভাবে কথা বলে।
 - [Security model](/concepts/security-model/)
-- [Upgrade করা](/start/upgrade/): অন্য server-এর agent update করা।
+- [Upgrade করা](/start/upgrade/): panel প্রতিটা server-এর agent update করে।

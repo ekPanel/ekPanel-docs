@@ -176,10 +176,18 @@ Software that does not come from a signed package repository (WP-CLI, Composer, 
 Stalwart, Roundcube, Joomla, Moodle) is a pinned version, checked against the checksum its
 publisher lists before it is used.
 
+ekPanel's own releases are signed. Each release has a `SHA256SUMS` file with an Ed25519
+signature, made in the project's release workflow with a key that only a protected GitHub
+environment holds. The public key is built into the installer and into both programs. The
+installer (with `openssl`) and the agent, before an update (in Go), check the signature and
+then the archive's checksum, and refuse anything that does not match, also from a mirror.
+Updates only go forward, and the previous program is kept to go back to. See
+[Install](/start/install/#how-the-download-is-checked) and [Upgrade](/start/upgrade/).
+
 ## Not there yet
 
-- **Signed releases** and self-update with signature checks (phase 4a). Today you build from
-  source yourself.
+- **A first release.** Signed releases and self-update are ready, but none is published yet;
+  until then you build from source yourself.
 - A **web application firewall** and rate limiting per site (phase 4).
 - **Passkeys** and a list of active sessions (phase 4).
 

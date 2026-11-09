@@ -1,0 +1,98 @@
+---
+title: Updates
+description: See which ekPanel version the panel and every server run, let the panel look for new releases, and get told when one is out.
+sidebar:
+  order: 4
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The **Updates** page shows which version of ekPanel runs on the panel and on every server,
+looks for new releases, and installs them. This page explains what it shows and how the
+release checks work. [Upgrade](/start/upgrade/) walks through an update step by step.
+
+<Aside type="note">
+There is no official release yet, so the page has nothing to offer until the first one,
+v0.1.0, is published.
+</Aside>
+
+## Before you start
+
+- You are an administrator. Customers do not see the page.
+- The panel was installed from a release. A panel built from source shows "This panel is
+  built from source, not from a release, so it does not update itself. Install a release to
+  get updates." It does not look for releases by itself.
+
+## Open the page
+
+<Steps>
+
+1. In the sidebar, under **Administration**, click **Updates**. The address is
+   `/settings/updates`; the command palette (`Ctrl+K`) finds it too.
+
+2. Click **Check for updates** to ask for the newest release right now.
+
+</Steps>
+
+## What the page shows
+
+| Part | What it shows |
+| --- | --- |
+| **This panel runs** | The panel's version, such as `v0.1.0`. |
+| **Newest release: …** | The newest release and when it was published, with **Up to date** when the panel already runs it. Below it, **Checked …** says when the panel last looked. Before the first check: "Not checked yet. The panel looks for new releases every 6 hours." |
+| **The last check failed: …** | The reason the last check did not work, for example when the server cannot reach GitHub. |
+| **ekPanel … is available** | Shown when a newer release exists: what the update does, the button **Update to …**, and **What is new**, which opens the release notes. |
+| Progress | The latest update: **Updating the panel to …**, **Updating the agents to …**, **Updated to …** or **Update to … failed**, with the reason, the database copy taken before it, and each server's result. It stays until the next update. |
+| **Agents** | Every server with its **Agent version** and a **Status**: **Current**, **Older than the panel** or **Offline**. The panel's own server is marked "runs the panel". |
+| **Update … agents** | Shown when some agents are older than the panel, for example after a server was offline during an update. |
+
+When the agent on the panel's own server is not connected, the page says "The agent on the
+panel's own server is not connected, so it cannot install the update." and the update button
+cannot be used. That agent is the one that installs a new panel.
+
+[Upgrade](/start/upgrade/#update-from-the-panel) describes what happens after you click
+**Update to …**, and what to do when an update fails.
+
+## How the panel looks for new releases
+
+A panel installed from a release looks for a new one a minute after it starts, and then
+every **6 hours**. It downloads one small file, `release.json` of the newest release, from
+`EKPANEL_RELEASES_URL` (GitHub's release page by default, or your mirror). The request
+carries no version or other data about your panel.
+
+- Only full releases count. Releases with a suffix, such as `v1.2.3-rc.1`, are test releases
+  and are never offered.
+- Finding a release changes nothing. The panel never installs an update by itself; an
+  administrator clicks **Update to …**.
+- To turn the automatic checks off, set `EKPANEL_UPDATE_CHECK=false` in
+  `/etc/ekpanel/panel.env` and restart the panel (see
+  [Configuration](/reference/configuration/)). The page then says "Automatic checks are turned
+  off (EKPANEL_UPDATE_CHECK=false). You can still check by hand." **Check for updates** keeps
+  working.
+
+## Notifications
+
+Updates send three [notifications](/guides/admin/notifications/) to every administrator.
+Like every event, you can choose them per notification channel.
+
+| Event (in the panel) | When it is sent |
+| --- | --- |
+| **New ekPanel version** | A check found a version newer than the panel. Sent once per new version. |
+| **ekPanel updated** | An update finished, with the number of servers and how many had a problem. |
+| **ekPanel update failed** | An update could not be installed; the panel keeps running its current version. |
+
+Starting an update, and updating the agents, are recorded in the audit log.
+
+## Limits and what is not there yet
+
+- Updates go forward only, and only to the newest release. To go back, see
+  [Go back by hand](/start/upgrade/#go-back-by-hand).
+- No updates on a schedule: an administrator starts each one.
+- The release checks and updates were tested in a VM with test releases signed by a test key.
+  There has been no real release yet.
+
+## Related
+
+- [Upgrade](/start/upgrade/): an update step by step, failures and going back.
+- [Servers](/guides/admin/servers/)
+- [Notifications](/guides/admin/notifications/)

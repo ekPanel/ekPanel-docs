@@ -1,34 +1,149 @@
 ---
 title: Install
-description: Build ekPanel from source and install the panel and its agent on a fresh Ubuntu or Debian server.
+description: Install the ekPanel panel and its agent on a fresh Ubuntu or Debian server with one command, or from a release you build yourself.
 sidebar:
   order: 4
 ---
 
 import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-To install ekPanel today, you build the two programs from source, copy them to your server
-and run the installer. It takes about ten minutes, most of it downloads.
+One command on a fresh server installs the panel, its agent, PostgreSQL and the Caddy web
+server. The installer downloads an ekPanel release and checks its signature before it
+installs anything. It takes about ten minutes, most of it downloads.
 
-<Aside type="note" title="No one-line installer yet">
-A one-line installer that downloads signed releases comes with the first release
-([roadmap](/project/roadmap/), phase 4a). Until then, use the steps on this page.
+<Aside type="caution" title="The first release is not out yet">
+The one-line install downloads an official release, and there is none yet. The first one,
+v0.1.0, comes when the project's owner publishes it. Until then the command below fails with
+a "404" error from `curl`: build a release yourself and install it, as in
+[Install from your own build](#install-from-your-own-build).
 </Aside>
 
 ## Before you start
 
-- A fresh server that meets the [requirements](/start/requirements/), and SSH access to it as
-  root or a user with `sudo`.
-- On your computer: Linux, Go 1.27+, Node.js 22+, `make`, `git` and `tar`.
+- A fresh server that meets the [requirements](/start/requirements/): Ubuntu 24.04+ or
+  Debian 12+, on amd64 or arm64. You need SSH access to it as root or as a user with `sudo`.
+- Outgoing HTTPS from the server to `github.com`, where releases are downloaded from.
 - Optional: a domain name for the panel (for example `panel.example.com`) with a DNS record
   pointing at the server. Create it now, so Let's Encrypt can check it during the install.
-- Find out your server's CPU type. Run `uname -m` on the server: `x86_64` means **amd64**,
-  `aarch64` means **arm64**.
 
-## Build ekPanel
+## Install with one command
 
-ekPanel is two programs: `ekpanel` (the panel, with the web interface built in) and
-`ekpanel-agent` (the agent). The installer needs both in one folder.
+Run this on the server:
+
+<Tabs>
+<TabItem label="With a domain">
+
+```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- --domain panel.example.com --email you@example.com
+```
+
+The panel is then at `https://panel.example.com` with a trusted certificate.
+
+</TabItem>
+<TabItem label="Without a domain">
+
+```bash
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash
+```
+
+The panel is then at `https://<server IP>` with a self-signed certificate. Your browser
+warns you once; accept the warning to continue. You can add a domain later by running the
+installer again with `--domain`.
+
+</TabItem>
+</Tabs>
+
+`bash -s --` passes the options after it to the installer. The installer downloads the
+newest release for your server's CPU type, checks it, and installs it.
+
+At the end, it prints something like this:
+
+```text
+==> ekPanel is installed.
+    Open:  https://panel.example.com
+    Setup token (needed once, to create the administrator):
+        <setup token>
+    Agents on other servers connect to TCP port 7443; allow it in any cloud firewall.
+    Logs:  journalctl -u ekpanel -u ekpanel-agent -f
+```
+
+Copy the **setup token**. You need it to [create the administrator](#create-the-administrator).
+
+<Aside type="tip" title="Read the script first">
+To look at the installer before it runs, download it, read it, and run the file:
+
+```bash
+curl -fsSLO https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh
+less install.sh
+sudo bash install.sh --domain panel.example.com
+```
+</Aside>
+
+## How the download is checked
+
+Every release is signed. The installer refuses a download that does not match the signature,
+so a file changed on a mirror or on the way is never installed.
+
+<Steps>
+
+1. The installer downloads three files of the release: `SHA256SUMS` (the SHA-256 checksum of
+   every file in the release), `SHA256SUMS.sig` (an Ed25519 signature of that list) and the
+   archive for your server, `ekpanel-<version>-linux-<arch>.tar.gz`.
+
+2. `openssl` checks the signature of `SHA256SUMS` against the ekPanel release key. The public
+   key is written into the installer; it is also in the main repository as
+   [`internal/release/release.pub`](https://github.com/ekPanel/ekpanel/blob/HEAD/internal/release/release.pub).
+   If the signature is wrong, the installer stops with "SHA256SUMS is not signed by the ekPanel
+   release key; not installing."
+
+3. The archive's SHA-256 must match its line in the signed list. If it does not, the
+   installer stops with "… does not match its signed checksum; not installing."
+
+</Steps>
+
+The panel checks updates the same way before it installs them (see [Upgrade](/start/upgrade/)).
+
+### Check a release yourself
+
+You can do the same checks by hand, for example before you copy a release to a server
+without internet access. Put the release's files and `release.pub` in one folder, then run:
+
+```bash
+openssl pkeyutl -verify -pubin -inkey release.pub -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+sha256sum --ignore-missing -c SHA256SUMS
+```
+
+The first command prints `Signature Verified Successfully`, the second `OK` for each file you
+downloaded.
+
+Each release also has GitHub build attestations, which show that the project's release
+workflow on GitHub built the files. With the GitHub CLI:
+
+```bash
+gh attestation verify ekpanel-v0.1.0-linux-amd64.tar.gz --repo ekPanel/ekpanel
+```
+
+## Installer options
+
+| Option | Meaning |
+| --- | --- |
+| `--domain NAME` | A DNS name pointing at this server. Caddy gets a free Let's Encrypt certificate for it. Without it, the panel uses a self-signed certificate on the server's IP address. |
+| `--email ADDRESS` | Your address for Let's Encrypt expiry notices. Optional. |
+| `--agent` | Set up this server for an existing panel instead of installing a panel. Needs `--panel HOST:7443`, `--token …` and `--ca-pin …`; the panel's **Add server** dialog shows the whole command. See [Add a server](/start/add-server/). |
+| `--version vX.Y.Z` | Install this release. By default the installer installs the release it came with; from the `latest` address, that is the newest release. |
+| `--local-dir DIR` | Use the `ekpanel` and `ekpanel-agent` programs in `DIR` instead of downloading a release. Nothing is downloaded or checked. For your own builds. |
+| `--release-url URL` | Download releases from a mirror instead of `https://github.com/ekPanel/ekpanel/releases`. The mirror must have the same layout. The signature is still checked. |
+| `--release-key FILE` | Trust this public key instead of the ekPanel release key. Only for testing builds you signed yourself; never use it on a real server. |
+| `-h`, `--help` | Show the usage. This works when you run the downloaded file (`bash install.sh --help`), not through `curl … \| bash`. |
+
+## Install from your own build
+
+Until the first release is published, and whenever you want to run code that is not released
+yet, you build a release yourself and install it with `--local-dir`.
+
+On your computer you need Linux, Go 1.27+, Node.js 22+, `make`, `git` and `tar`. Find out your
+server's CPU type first: `uname -m` on the server prints `x86_64` (**amd64**) or `aarch64`
+(**arm64**).
 
 <Tabs>
 <TabItem label="Build on your computer">
@@ -38,37 +153,46 @@ and packs each into an archive together with the installer.
 
 <Steps>
 
-1. Get the source code and build the release archives:
+1. Get the source code and build a release. `VERSION` must look like `v1.2.3`; use a version
+   below the first official one, such as `v0.0.1`:
 
    ```bash
    git clone https://github.com/ekPanel/ekpanel.git
    cd ekpanel
-   make release
+   make release VERSION=v0.0.1
    ```
 
    This runs `npm ci` and `npm run build` for the web interface first, then builds the Go
-   programs. You get files like these in `dist/`:
+   programs. You get these files in `dist/`:
 
    ```text
-   dist/ekpanel-<version>-linux-amd64.tar.gz
-   dist/ekpanel-<version>-linux-arm64.tar.gz
+   dist/ekpanel-v0.0.1-linux-amd64.tar.gz
+   dist/ekpanel-v0.0.1-linux-arm64.tar.gz
+   dist/install.sh
+   dist/release.json
    dist/SHA256SUMS
    ```
 
 2. Copy the archive for your server's CPU type to the server:
 
    ```bash
-   scp dist/ekpanel-*-linux-amd64.tar.gz root@your-server:
+   scp dist/ekpanel-v0.0.1-linux-amd64.tar.gz root@your-server:
    ```
 
 3. On the server, unpack it and go into the folder:
 
    ```bash
-   tar -xzf ekpanel-*-linux-amd64.tar.gz
-   cd ekpanel-*-linux-amd64
+   tar -xzf ekpanel-v0.0.1-linux-amd64.tar.gz
+   cd ekpanel-v0.0.1-linux-amd64
    ```
 
    The folder holds `ekpanel`, `ekpanel-agent`, `install.sh` and `LICENSE`.
+
+4. Run the installer with `--local-dir .` and the other options you want:
+
+   ```bash
+   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
+   ```
 
 </Steps>
 
@@ -90,14 +214,18 @@ builds the web interface and both programs for the machine it runs on.
 
    The programs are now in `bin/`: `bin/ekpanel` and `bin/ekpanel-agent`.
 
-2. Copy the installer next to them:
+2. Copy the installer next to them and run it:
 
    ```bash
    cp deploy/install.sh bin/
    cd bin
+   sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
    ```
 
 </Steps>
+
+A build made this way is named after the Git commit (or `dev`), not a release version, so it
+cannot update itself from the panel.
 
 </TabItem>
 </Tabs>
@@ -109,56 +237,11 @@ also builds for the computer you run it on, so use `make release` when your comp
 your server differ.
 </Aside>
 
-## Run the installer
-
-The installer's usage, from the top of `install.sh`:
-
-```bash
-sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
-```
-
-| Option | Meaning |
-| --- | --- |
-| `--local-dir DIR` | Folder with the `ekpanel` and `ekpanel-agent` programs. Required for now. |
-| `--domain NAME` | A DNS name pointing at this server. Caddy gets a free Let's Encrypt certificate for it. |
-| `--email ADDRESS` | Your address for Let's Encrypt expiry notices. Optional. |
-| `-h`, `--help` | Show the usage. |
-
-<Tabs>
-<TabItem label="With a domain">
-
-```bash
-sudo ./install.sh --local-dir . --domain panel.example.com --email you@example.com
-```
-
-The panel is then at `https://panel.example.com` with a trusted certificate.
-
-</TabItem>
-<TabItem label="Without a domain">
-
-```bash
-sudo ./install.sh --local-dir .
-```
-
-The panel is then at `https://<server IP>` with a self-signed certificate. Your browser
-warns you once; accept the warning to continue. You can add a domain later by running the
-installer again with `--domain`.
-
-</TabItem>
-</Tabs>
-
-At the end, the installer prints something like this:
-
-```text
-==> ekPanel is installed.
-    Open:  https://panel.example.com
-    Setup token (needed once, to create the administrator):
-        <setup token>
-    Agents on other servers connect to TCP port 7443; allow it in any cloud firewall.
-    Logs:  journalctl -u ekpanel -u ekpanel-agent -f
-```
-
-Copy the **setup token**. You need it in the next step.
+A panel built with `make release VERSION=v0.0.1` counts as a release: it looks for new
+releases, and once v0.1.0 is published it offers to update to it under **Updates**. Its
+**Add server** dialog shows the one-line command, but that download only exists for published
+versions. See [Add a server](/start/add-server/#when-the-panel-is-not-a-published-release)
+for what to run instead.
 
 ## Create the administrator
 
@@ -186,13 +269,13 @@ continues from here.
 
 ## What the installer does
 
-You can read `install.sh` yourself; it is about 270 lines. In order, it:
+You can read `install.sh` yourself; it is about 400 lines. For a panel, in order, it:
 
 <Steps>
 
 1. **Checks** that it runs as root, on a supported OS and CPU (see
-   [requirements](/start/requirements/)), that `--local-dir` holds both programs, and that
-   `--domain` is a plain host name.
+   [requirements](/start/requirements/)), that `--domain` is a plain host name, and that
+   `--version` looks like `v1.2.3`.
 
 2. **Installs packages**: `ca-certificates`, `curl`, `gnupg`, `openssl`, `acl` (so the web
    server can read each site's files without opening them to other sites) and `postgresql`.
@@ -200,39 +283,45 @@ You can read `install.sh` yourself; it is about 270 lines. In order, it:
    repository. Caddy comes from Caddy's official package repository, if it is not installed
    yet.
 
-3. **Creates the `ekpanel` system user** (no shell), the data folder `/var/lib/ekpanel`
+3. **Gets the programs**: it downloads and checks the release, as described
+   [above](#how-the-download-is-checked), or takes them from `--local-dir`.
+
+4. **Creates the `ekpanel` system user** (no shell), the data folder `/var/lib/ekpanel`
    (readable only by that user) and `/etc/ekpanel`.
 
-4. **Creates the PostgreSQL role and database `ekpanel`.** The panel connects over the
+5. **Creates the PostgreSQL role and database `ekpanel`.** The panel connects over the
    local socket with peer authentication, so there is no database password. It also
    revokes access to that database from everyone else, so customer database accounts cannot
    connect to it.
 
-5. **Installs the programs** as `/usr/local/bin/ekpanel` and `/usr/local/bin/ekpanel-agent`,
-   writes the panel's settings to `/etc/ekpanel/panel.env`, and writes two systemd units:
+6. **Installs the programs** as `/usr/local/bin/ekpanel` and `/usr/local/bin/ekpanel-agent`.
+   A program it replaces with a different one is kept as `ekpanel.prev` or
+   `ekpanel-agent.prev`. It writes the panel's settings to `/etc/ekpanel/panel.env`
+   (including `EKPANEL_RELEASES_URL`, the release address it used) and two systemd units:
    - `ekpanel.service` runs the panel as the `ekpanel` user, with no privileges and a strict
      sandbox (read-only system, private `/tmp`, no capabilities). The agent does the work
      on the server, not the panel.
    - `ekpanel-agent.service` runs the agent as root, because it manages the server.
 
-6. **Starts the panel** and waits up to 30 seconds for it to answer on
+7. **Starts the panel** and waits up to 30 seconds for it to answer on
    `http://127.0.0.1:8080/api/v1/health`. On first start the panel creates its database
    tables, its private certificate authority for agents, its secret key and the setup
    token.
 
-7. **Connects this server's agent.** It registers the server under its host name (with
+8. **Connects this server's agent.** It registers the server under its host name (with
    `ekpanel add-server`), enrols the agent at `127.0.0.1:7443`, and starts
-   `ekpanel-agent`. If the agent is already enrolled, this step is skipped.
+   `ekpanel-agent`. If the agent is already enrolled, this step is skipped. This agent is
+   also the one that installs updates of the panel later.
 
-8. **Configures Caddy** in `/etc/caddy/Caddyfile`: the panel on your domain or on the
+9. **Configures Caddy** in `/etc/caddy/Caddyfile`: the panel on your domain or on the
    server's addresses, an import of `/etc/ekpanel/caddy/sites/*.caddy` (one file per website,
    written by the agent), and trust in Cloudflare's published address ranges so logs show
    visitors' real addresses behind Cloudflare. It checks the configuration and reloads
    Caddy.
 
-9. **Opens ports 80, 443 and 7443 in ufw**, only if ufw is already active.
+10. **Opens ports 80, 443 and 7443 in ufw**, only if ufw is already active.
 
-10. **Prints** the address, the setup token and where the logs are.
+11. **Prints** the address, the setup token and where the logs are.
 
 </Steps>
 
@@ -256,12 +345,19 @@ itself.
 
 ## Troubleshooting
 
+- **`curl: (22) The requested URL returned error: 404`**: there is no published release yet,
+  or the version you asked for does not exist. Install
+  [from your own build](#install-from-your-own-build).
+- **"could not find the latest release at …"** or **"could not download …"**: the server
+  cannot reach `github.com` (or your `--release-url`). Check its outgoing HTTPS and DNS.
+- **"SHA256SUMS is not signed by the ekPanel release key; not installing."** or **"… does not
+  match its signed checksum; not installing."**: the download was changed or cut off on the
+  way. Nothing was installed. Try again later or from another network. If it keeps
+  happening, report it as described in the [security policy](/project/security-policy/).
 - **"is not supported yet"**: the OS or CPU is not on the supported list. Use Ubuntu 24.04+
   or Debian 12+ on amd64 or arm64.
-- **"release downloads are not available yet"**: you left out `--local-dir`. Pass the folder
-  with the two programs (`--local-dir .` when you are in it).
-- **"not found or not executable"**: the folder is missing a program, or it lost its
-  executable bit. Run `chmod +x ekpanel ekpanel-agent`.
+- **"not found or not executable"**: the `--local-dir` folder is missing a program, or it
+  lost its executable bit. Run `chmod +x ekpanel ekpanel-agent`.
 - **"the panel did not start"**: read the panel's log with `sudo journalctl -u ekpanel`.
 - **The page does not load**: check that ports 80 and 443 are open in your provider's
   firewall.
@@ -274,4 +370,4 @@ More in [troubleshooting](/reference/troubleshooting/).
 
 - [First steps](/start/first-steps/): two-factor sign-in, your first website and backups.
 - [Add a server](/start/add-server/): connect more servers.
-- [Upgrade](/start/upgrade/): install a newer build.
+- [Upgrade](/start/upgrade/): update the panel and its agents to a newer release.

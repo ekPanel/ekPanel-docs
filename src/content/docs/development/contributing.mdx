@@ -113,6 +113,23 @@ template also asks you to tick:
 - tried on a real server or the test VM, if it changes what the agent does
 - the docs are updated, or an issue on the docs repository says what to add
 
+## Releases
+
+Only the project's owners publish releases:
+
+1. The `## [Unreleased]` section of `CHANGELOG.md` becomes `## [v1.2.3] - YYYY-MM-DD`, and the
+   change goes from `dev` to `pub` through a pull request.
+2. An owner tags the merge on `pub` with `vX.Y.Z` and pushes the tag.
+3. The **Release** workflow (`.github/workflows/release.yml`) checks that the tag is on `pub`
+   and that the changelog describes the version, builds reproducible archives for amd64 and
+   arm64 (`make release`), signs `SHA256SUMS` with the key kept in the protected `release`
+   environment (`make sign`), adds build attestations and publishes the release with its notes.
+
+Tags with a pre-release part, such as `v1.2.3-rc.1`, become pre-releases, which panels never
+offer as updates. Panels find a new release within 6 hours. The details, and how to build and
+sign a test release with a key of your own, are in
+[`CONTRIBUTING.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/CONTRIBUTING.md).
+
 ## Guidelines
 
 These come from `CONTRIBUTING.md` in the main repository:

@@ -174,10 +174,18 @@ Database নিজেই audit row edit বা delete করতে দেয় 
 Roundcube, Joomla, Moodle), সেগুলো নির্দিষ্ট (pinned) version, আর ব্যবহারের আগে তার publisher-এর
 দেওয়া checksum-এর সাথে মিলিয়ে দেখা হয়।
 
+ekPanel-এর নিজের release sign করা থাকে। প্রতিটা release-এ একটা `SHA256SUMS` file থাকে, যার একটা
+Ed25519 signature project-এর release workflow-এ বানানো হয়, এমন একটা key দিয়ে যা শুধু একটা সুরক্ষিত
+GitHub environment-এ থাকে। Public key-টা installer আর দুটো program-এর ভেতরেই build করা। Installer
+(`openssl` দিয়ে) আর update-এর আগে agent (Go-তে) signature, তারপর archive-এর checksum check করে, আর না
+মিললে কিছুই নেয় না, mirror থেকে এলেও। Update শুধু সামনের দিকে যায়, আর ফিরে যাওয়ার জন্য আগের program
+রেখে দেওয়া হয়। দেখুন [Install করা](/start/install/#how-the-download-is-checked) আর
+[Upgrade করা](/start/upgrade/)।
+
 ## এখনো নেই
 
-- **Signed release** আর signature check-সহ self-update (phase 4a)। আজকের দিনে আপনি নিজেই source থেকে
-  build করেন।
+- **প্রথম release।** Sign করা release আর self-update তৈরি, কিন্তু এখনো একটাও publish হয়নি; ততদিন আপনি
+  নিজেই source থেকে build করেন।
 - একটা **web application firewall** আর প্রতিটা site-এর rate limiting (phase 4)।
 - **Passkey** আর active session-এর তালিকা (phase 4)।
 

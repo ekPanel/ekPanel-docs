@@ -124,7 +124,8 @@ EKPANEL_DEV_TARGET=https://127.0.0.1:8443 npm run dev
 | `make ui` | Installs the web dependencies, builds the UI and embeds it into the panel. |
 | `make panel` | Builds `bin/ekpanel`. |
 | `make agent` | Builds `bin/ekpanel-agent`. |
-| `make release` | Builds Linux amd64 and arm64 archives with `install.sh` and `LICENSE`, and `SHA256SUMS`, into `dist/`. |
+| `make release VERSION=v1.2.3` | Builds a release into `dist/`: Linux amd64 and arm64 archives (each with both programs, `install.sh` and `LICENSE`), `install.sh` with the version written in, `release.json` and `SHA256SUMS`. `VERSION` must look like `v1.2.3`. The same commit and version give the same files. |
+| `make sign KEY=…` | Signs `dist/SHA256SUMS` with an Ed25519 key into `SHA256SUMS.sig`, and checks it against `internal/release/release.pub` (or `PUBKEY=…`). The release workflow does this with the project's key. |
 | `make test` | `test-go` and `test-web`: what CI checks, except `gofmt` and the UI build. |
 | `make test-go` | `go vet ./...` and `go test -race ./...`. |
 | `make test-web` | Type-checks the UI and checks the translations. |

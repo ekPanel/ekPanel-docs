@@ -60,6 +60,18 @@ TCP 80, 443 আর 22 খুলুন, আর panel-এর server-এ TCP 7443�
 | 18920 | PowerDNS API | এর key আছে `/etc/powerdns/ekpanel-api.key`-এ। |
 | `127.0.0.53`-এ 53 | systemd-resolved | System-এর নিজের resolver। PowerDNS এই address-এ হাত দেয় না। |
 
+### বাইরের দিকে connection
+
+বাইরের দিকের traffic সাধারণত খোলা থাকে। আপনি filter করলে এগুলো খোলা রাখুন:
+
+| কোথায় | Port | কোথা থেকে | কীসের জন্য |
+| --- | --- | --- | --- |
+| Panel-এর server | TCP 7443 | প্রতিটা managed server-এর agent | Panel-এর সাথে agent-এর connection। |
+| `github.com` | TCP 443 | Panel-এর server আর প্রতিটা managed server | ekPanel-এর release: installer, panel আর agent-এর update, আর panel-এর প্রতি 6 ঘণ্টায় update খোঁজা। GitHub file-গুলো দেয় `githubusercontent.com`-এর অধীনে তার download host থেকে, তাই সেগুলোও খোলা রাখুন। `EKPANEL_RELEASES_URL` বা `--release-url` দিলে তার বদলে আপনার mirror। |
+| Package mirror আর project-এর download page | TCP 80 আর 443 | প্রতিটা server | Package (distribution-এর, Caddy-র, PHP-র, CrowdSec-এর) আর WP-CLI, Railpack, Stalwart-এর মতো tool। |
+| Let's Encrypt | TCP 443 | Website আছে এমন প্রতিটা server | Certificate, Caddy নেয়। |
+| অন্য mail server-এর port 25 | TCP 25 | Email চালু থাকা server | Mail পৌঁছে দেওয়া। |
+
 ### ekPanel যে firewall rule-গুলো manage করে
 
 Server-এর page-এ firewall চালু করলে ekPanel `ufw` manage করে আর এগুলো সবসময় খোলা রাখে, যাতে
@@ -89,6 +101,10 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | `/var/lib/ekpanel-agent/` | Agent-এর নিজের state (কী কী বানিয়েছে, firewall আর traffic state)। |
 | `/etc/ekpanel/tls/` | `--domain` ছাড়া install করলে panel-এর self-signed certificate। |
 | `/usr/local/lib/ekpanel/` | Agent যেসব tool download করে আর check করে: WP-CLI, Railpack, Stalwart। |
+| `/usr/local/bin/ekpanel.prev`, `/usr/local/bin/ekpanel-agent.prev` | আগের program, ফিরে যাওয়ার জন্য একটা [update](/start/upgrade/) বা installer রেখে দেয়। |
+| `/usr/local/bin/ekpanel.failed`, `/usr/local/bin/ekpanel-agent.failed` | Update-এর পরে চালু হয়নি এমন নতুন program, যার জায়গায় আগেরটা ফিরিয়ে আনা হয়েছে। দেখার জন্য রাখা থাকে। |
+| `/var/backups/ekpanel/ekpanel-db-<version>-<time>.dump` | Panel-এর প্রতিটা update-এর আগে নেওয়া panel-এর database-এর কপি (`pg_dump -Fc`)। সবচেয়ে নতুন তিনটা রাখা হয়। শুধু panel-এর server-এ। |
+| `/etc/ekpanel/agent-update.pending` | শুধু agent update-এর সময় থাকে, নতুন agent panel-এ পৌঁছানো পর্যন্ত। এটা থাকা অবস্থায় systemd timer `ekpanel-agent-rollback` আগের agent ফিরিয়ে আনার জন্য অপেক্ষা করে। |
 
 ### Website
 
@@ -121,7 +137,7 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | --- | --- |
 | `/srv/ekpanel/apps/<name>` | একটা Docker app-এর Compose project। শুধু root। |
 | `/srv/ekpanel/builds` | Git deploy-এর build। |
-| `/var/backups/ekpanel` | Server-এর নিজের disk-এ রাখা backup। |
+| `/var/backups/ekpanel` | Server-এর নিজের disk-এ রাখা backup (প্রতিটা backup location-এর জন্য একটা folder), আর panel-এর server-এ update-এর আগে নেওয়া database-এর কপি। শুধু root (mode `0700`)। |
 | `/etc/ekpanel/backup/` | Backup setting, encryption key আর S3 key। শুধু root। |
 | `/var/lib/ekpanel/quarantine` | Malware scan যেসব file সরিয়ে রেখেছে। শুধু root পড়তে পারে। |
 | `/var/lib/ekpanel/geo/` | Country blocking-এর জন্য DB-IP-এর country list, প্রতি মাসে refresh হয়। |

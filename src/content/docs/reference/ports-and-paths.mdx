@@ -60,6 +60,18 @@ what they are, and so you do not put something else there.
 | 18920 | PowerDNS API | Its key is in `/etc/powerdns/ekpanel-api.key`. |
 | 53 on `127.0.0.53` | systemd-resolved | The system's own resolver. PowerDNS leaves this address alone. |
 
+### Outgoing connections
+
+Outgoing traffic is usually open. If you filter it, allow these:
+
+| To | Port | From | What for |
+| --- | --- | --- | --- |
+| The panel's server | TCP 7443 | Every managed server's agent | The agent's connection to the panel. |
+| `github.com` | TCP 443 | The panel's server and every managed server | ekPanel releases: the installer, updates of the panel and agents, and the panel's update check every 6 hours. GitHub serves the files from its download hosts under `githubusercontent.com`, so allow those too. With `EKPANEL_RELEASES_URL` or `--release-url`, your mirror instead. |
+| Package mirrors and project download pages | TCP 80 and 443 | Every server | Packages (the distribution's, Caddy's, PHP's, CrowdSec's) and tools such as WP-CLI, Railpack and Stalwart. |
+| Let's Encrypt | TCP 443 | Every server with websites | Certificates, obtained by Caddy. |
+| Port 25 of other mail servers | TCP 25 | Servers with email on | Delivering mail. |
+
 ### Firewall rules ekPanel manages
 
 When you turn on the firewall on a server's page, ekPanel manages `ufw` and always keeps these
@@ -89,6 +101,10 @@ The installer itself adds rules for 80, 443 and 7443 only if `ufw` is already ac
 | `/var/lib/ekpanel-agent/` | The agent's own state (what it created, firewall and traffic state). |
 | `/etc/ekpanel/tls/` | The self-signed certificate for the panel, when installed without `--domain`. |
 | `/usr/local/lib/ekpanel/` | Tools the agent downloads and checks: WP-CLI, Railpack, Stalwart. |
+| `/usr/local/bin/ekpanel.prev`, `/usr/local/bin/ekpanel-agent.prev` | The previous program, kept by an [update](/start/upgrade/) or the installer, to go back to. |
+| `/usr/local/bin/ekpanel.failed`, `/usr/local/bin/ekpanel-agent.failed` | A new program that did not start after an update and was replaced by the previous one. Kept for a look. |
+| `/var/backups/ekpanel/ekpanel-db-<version>-<time>.dump` | Copies of the panel's database, taken before each update of the panel (`pg_dump -Fc`). The three newest are kept. Panel's server only. |
+| `/etc/ekpanel/agent-update.pending` | Exists only during an agent update, until the new agent reaches the panel. While it exists, the systemd timer `ekpanel-agent-rollback` waits to put the previous agent back. |
 
 ### Websites
 
@@ -121,7 +137,7 @@ The ID of a website or app is the long ID in its address in the panel.
 | --- | --- |
 | `/srv/ekpanel/apps/<name>` | A Docker app's Compose project. Root only. |
 | `/srv/ekpanel/builds` | Git deploy builds. |
-| `/var/backups/ekpanel` | Backups kept on the server's own disk. |
+| `/var/backups/ekpanel` | Backups kept on the server's own disk (one folder per backup location), and on the panel's server the database copies taken before updates. Root only (mode `0700`). |
 | `/etc/ekpanel/backup/` | Backup settings, encryption key and S3 keys. Root only. |
 | `/var/lib/ekpanel/quarantine` | Files moved away by the malware scan. Only root can read it. |
 | `/var/lib/ekpanel/geo/` | DB-IP's country list for country blocking, refreshed monthly. |

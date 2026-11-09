@@ -125,6 +125,9 @@ databases, disk space and account.
 | **Disk space used up** | A customer uses all of it | Administrators and that customer |
 | **Task failed** | A task (an image update, a restore, a WordPress install …) failed for good, after its last attempt. Scheduled and manual backups, and setting up websites, apps and databases, send their own alerts instead | Administrators, and the customer who started it |
 | **Sign-in from a new address** | Someone signed in to your account from an address not used in the last 90 days (not on the very first sign-in) | Only you |
+| **New ekPanel version** | The panel found a newer [release](/guides/admin/updates/). Sent once per version | Administrators |
+| **ekPanel updated** | An [update](/start/upgrade/) finished, with how many servers had a problem | Administrators |
+| **ekPanel update failed** | An update could not be installed; the panel keeps its current version | Administrators |
 
 Alerts go to **every** administrator. A customer receives only the alerts marked "owner" or
 "customer" above, and only about their own things.

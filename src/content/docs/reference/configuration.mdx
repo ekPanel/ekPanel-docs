@@ -25,6 +25,8 @@ line flag with the same meaning wins over the variable.
 | `EKPANEL_DEV_DB` | `--dev-db` | `false` | Starts a private, embedded PostgreSQL inside the data folder. For development only. |
 | `EKPANEL_DATA_DIR` | `--data-dir` | `/var/lib/ekpanel` | Folder for panel state that is not in the database (see below). |
 | `EKPANEL_SECURE_COOKIES` | `--secure-cookies` | `true` | Marks the session cookie `Secure` and names it `__Host-ekpanel_session`. Turn it off only for plain-HTTP development. |
+| `EKPANEL_RELEASES_URL` | `--releases-url` | `https://github.com/ekPanel/ekpanel/releases` | Where ekPanel releases are published, for update checks, updates and the **Add server** command. A mirror must have the same layout; downloads are still checked against the release key. The installer writes the address it used. |
+| `EKPANEL_UPDATE_CHECK` | `--update-check` | `true` | Look for a new release a minute after start and every 6 hours (only in a release build). `false` turns the automatic checks off; **Check for updates** on the [Updates](/guides/admin/updates/) page still works. |
 
 True or false values accept the usual forms (`true`, `false`, `1`, `0`). An unreadable value
 falls back to the default.
@@ -128,7 +130,9 @@ revokes the old certificate and closes the old connection.
 
 ## Files the installer writes
 
-`deploy/install.sh` sets up the panel's server. These are the settings it leaves behind:
+`deploy/install.sh` sets up the panel's server. These are the settings it leaves behind. On a
+server set up with `--agent`, it writes only `ekpanel-agent.service` and the Caddyfile (with no
+panel in it).
 
 <Tabs>
 <TabItem label="/etc/ekpanel/panel.env">
@@ -138,6 +142,7 @@ EKPANEL_LISTEN=127.0.0.1:8080
 EKPANEL_AGENT_LISTEN=:7443
 EKPANEL_DATABASE_URL=postgres:///ekpanel?host=/var/run/postgresql
 EKPANEL_DATA_DIR=/var/lib/ekpanel
+EKPANEL_RELEASES_URL=https://github.com/ekPanel/ekpanel/releases
 ```
 
 The database URL uses PostgreSQL's local socket with peer authentication, so there is no
@@ -177,23 +182,21 @@ Running `install.sh` again (to upgrade) writes `panel.env`, both service files a
 Caddyfile again. Changes you made by hand are lost. If you change them, note what you
 changed and apply it again after each upgrade. Also keep `EKPANEL_LISTEN` at
 `127.0.0.1:8080`: the Caddyfile and the installer's start check expect the panel there.
+An update from the **Updates** page replaces only the programs; it does not rewrite these
+files.
 </Aside>
 
 ### Installer options
 
 ```bash
-sudo ./install.sh --local-dir DIR [--domain panel.example.com] [--email you@example.com]
+curl -fsSL https://github.com/ekPanel/ekpanel/releases/latest/download/install.sh | sudo bash -s -- [options]
+sudo ./install.sh --local-dir DIR [options]
 ```
 
-| Option | What it does |
-| --- | --- |
-| `--local-dir DIR` | Folder with the `ekpanel` and `ekpanel-agent` binaries. Required for now: downloading releases comes with the first release. |
-| `--domain NAME` | A DNS name that points at this server. Caddy gets a trusted certificate for it. Without it, browsers show a certificate warning. |
-| `--email ADDRESS` | Contact address for Let's Encrypt expiry notices. Optional. |
-| `-h`, `--help` | Shows the usage text. |
-
-See [Install](/start/install/) for the whole procedure and [Upgrade](/start/upgrade/) for
-running it again.
+The options are `--domain`, `--email`, `--agent` (with `--panel`, `--token` and `--ca-pin`),
+`--version`, `--local-dir`, `--release-url` and `--release-key`. [Install](/start/install/#installer-options)
+explains each one. See [Install](/start/install/) for the whole procedure and
+[Upgrade](/start/upgrade/) for running it again.
 
 ## Changing a setting on a server
 
