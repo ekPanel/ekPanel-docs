@@ -13,7 +13,8 @@ The first release, v0.1.0, came out of it on 9 November 2026. Since then the API
 (API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
 the next release, and so is 4c: moving a website, an app, a database or everything a
 customer has on a server to another server, and rebuilding a website on another server from
-its backup when its server is gone. Next is 4d, importers. The full plan, with every decision
+its backup when its server is gone. 4d, importers, has started: a cPanel account's websites,
+files, MySQL databases and cron jobs can be imported from its full backup. The full plan, with every decision
 and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
@@ -159,10 +160,11 @@ Left for later:
 
 ### 4d. Importers
 
-- cPanel backups (accounts, files, databases, mail, DNS, cron jobs, certificates)
+- cPanel backups: websites, files, MySQL databases and cron jobs <Badge text="done" variant="success" />;
+  mail, DNS zones and certificates next
 - aaPanel sites and databases; plain WordPress from another host
 - Coolify applications and services
-- A report of what was imported and what was not
+- A report of what was imported and what was not (done for cPanel)
 
 ### 4e. Resellers and white-label
 

@@ -1,0 +1,288 @@
+---
+title: cPanel থেকে ইমপোর্ট
+description: একটা cPanel account-এর full backup থেকে তার website আর file, password-সহ MySQL database, আর cron job নিয়ে আসুন।
+sidebar:
+  order: 6
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা পুরো cPanel account তার full backup (`cpmove` file) থেকে আপনার কোনো server-এ নিয়ে আসতে পারেন: file-সহ তার website,
+একই নাম, user আর password-সহ তার MySQL database, আর তার cron job। কী আনবেন তা আপনি বেছে নেন, panel সেটা set up করে, আর
+শেষে একটা report বলে দেয় কী এসেছে আর কী আসেনি। Domain নতুন server-এ point না করা পর্যন্ত visitor-দের জন্য কিছুই বদলায় না।
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এই পাতা দেখেন না; তবে আপনি কোনো customer-এর জন্য account ইমপোর্ট করতে পারেন।
+- **Server connected**: এটা [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায় **অনলাইন** (Online)
+  দেখায়। Website-গুলো এই server-এই চলবে।
+- **Server-এ যথেষ্ট খালি disk জায়গা আছে**: backup file, আর সাথে unpack করার পরে তার ভেতরের সবকিছু, মানে account-এর
+  file আর database। cPanel-এর home পাতায় দুটোর size-ই দেখায়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন; panel নিজে এটা
+  check করে না।
+- **আপনি server-এ file কপি করতে পারেন**, SSH দিয়ে (`scp` বা FileZilla-র মতো কোনো SFTP program), `root` হিসেবে বা `sudo`
+  আছে এমন user হিসেবে।
+- কোনো customer-এর জন্য ইমপোর্ট করলে, তাঁর [package](/guides/admin/customers/)-এ server-টা থাকতে হবে, আর যত website,
+  database আর cron job আনছেন তার জায়গা থাকতে হবে।
+
+## cPanel-এ backup বানান
+
+আপনার লাগবে একটা **full account backup**, শুধু home folder বা শুধু database-এর backup না। এর যেকোনোটা দিয়ে পাবেন:
+
+- **cPanel-এ**: **Backup** খুলে **Download a Full Account Backup**-এ click করুন। cPanel background-এ file-টা বানায়, আর
+  তৈরি হলে জানিয়ে দেয়।
+- **পুরোনো host-এর কাছ থেকে**: account-এর `cpmove` file-টা চেয়ে নিন।
+- **WHM-এ**, যদি থাকে: **Transfer or Restore a cPanel Account**, বা পুরোনো server-এর command line-এ:
+
+  ```bash
+  sudo /scripts/pkgacct <cpanel user>
+  ```
+
+File-এর নাম হয় `cpmove-USER.tar.gz`-এর মতো (cPanel-এর **Backup** পাতা থেকে নিলে `backup-…_USER.tar.gz`)। Panel
+`.tar.gz`, `.tgz` আর `.tar` file নেয়।
+
+## Backup server-এ রাখুন
+
+Server-এর agent শুধু একটা folder-এর backup পড়ে: `/srv/ekpanel/imports/` (agent নিজেই folder-টা বানায়, শুধু root পড়তে
+পারে)। আপনার computer থেকে file-টা সেখানে কপি করুন:
+
+```bash
+scp cpmove-USER.tar.gz root@203.0.113.20:/srv/ekpanel/imports/
+```
+
+`203.0.113.20`-এর জায়গায় server-এর address আর `cpmove-USER.tar.gz`-এর জায়গায় file-এর নাম দিন। আপনি যে server বেছে নেন,
+**cPanel থেকে ইমপোর্ট** (Import from cPanel) পাতা তার জন্য `scp` লাইনটা দেখায়, সাথে একটা copy button।
+
+<Aside type="caution">
+Backup-এ account-এর সব file আর তার database-গুলোর password hash থাকে। যতক্ষণ দরকার শুধু ততক্ষণই রাখুন, আর
+[ইমপোর্টের পরে মুছে ফেলুন](#after-the-import)।
+</Aside>
+
+## Backup পড়ুন
+
+<Steps>
+
+1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
+   যেতে পারেন।
+
+2. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে backup কপি করেছেন।
+
+3. **ব্যাকআপ ফাইলের নাম** (Backup file name)-এ শুধু file-এর নাম লিখুন, folder ছাড়া: `cpmove-USER.tar.gz`,
+   `/srv/ekpanel/imports/cpmove-USER.tar.gz` না।
+
+4. **ব্যাকআপ পড়ুন** (Read backup)-এ click করুন। "ব্যাকআপ পড়া হচ্ছে। বড় হলে কয়েক মিনিট লাগতে পারে।"
+
+</Steps>
+
+এরপর panel দেখায় **২. _user_ থেকে কী কী আনবেন বেছে নিন** (2. Choose what to import from _user_), সাথে cPanel-এর user
+নাম আর তার home folder-এর size।
+
+## কী আনবেন বেছে নিন
+
+<Steps>
+
+1. **ওয়েবসাইট** (Websites)-এর নিচে যে website-গুলো আনবেন, সেগুলোতে tick দিন। প্রতিটার পাশে লেখা থাকে **মূল ডোমেইন**
+   (Main domain), **অ্যাডঅন ডোমেইন** (Addon domain) বা **সাবডোমেইন** (Subdomain), সাথে তার document root (যেমন
+   `~/public_html`)। Parked domain আলাদা website না: সেগুলো মূল domain-এর নিচে "সাথে: …" হিসেবে দেখায়, আর তার extra domain
+   হয়ে যায়।
+
+2. প্রতিটা website-এর পাশে তার **PHP** version দেখে নিন। শুরুতে থাকে cPanel-এ website-টার যে version ছিল সেটা (সেই version
+   এখানে না থাকলে "আগে ছিল 8.0" দেখায়)। ekPanel-এ আছে 8.5, 8.4, 8.3, 8.2, 8.1 আর 7.4; অন্য যেকোনো version 8.4 হয়ে যায়।
+   কোনো customer-এর package হয়তো কয়েকটা version-ই allow করে; তখন package-এর প্রথম version-টা নেওয়া হয়।
+
+3. **ডেটাবেস** (Databases)-এর নিচে যে MySQL database-গুলো আনবেন, সেগুলোতে tick দিন। প্রতিটার size আর user দেখায়।
+   "নতুন পাসওয়ার্ড পাবে" (gets a new password) মানে password আনা যায়নি (দেখুন [Database](#databases))।
+
+4. Account-এ cron job থাকলে, তাদের সংখ্যাসহ box-টা (যেমন **3টা ক্রন জব**) সবগুলো একসাথে আনে। এগুলো মূল website-এ যায়,
+   তাই মূল website-এ tick থাকলেই শুধু এটায় tick দেওয়া যায়।
+
+5. **কার জন্য** (For)-এ বেছে নিন যা আনছেন তার মালিক কে: **অ্যাডমিনদের (কোনো প্যাকেজ নয়)** (Administrators (no package))
+   বা কোনো customer।
+
+6. **এখনো ইমপোর্ট হয় না** (Not imported yet) box-টা পড়ে **ইমপোর্ট করুন** (Import)-এ click করুন।
+
+</Steps>
+
+যে website-এর domain panel-এর অন্য কোনো website বা app আগে থেকেই ব্যবহার করছে, সেটায় **আগে থেকেই আছে** (Already here)
+লেখা থাকে; যে database-এর নাম (বা user) server-এ আগে থেকে আছে, সেটাতেও। এগুলোতে tick দেওয়া যায় না। **ইমপোর্ট করুন**
+button-এর পাশের লাইনটা আপনার বেছে নেওয়া জিনিস গোনে, যেমন "3টা ওয়েবসাইট, 2টা ডেটাবেস"।
+
+**ইমপোর্ট করুন**-এ click করলে panel সাথে সাথে website আর database বানিয়ে ফেলে, তারপর একটা task সেগুলো ভরে: "ওয়েবসাইট আর
+ডেটাবেস তৈরি হচ্ছে, তারপর ফাইল আর ডেটা কপি হবে। এই পেজ ছেড়ে গেলেও ইমপোর্ট চলতে থাকবে।" চলার সময় প্রতিটা পাতার নিচের
+task box-এ এটা "cPanel অ্যাকাউন্ট _user_ ইমপোর্ট" নামে দেখায়।
+
+## ইমপোর্টে কী হয়
+
+একটা test VM-এ একটা ছোট account (MySQL database-সহ একটা PHP 8.2 website, একটা parked domain, একটা symbolic link আর
+একটা cron job) পড়ে ইমপোর্ট করতে প্রায় 5 second লেগেছে, আর server-এ আগে PHP 8.2 install করতে হলে 51 second। বড় account-এ
+সময় লাগে তার file unpack হতে যতক্ষণ লাগে।
+
+### Website আর file
+
+- আপনার বেছে নেওয়া প্রতিটা website একটা **PHP website** হয়, তার নিজের Linux account-সহ। Account-টা domain থেকে নতুন একটা
+  নাম পায় (যেকোনো নতুন website-এর মতো), cPanel-এর user নাম না।
+- Website-এর document root-এর file-গুলো যায় তার `public_html`-এ। কোনো addon domain-এর folder `public_html`-এর ভেতরে
+  থাকলে সেটা শুধু নিজের folder পায়; বাকিটা পায় মূল website।
+- cPanel home folder-এর অন্য file আর folder, যেগুলো কোনো document root-এর মধ্যে পড়ে না (script, private folder), সেগুলো
+  যায় **মূল website-এর** home folder-এ, তার `public_html`-এর পাশে। মূল website না আনলে এগুলো বাদ পড়ে।
+- বাদ পড়ে: cPanel-এর নিজের folder (`mail`, `etc`, `.cpanel`, `tmp`, `logs`, `access-logs`, `ssl`, `.trash`,
+  `public_ftp`, `.htpasswds`, `.softaculous` আর এরকম আরও), home folder-এর অন্য dotfile আর dotfolder (`.well-known` ছাড়া),
+  website-এর বাইরে point করা symbolic link, আর pipe-এর মতো বিশেষ file। Report-এ এগুলোর হিসাব থাকে।
+
+### Database
+
+- আপনার বেছে নেওয়া প্রতিটা database server-এ একটা MariaDB database হয়, **একই নাম**, **একই user** আর **একই password**-সহ:
+  password hash-টা সাথে আসে। আপনার `wp-config.php` আর অন্য settings কিছু না বদলেই কাজ করে।
+- ekPanel-এ প্রতিটা database-এর একটাই নিজস্ব user থাকে। cPanel-এ এক user অনেক database ব্যবহার করতে পারে: তখন প্রথম
+  database user-টা রাখে, আর বাকি প্রতিটা database-এর নামে একটা নতুন user পায়, নতুন password-সহ। যে database-এর কোনো user
+  ছিল না, সেটাও নতুন password-সহ একটা user পায়।
+- নতুন password পাওয়া database-গুলো report-এ থাকে। প্রতিটার জন্য **ডেটাবেস** (Databases)-এ সেটা খুলুন, **নতুন পাসওয়ার্ড
+  তৈরি করুন** (Create a new password)-এ click করুন, আর database-এর user আর নতুন password website-এর settings-এ বসান। দেখুন
+  [Database](/guides/data/databases/#reset-a-password)।
+
+### File-এর ভেতরের path
+
+পুরোনো code আর settings-এ প্রায়ই cPanel-এর home folder-এর নাম থাকে, যেমন `/home/olduser/public_html/wp-content`। ইমপোর্ট
+ছোট text file-গুলোতে `/home/<cPanel user>/…` বদলে নতুন জায়গা বসায়:
+
+- কোনো website-এর document root-এর ভেতরের path হয়ে যায় সেই website-এর `public_html`;
+- অন্য যেকোনো path হয়ে যায় মূল website-এর home folder।
+
+শুধু 1 MB পর্যন্ত file বদলায়, আর শুধু code আর configuration: `.php`, `.inc`, `.ini`, `.env`, `.htaccess`, `.user.ini`,
+`.json`, `.yml`, `.yaml`, `.xml`, `.conf`, `.cfg`, `.sh`, `.pl`, `.py`, `.cgi` আর `.txt`। কয়টা file বদলেছে, report তা
+গোনে আর তালিকা দেয়।
+
+**Database-এর ভেতরে** রাখা path (যেমন WordPress-এর `wp_options` table-এ, বা কোনো cache plugin-এর settings-এ) বদলায় না।
+Website-এ এখনো পুরোনো folder-এর নাম থাকলে website-এর নিজের tool দিয়ে বদলান, যেমন WordPress-এ `wp search-replace`।
+
+### Cron job
+
+- Cron job-গুলো মূল website-এ যোগ হয় আর তার account হিসেবে চলে।
+- Command-এ `/home/<cPanel user>/` বদলে মূল website-এর home folder হয়।
+- cPanel যে PHP binary ব্যবহার করে (`/usr/local/bin/php`, `/opt/cpanel/ea-php82/root/usr/bin/php`, `ea-php82`, `php`),
+  সেগুলো বদলে মূল website-এর PHP version হয়, যেমন `php8.2`।
+- `MAILTO=…`-এর মতো settings লাইন ইমপোর্ট হয় না; report-এ সেগুলোর তালিকা থাকে। ekPanel এর বদলে প্রতিটা job-এর output তার
+  পাতায় রাখে। দেখুন [Cron job](/guides/websites/cron/)।
+
+### Report
+
+Task শেষ হলে পাতায় দেখায় **ইমপোর্ট শেষ** (Import finished), সাথে website, database, file-এর সংখ্যা আর size, আর cron
+job-এর সংখ্যা, তারপর:
+
+- "_n_টা ফাইলে পুরোনো হোম ফোল্ডারের পাথ বদলানো হয়েছে", তালিকাসহ;
+- নতুন password পাওয়া database-গুলো;
+- **ইমপোর্ট হয়নি** (Not imported): যা বাদ পড়েছে সব, যেমন email account, DNS zone, certificate, cPanel-এর folder আর
+  website-এর বাইরে point করা link।
+
+## ইমপোর্টের পরে
+
+<Steps>
+
+1. **DNS বদলানোর আগে প্রতিটা website check করুন।** শুধু আপনার computer-এ domain-টা নতুন server-এ point করুন, তার `hosts`
+   file-এ একটা লাইন যোগ করে (Linux আর macOS-এ `/etc/hosts`, Windows-এ `C:\Windows\System32\drivers\etc\hosts`):
+
+   ```text
+   203.0.113.20  example.com www.example.com
+   ```
+
+   Browser-এ website খুলে কয়েকটা পাতা, একটা login আর একটা form চালিয়ে দেখুন। Browser certificate নিয়ে সতর্ক করবে: DNS
+   server-এ point করলে তবেই server আসল certificate পায়। কাজ শেষে লাইনটা মুছে দিন।
+
+2. **যা ইমপোর্ট হয়নি তা নতুন করে বানান**: email account [Email](/guides/dns/email/)-এ, আর DNS zone
+   [DNS](/guides/dns/name-servers/)-এ (বা আপনার বর্তমান DNS host-এই রেখে দিন)।
+
+3. **Domain-গুলো server-এ point করুন।** প্রতিটা domain-এর, আর extra domain-গুলোর, `A` record (আর থাকলে `AAAA`) বদলে
+   server-এর address দিন। Domain সেখানে point করলে certificate নিজে থেকেই নেওয়া হয়।
+
+4. Server থেকে **backup মুছে ফেলুন**:
+
+   ```bash
+   sudo rm /srv/ekpanel/imports/cpmove-USER.tar.gz
+   ```
+
+</Steps>
+
+<Aside type="caution" title="এখানে .htaccess file কোনো কাজ করে না">
+ekPanel-এর web server (Caddy) `.htaccess` file পড়ে না। WordPress, Laravel আর এরকম software-এর "সব request `index.php`-এ
+পাঠাও" নিয়মটা আগে থেকেই আছে, তাই তাদের সুন্দর link-গুলো কাজ করতে থাকে। `.htaccess`-এর অন্য নিয়ম (redirect, বন্ধ করা
+folder, password protection, `php_value` লাইন) কাজ করে না: সেগুলো [Redirect](/guides/websites/redirects/) আর website-এর
+[PHP settings](/guides/websites/php/#php-settings-per-site)-এ নতুন করে বানান।
+</Aside>
+
+<Aside type="note">
+Website-এর home folder (`/home/<account>`) website-এর নিজের account-এর জন্য read-only, কারণ SFTP account-টাকে এর ভেতরে
+আটকে রাখে। যে script সরাসরি `/home/<cPanel user>/`-এ file লিখত, তাকে এর ভেতরের কোনো folder-এ লিখতে হবে, যেমন `tmp` বা
+তার নিজের একটা folder। দেখুন [File](/guides/websites/files/)।
+</Aside>
+
+## API দিয়ে
+
+`sites` scope-সহ admin-এর [API token](/guides/security/api-tokens/) দিয়ে ইমপোর্ট করা যায়। Customer-দের token দিয়ে যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/imports/inspect` | Backup পড়ে। Body: `{"server_id": "…", "file": "cpmove-USER.tar.gz"}`। ভেতরে কী আছে তা জানায়, সাথে `taken_domains`, `taken_databases` আর `php_versions`। |
+| `POST /api/v1/imports` | ইমপোর্ট করে। Body: `{"server_id", "file", "owner_id", "sites": ["example.com"], "php": {"example.com": "8.2"}, "databases": ["olduser_wp"], "cron": true}`। `202` আর একটা [task](/reference/api/#tasks-following-slow-work) দিয়ে উত্তর দেয়; তার `result`-এ report থাকে। |
+
+Admin-দের জন্য `owner_id` খালি রাখুন। [ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api POST imports/inspect --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz"}'
+ekctl api POST imports --data '{"server_id":"<server id>","file":"cpmove-USER.tar.gz","owner_id":"","sites":["example.com"],"databases":["olduser_wp"],"cron":true}'
+```
+
+## সীমা আর যা এখনো নেই
+
+cPanel account-এর এই অংশগুলো **এখনো ইমপোর্ট হয় না**। এগুলো পরিকল্পনায় আছে; দেখুন [roadmap](/project/roadmap/)।
+
+- **Email account আর mail।** [Email](/guides/dns/email/)-এ mailbox নতুন করে বানান, আর mail আপনার mail program দিয়ে বা
+  `imapsync`-এর মতো tool দিয়ে সরান।
+- **DNS zone।** Record-গুলো [DNS](/guides/dns/name-servers/)-এ যোগ করুন, বা zone বর্তমান DNS host-এই রেখে শুধু `A` আর
+  `AAAA` record বদলান।
+- **SSL certificate।** Domain server-এ point করলে নতুন certificate নেওয়া হয়।
+
+এছাড়া:
+
+- শুধু MySQL database ইমপোর্ট হয়, MariaDB database হিসেবে। Backup-এর PostgreSQL database বাদ পড়ে।
+- সব website PHP website হয়। cPanel-এর Node.js, Python আর Ruby application file হিসেবে কপি হয়, কিন্তু চলে না; সেগুলো
+  [app](/guides/apps/docker-apps/) হিসেবে set up করুন।
+- FTP account আর cPanel-এর নিজের settings ইমপোর্ট হয় না। cPanel-এ বানানো redirect আর password দেওয়া folder থাকে
+  `.htaccess` file-এ, যা ekPanel পড়ে না (দেখুন [ইমপোর্টের পরে](#after-the-import))।
+- একটা backup একটা server-এ ইমপোর্ট হয়।
+- cPanel-এর মতো করে বানানো একটা ছোট backup দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল cPanel server-এর backup দিয়ে না।
+
+## সমস্যা সমাধান
+
+| Message | যা করবেন |
+| --- | --- |
+| "সার্ভারের /srv/ekpanel/imports ফোল্ডারে রাখা একটা .tar.gz ব্যাকআপের নাম লিখুন, ফোল্ডার ছাড়া।" | শুধু file-এর নাম লিখুন, শেষে `.tar.gz`, `.tgz` বা `.tar`। |
+| "এই সার্ভারের /srv/ekpanel/imports ফোল্ডারে এই নামের কোনো ব্যাকআপ নেই। ফাইলের নাম আর সার্ভার আবার দেখুন।" | File-টা অন্য server-এ আছে বা নাম আলাদা। বেছে নেওয়া server-এ `ls -l /srv/ekpanel/imports/` দিয়ে check করুন। |
+| "এই ফাইলটা cPanel-এর পুরো ব্যাকআপ নয়, বা নষ্ট হয়ে গেছে। cPanel-এ পুরো অ্যাকাউন্টের ব্যাকআপ বানিয়ে আবার কপি করুন।" | কপি অসম্পূর্ণ (size মূল file-এর সাথে মিলিয়ে দেখুন), বা এটা অন্য ধরনের backup, যেমন শুধু home folder-এর backup। পুরো account-এর backup বানিয়ে আবার কপি করুন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" | Server offline। দেখুন [Server offline হলে](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "এখানে অন্য ওয়েবসাইট বা অ্যাপ আগে থেকেই ব্যবহার করছে: …" | Panel-এর অন্য কোনো website বা app domain-টা ব্যবহার করছে। Website-টা থেকে tick তুলে দিন, বা আগে অন্যটা মুছুন। |
+| "সার্ভারে আগে থেকেই … নামের ডেটাবেস বা ইউজার আছে।" | Database-টা থেকে tick তুলে দিন, server-এর ওই database বা user মুছুন বা নাম বদলান, বা অন্য server-এ ইমপোর্ট করুন। |
+| "আপনার প্যাকেজে আর ওয়েবসাইট যোগ করা যাবে না।" (বা ডেটাবেস, ক্রন জব) | Customer-এর package-এর limit বাড়ান, বা কম জিনিস আনুন। |
+| "এই প্যাকেজ ওই সার্ভার ব্যবহার করতে পারে না।" | Customer-এর package-এ server-টা যোগ করুন, বা অন্য server বেছে নিন। |
+| "অন্তত একটা ওয়েবসাইট বা ডেটাবেস বেছে নিন।" | অন্তত একটায় tick দিন। |
+
+**ইমপোর্ট ব্যর্থ হয়েছে।** পাতায় **ইমপোর্ট ব্যর্থ হয়েছে** (The import failed) আর কারণ দেখায়। "এর জন্য প্যানেল যে ওয়েবসাইট
+আর ডেটাবেস বানিয়েছিল সেগুলো তালিকায় থেকে গেছে। আবার চেষ্টার আগে সেগুলো মুছে ফেলুন।" তারপর backup আবার পড়ে ইমপোর্ট করুন।
+
+**কোনো website database error দেখায়।** Report-এ নতুন password পাওয়া database আছে কিনা দেখুন, আর নতুন password-টা
+website-এর settings-এ বসান। কোনো database ইমপোর্ট না হয়ে থাকলে সেটা আলাদা করে আবার ইমপোর্ট করুন: backup আবার পড়ে শুধু
+ওই database-এ tick দিন।
+
+**কোনো website ভুল file বা পুরোনো path দেখায়।** `/home/<cPanel user>/`-এর যে path ইমপোর্ট বদলায়নি সেগুলো খুঁজুন: 1 MB-এর
+বড় file-এ, অন্য ধরনের file-এ, বা database-এ।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="Database" href="/guides/data/databases/" description="Password, user আর connect করা।" />
+	<LinkCard title="Cron job" href="/guides/websites/cron/" />
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+	<LinkCard title="Email" href="/guides/dns/email/" />
+	<LinkCard title="Built-in name server" href="/guides/dns/name-servers/" />
+	<LinkCard title="অন্য server-এ সরান" href="/guides/websites/move/" description="আপনার নিজের server-গুলোর মধ্যে।" />
+	<LinkCard title="REST API" href="/reference/api/" />
+</CardGrid>

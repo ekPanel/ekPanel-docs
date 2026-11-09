@@ -242,7 +242,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -265,6 +265,9 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - <Badge text="পরের release" variant="note" /> Server চলে গেলে আপনার বেছে নেওয়া database সহ একটা website তার সবচেয়ে
   নতুন S3 backup থেকে অন্য server-এ আবার বানানো। Panel যে DNS চালায় তা পেছনে যায়। দুটো VM আর একটা S3 test server দিয়ে
   test করা।
+- <Badge text="পরের release" variant="note" /> একটা cPanel account তার full backup (`cpmove` file) থেকে ইমপোর্ট করা:
+  file-সহ website, একই নাম, user আর password-সহ MySQL database, আর cron job, সাথে কী এসেছে আর কী আসেনি তার report।
+  Email, DNS zone আর certificate এখনো ইমপোর্ট হয় না।
 
 ## API আর command line
 
@@ -294,7 +297,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
+| Importer | aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify; cPanel backup থেকে email, DNS zone আর certificate-ও |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |

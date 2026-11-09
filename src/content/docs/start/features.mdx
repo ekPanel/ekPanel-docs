@@ -241,7 +241,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/) · [Import from cPanel](/guides/admin/import-cpanel/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -270,6 +270,10 @@ has not been tried yet.
 - <Badge text="next release" variant="note" /> Rebuilding a website, with the databases you
   choose, on another server from its newest S3 backup when its server is gone. DNS the panel
   manages follows. Tested with two VMs and an S3 test server.
+- <Badge text="next release" variant="note" /> Importing a cPanel account from its full backup
+  (`cpmove` file): websites with their files, MySQL databases with the same names, users and
+  passwords, and cron jobs, with a report of what was and was not imported. Email, DNS zones
+  and certificates are not imported yet.
 
 ## API and command line
 
@@ -301,7 +305,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |
+| Importers | aaPanel, plain WordPress from another host, Coolify; from cPanel backups, also email, DNS zones and certificates |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |
