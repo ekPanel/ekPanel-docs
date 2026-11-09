@@ -12,7 +12,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 সাথে এখনো চালিয়ে দেখা না হয়ে থাকে, তালিকায় সেটা বলা আছে।
 
 <Aside type="note">
-এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line) আর website অন্য
+এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line) আর website ও app অন্য
 server-এ সরানো ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
@@ -98,6 +98,7 @@ server-এ সরানো ([অনেক server](#many-servers)-এর নি�
 - App-এর port `127.0.0.1`-এ থাকে, তাই Docker firewall-এ ফুটো করতে পারে না। যেসব Compose file
   public port খোলে, আপনি অনুমতি না দিলে সেগুলো নেওয়া হয় না।
 - একটা app delete করলে তার data থেকে যায়, যদি না আপনি সেটাও delete করতে বেছে নেন।
+- <Badge text="পরের release" variant="note" /> একটা app তার data সহ [অন্য server-এ সরান](/guides/apps/move/)।
 
 ## App catalogue
 
@@ -236,7 +237,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [অন্য server-এ সরান](/guides/websites/move/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -249,6 +250,9 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - <Badge text="পরের release" variant="note" /> একটা website, আপনার বেছে নেওয়া database সহ, অন্য server-এ সরানো:
   file (owner আর ACL সহ), database আর certificate server-গুলোর agent-এর মধ্যে কপি হয়, কিছু বদলানোর আগে নতুন server
   যাচাই করা হয়, panel যে DNS চালায় তা পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি চলতে থাকে। দুটো VM দিয়ে test করা।
+- <Badge text="পরের release" variant="note" /> একটা app অন্য server-এ সরানো: app বন্ধ করা হয়, তার Docker volume (সংখ্যায়
+  owner সহ) আর Git app-এর বর্তমান build server-গুলোর agent-এর মধ্যে কপি হয়, নতুন server app set up করে তার volume ভরে,
+  panel যে DNS চালায় তা পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি তার data সহ বন্ধ থাকে। দুটো VM দিয়ে test করা।
 
 ## API আর command line
 
@@ -278,7 +282,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| সরানো | একটা app, বা শুধু একটা database, অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো। (Website এখনই সরানো যায়।) |
+| সরানো | শুধু একটা database অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো। (Website আর app এখনই সরানো যায়।) |
 | Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |

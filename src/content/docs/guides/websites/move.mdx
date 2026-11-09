@@ -174,8 +174,8 @@ website's Linux account, its home folder, its web server and PHP settings, and t
 that moved with it. Databases you did not tick stay where they were. This cannot be undone.
 
 Until the old copy is removed, nobody (not even the website's owner) can delete the website:
-the panel answers "This website is being moved, or its old copy is still on the other server.
-Finish the move first." Once the move is **Done**, the website can be moved again, back to
+the panel answers "This is being moved, or its old copy is still on the other server. Finish
+the move first." Once the move is **Done**, the website can be moved again, back to
 its first server too.
 
 <Aside type="note">
@@ -199,8 +199,9 @@ The card shows **Failed** and the reason. Fix the cause, then click **Move…** 
 
 <Aside type="caution">
 Avoid updating or restarting the panel while a move runs. A move is not continued after the
-panel restarts: it is marked **Failed** ("the panel restarted during the move"), a website
-that was already switching goes back to the old server, and you can start the move again.
+panel restarts: it is marked **Failed** ("the panel restarted during the move; it stays where
+it was"), a website that was already switching goes back to the old server, and you can start
+the move again.
 </Aside>
 
 ## With the API or ekctl
@@ -224,9 +225,10 @@ ekctl api POST moves/<move id>/cleanup
 
 ## Limits and what is not there yet
 
-- Only websites move. Moving an [app](/guides/apps/docker-apps/), a database on its own,
-  restoring a backup onto another server and moving a whole customer are not there yet (see
-  the [roadmap](/project/roadmap/)).
+- **Apps** move on their own, from the app's page: see [Move an app](/guides/apps/move/). A
+  website and an app that work together move one after the other.
+- Moving a database on its own, restoring a backup onto another server and moving a whole
+  customer are not there yet (see the [roadmap](/project/roadmap/)).
 - Changes made on the old copy after the copy starts are not carried over.
 - Email for the domain is not part of the move; it stays on its email server.
 - A WordPress staging copy is a website of its own and stays where it is.
@@ -242,13 +244,13 @@ The panel refuses to start a move with one of these messages:
 | Message (error code) | What to do |
 | --- | --- |
 | "The website must be working before it can move." (`site_not_active`) | Open the website and fix what its status shows, or wait until it is set up. |
-| "The website is already on this server." (`same_server`) | Choose another server. |
-| "Choose a server to move the website to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
+| "It is already on this server." (`same_server`) | Choose another server. |
+| "Choose a server to move to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
 | "The server's agent is not connected." (`agent_offline`) | One of the two servers is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
 | "A chosen database is not on the website's server or belongs to someone else." (`invalid_database`) | Choose only databases of the website's owner on its current server. |
 | "A chosen database must be working before it can move." (`database_not_active`) | Open **Databases** and fix the database first. |
 | "The target server already has a database or user with the same name." (`database_name_taken`) | Delete or rename that database or user on the new server, or move to another server. |
-| "This website is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | Wait for the move to finish, or remove the old copy. |
+| "This is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | Wait for the move to finish, or remove the old copy. |
 | "You do not have permission to do that." (`forbidden`) | Only administrators can move websites. |
 
 Removing the old copy can answer "There is no old copy to remove." (`move_not_moved`): the move
@@ -272,6 +274,7 @@ card again (it stays there while the error is shown).
 
 <CardGrid>
 	<LinkCard title="Websites" href="/guides/websites/websites/" />
+	<LinkCard title="Move an app" href="/guides/apps/move/" description="The same for Docker, Compose and Git apps." />
 	<LinkCard title="Servers" href="/guides/admin/servers/" description="Add, watch and remove servers." />
 	<LinkCard title="Built-in name servers" href="/guides/dns/name-servers/" />
 	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />

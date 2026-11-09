@@ -158,7 +158,7 @@ Phase বদলে হয় **পুরোনো কপি মোছা হচ�
 account, তার home folder, তার web server আর PHP settings, আর তার সাথে যাওয়া database-গুলো মুছে ফেলে। যে database-এ tick
 দেননি, সেগুলো যেখানে ছিল সেখানেই থাকে। এটা আর ফেরানো যায় না।
 
-পুরোনো কপি মোছা না হওয়া পর্যন্ত কেউই (website-এর মালিকও না) website টা delete করতে পারেন না: panel উত্তর দেয় "এই ওয়েবসাইট
+পুরোনো কপি মোছা না হওয়া পর্যন্ত কেউই (website-এর মালিকও না) website টা delete করতে পারেন না: panel উত্তর দেয় "এটা
 সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" সরানো **শেষ** (Done) হলে website আবার সরানো যায়,
 প্রথম server-এ ফেরতও।
 
@@ -180,7 +180,7 @@ Card-এ **ব্যর্থ** (Failed) আর কারণ দেখায়�
 
 <Aside type="caution">
 সরানো চলার সময় panel update বা restart এড়িয়ে চলুন। Panel restart হলে সরানোর কাজ আর এগোয় না: সেটা **ব্যর্থ** (Failed)
-হিসেবে চিহ্নিত হয় ("the panel restarted during the move"), বদলানো শুরু হয়ে থাকলে website পুরোনো server-এ ফিরে যায়, আর আপনি
+হিসেবে চিহ্নিত হয় ("the panel restarted during the move; it stays where it was"), বদলানো শুরু হয়ে থাকলে website পুরোনো server-এ ফিরে যায়, আর আপনি
 আবার সরানো শুরু করতে পারেন।
 </Aside>
 
@@ -205,8 +205,10 @@ ekctl api POST moves/<move id>/cleanup
 
 ## সীমা আর যা এখনো নেই
 
-- শুধু website সরানো যায়। [App](/guides/apps/docker-apps/) সরানো, শুধু একটা database সরানো, অন্য server-এ backup restore করা
-  আর পুরো একজন customer সরানো এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+- **App** আলাদাভাবে সরে, app-এর পাতা থেকে: দেখুন [App সরান](/guides/apps/move/)। একসাথে কাজ করা একটা website আর একটা app
+  একটার পর একটা সরে।
+- শুধু একটা database সরানো, অন্য server-এ backup restore করা আর পুরো একজন customer সরানো এখনো নেই (দেখুন
+  [roadmap](/project/roadmap/))।
 - কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
 - Domain-এর email সরানোর অংশ না; সেটা তার email server-এই থাকে।
 - WordPress-এর staging copy আলাদা একটা website, সেটা যেখানে আছে সেখানেই থাকে।
@@ -221,13 +223,13 @@ ekctl api POST moves/<move id>/cleanup
 | Message (error code) | যা করবেন |
 | --- | --- |
 | "সরানোর আগে ওয়েবসাইটটা ঠিকমতো চলতে হবে।" (`site_not_active`) | Website খুলে তার status যা দেখায় তা ঠিক করুন, বা set up শেষ হওয়া পর্যন্ত অপেক্ষা করুন। |
-| "ওয়েবসাইটটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
+| "এটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
 | "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | **যেখানে সরাবেন** (Move to)-এ একটা server বেছে নিন। API দিয়ে করলে server ID check করুন। |
 | "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | দুটো server-এর একটা offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
 | "বেছে নেওয়া একটা ডেটাবেস ওয়েবসাইটের সার্ভারে নেই, বা অন্য কারো।" (`invalid_database`) | শুধু website-এর মালিকের, তার বর্তমান server-এর database বেছে নিন। |
 | "সরানোর আগে বেছে নেওয়া ডেটাবেস ঠিকমতো চলতে হবে।" (`database_not_active`) | **ডেটাবেস** (Databases) খুলে আগে database টা ঠিক করুন। |
 | "নতুন সার্ভারে আগে থেকেই একই নামের ডেটাবেস বা ইউজার আছে।" (`database_name_taken`) | নতুন server-এ ওই database বা user মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
-| "এই ওয়েবসাইট সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | সরানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা পুরোনো কপি মুছে ফেলুন। |
+| "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | সরানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা পুরোনো কপি মুছে ফেলুন। |
 | "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা website সরাতে পারেন। |
 
 পুরোনো কপি মোছার সময় উত্তর আসতে পারে "মুছে ফেলার মতো কোনো পুরোনো কপি নেই।" (`move_not_moved`): সরানো ব্যর্থ হয়েছিল, বা
@@ -249,6 +251,7 @@ server-এ কপি করুন।
 
 <CardGrid>
 	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="App সরান" href="/guides/apps/move/" description="Docker, Compose আর Git app-এর জন্য একই কাজ।" />
 	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />
 	<LinkCard title="Built-in name server" href="/guides/dns/name-servers/" />
 	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />

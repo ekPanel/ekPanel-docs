@@ -95,7 +95,7 @@ Connection সবসময় agent খোলে:
 যেহেতু agent নিজে বাইরে connect করে, NAT বা বাসার router-এর পেছনের server কোনো incoming port খোলা
 ছাড়াই কাজ করে। শুধু panel-এর server-কে TCP 7443-এ connection নিতে হয়।
 
-একটা [website অন্য server-এ সরানো](/guides/websites/move/)-ও এই connection-গুলোই ব্যবহার করে। Panel পুরোনো server-এর
+একটা [website](/guides/websites/move/) বা [app](/guides/apps/move/) অন্য server-এ সরানোও এই connection-গুলোই ব্যবহার করে। Panel পুরোনো server-এর
 agent-এ একটা export stream আর নতুনটায় একটা import stream খোলে, আর data একটা থেকে আরেকটায় পৌঁছে দেয়। দুটো server কখনো
 একে অপরের সাথে connect করে না: তাদের মধ্যে SSH নেই, বাড়তি কোনো খোলা port নেই, আর যেকোনোটা NAT-এর পেছনে থাকতে পারে।
 পুরোনো server ততটুকুই পাঠায় যতটুকু panel allow করে, আর নতুন server যা লিখেছে তা নিশ্চিত করলে তবেই panel আরও allow করে,
@@ -118,7 +118,7 @@ type-সহ, check করা parameter আছে, যা source code-এর `int
 | `services.restart` | একটা নির্দিষ্ট allowlist (Caddy, PostgreSQL, cron, mail server, CrowdSec) থেকে একটা service restart করে। |
 | `php.info`, `php.extension` | PHP version আর extension-এর তালিকা দেয়, একটা extension যোগ করে বা সরায়। |
 | `mail.check` | অন্য mail server এই server-এর mail নেবে কি না, তা যেসব জিনিস ঠিক করে সেগুলো পরীক্ষা করে। |
-| `transfer.export`, `transfer.import`, `transfer.finish`, `transfer.discard` | Website সরানো: পুরোনো server-এ pack করা, নতুনটায় নেওয়া, file আর database dump জায়গামতো বসানো, বা অব্যবহৃত কপি ফেলে দেওয়া। |
+| `transfer.export`, `transfer.import`, `transfer.finish`, `transfer.discard` | Website বা app সরানো: পুরোনো server-এ pack করা, নতুনটায় নেওয়া, file, database dump বা app volume জায়গামতো বসানো, বা অব্যবহৃত কপি ফেলে দেওয়া। |
 
 এর বাইরে যেকোনো কিছুর উত্তরে agent বলে "unknown operation"। **Shell command চালায় এমন কোনো
 operation নেই।** যেকোনো command চালানোর একমাত্র উপায় হলো [web terminal](/guides/apps/terminal/),

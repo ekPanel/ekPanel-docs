@@ -1,0 +1,281 @@
+---
+title: Move to another server
+description: Move a Docker, Compose or Git app with its data to another of your servers, point its domain there, and remove the old copy.
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+You can move an app, with the data in its Docker volumes, from one of your servers to another:
+to free up a full server, to retire an old one, or to give a busy app a server of its own. The
+copy goes straight from server to server, and the old copy stays on the old server, stopped,
+until you remove it.
+
+Moving an app works like [moving a website](/guides/websites/move/), with one big difference:
+**the app is stopped while it moves.** A website's old copy keeps serving; an app is unavailable
+from the moment it stops until it runs on the new server and its domain points there.
+
+## Before you start
+
+- You are an **administrator**. Customers do not see this; they can ask you to move an app.
+- For a customer's app, the new server is one their package allows (otherwise: "The customer's
+  package does not include this server. Add it to the package first.").
+- **Both servers are connected.** The new server is [added to the panel](/start/add-server/)
+  and shows **Online** on the **Servers** page, and so does the app's current server. The new
+  server does not need Docker: it is installed during the move if it is missing.
+- **The app is working**: its page shows no error and it is not being set up. A stopped app
+  can move too; it stays stopped on the new server.
+- **The new server has no app of the same name.** The app keeps its name, and two apps on one
+  server cannot share a name.
+- **Pull request previews are off and gone.** An app with **Preview each pull request** turned
+  on, an app that still has previews, and a preview itself cannot move. See
+  [Limits](#limits-and-what-is-not-there-yet).
+- **The new server has enough free disk space**: about twice the size of the app's volumes, plus
+  the size of its image. The copied volumes are kept on the new server before they are unpacked.
+  Check **Disk** on the server's page.
+- **Pick a quiet time.** The app is down during the move. In a test with two VMs, a small app
+  was down for under a minute; an app with gigabytes of data is down for as long as the copy
+  takes.
+
+<Aside type="tip">
+If you do not manage the app's domain in the panel, lower the TTL of its `A` and `AAAA` records
+to 300 seconds at your DNS provider a day before. Visitors then follow the new address within
+minutes instead of hours, which shortens the downtime.
+</Aside>
+
+## Move an app
+
+<Steps>
+
+1. Open the app (**Apps**, then the app). Find the **Move to another server** card and click
+   **Move…**.
+
+2. In **Move to**, choose the server. Only servers other than the current one are listed;
+   servers that are not connected show **(Offline)** and cannot be chosen.
+
+3. Read the steps and the warning ("The app is unavailable from the moment it stops until it
+   runs on the new server and its domain points there."), then click **Start the move**.
+
+</Steps>
+
+The card now shows the move: its phase, the two servers (**old → new**), when it started, and
+how much was copied. It updates by itself.
+
+## What happens during a move
+
+| Phase | What happens |
+| --- | --- |
+| **Copying** | The old server stops the app (`docker compose stop`), so that files such as a database inside the app are complete and still. It then sends, through the panel, each Docker volume of the app and, for a Git app, its current build. The new server keeps the volumes in `/srv/ekpanel/incoming/<move>/` and loads the build into Docker (installing Docker first if it is missing). The certificate of the app's domain goes straight into the new server's web server. The app stays stopped until the copy is done, even if the panel applies the old server's state in the meantime, so its data cannot change half way. **The app is down from here on.** |
+| **Switching over** | In the panel, the app now belongs to the new server, with a free local port of its own there. The new server sets the app up as a new one (installing Docker if it is missing, pulling the image of an image or Compose app) and starts it on new, empty volumes. Then it stops the app, empties each volume, fills it from the copy, and starts the app again. The old copy stays stopped. |
+| **Moved** | The app runs on the new server. DNS records the panel manages now point there. The old copy is still on the old server, stopped, with its data. |
+| **Removing the old copy** | After you choose to remove it: the old server deletes its copy. |
+| **Done** | Only the new server has the app. |
+| **Failed** | The error is shown on the card. See [When a move fails](#when-a-move-fails). |
+
+The panel checks that the app's containers start on the new server. Unlike a website move, it
+does not request the app's page, so look at the app yourself (see
+[Check the app](#check-the-app-on-the-new-server)).
+
+In a test with two VMs, an nginx app with a data volume (a page and a 5 MB file owned by user
+ID 101) moved in 45 seconds, including installing Docker on the new server. The page, the
+file's checksum and its owner were the same on the new server.
+
+### What is copied
+
+- **Data**: every Docker volume of the app: the [kept folders](/guides/apps/docker-apps/#folders-to-keep)
+  of an image or Git app, and the named volumes of a Compose app. Owners are kept as numbers
+  (user ID 101 stays user ID 101), which mean the same inside the containers on every server,
+  with permissions, ACLs and extended attributes.
+- **A Git app's current build**: the image that runs now is copied (`docker save` on the old
+  server, `docker load` on the new one), so nothing is rebuilt.
+- **Certificate**: the certificate of the app's domain, from the web server's storage. HTTPS
+  works on the new server at once, before DNS changes.
+- **Settings and cron jobs**: everything the panel stores about the app (the image or Compose
+  file, variables, domain, kept folders, limits, public ports) is applied on the new server.
+  Its [cron jobs](/guides/websites/cron/) move too and run only on the new server.
+
+Not copied:
+
+- **The image of an image or Compose app.** The new server pulls it again from its registry.
+  With a tag that moves, such as `latest`, the new server may get a newer version than the old
+  one ran. Use a fixed tag (such as `nginx:1.27`) if that matters.
+- **Older Git builds.** Only the current build moves; the builds kept for
+  [rollbacks](/guides/apps/git-deploys/#rollbacks) stay on the old server. After the move, deploy
+  again instead of rolling back to a release from before the move.
+- **Anything outside the app's volumes**: files a container wrote into its own file system (they
+  are lost whenever a container is recreated anyway), and folders of the host that an
+  administrator's Compose file mounts (see [Limits](#limits-and-what-is-not-there-yet)).
+
+## Downtime and DNS
+
+The app is unavailable from the start of **Copying** until it runs on the new server **and**
+visitors reach that server. How long the second part takes depends on who manages the domain's
+DNS.
+
+### When the panel manages the DNS
+
+If the domain is on the panel's own [name servers](/guides/dns/name-servers/) or connected
+through [Cloudflare](/guides/dns/cloudflare/), its records follow the app by themselves, right
+after the switch, as for a website. See
+[Point the domain to the new server](/guides/websites/move/#when-the-panel-manages-the-dns) in the
+website guide for the details and the two exceptions.
+
+### When it does not
+
+When the card shows **Moved**, it says "If the panel does not manage this domain's DNS, point its
+records to …", with the new server's address. Change the domain's `A` record (and `AAAA`, if you
+have one) at your DNS provider at once: until you do, visitors reach the old server, where the
+app is stopped, and get an error.
+
+The address is the one under **Public addresses for DNS** on the new server's page, or else the
+first address the server reports. See [Servers](/guides/admin/servers/#public-addresses-for-dns).
+
+### An app without a domain
+
+An app without a domain is only reachable if its Compose file publishes
+[public ports](/guides/apps/docker-apps/#allowing-public-ports). After the move, those ports are
+on the new server's address. Tell whoever uses them.
+
+The app's local port (between 20000 and 29999 on `127.0.0.1`, see
+[Ports are kept private](/guides/apps/docker-apps/#ports-are-kept-private)) is chosen again on the
+new server and may differ. This matters only if something on the server talks to that port
+directly.
+
+### Check the app on the new server
+
+You can try the app on the new server before DNS changes, with `curl --resolve`, as described
+in [Check the new server first](/guides/websites/move/#check-the-new-server-first). Also open
+**Logs** on the app's page to see that it started cleanly with its data.
+
+## Remove the old copy
+
+The old copy is your way back while you check the app on the new server. Once you are sure that
+the app works there with all its data:
+
+<Steps>
+
+1. On the app's page, in the **Move to another server** card, click
+   **Remove the old copy on _server_**.
+
+2. Confirm: "Remove the old copy on _server_? Its containers and data there are deleted. Only do
+   this once the app works on the new server and its domain points there."
+
+</Steps>
+
+The phase changes to **Removing the old copy**, then **Done**. The old server deletes the app's
+containers, its volumes, its folder `/srv/ekpanel/apps/<name>` and its web server settings. This
+cannot be undone.
+
+Until the old copy is removed, nobody can delete the app: the panel answers "This is being
+moved, or its old copy is still on the other server. Finish the move first." Once the
+move is **Done**, the app can be moved again, back to its first server too.
+
+<Aside type="note">
+[Backups](/guides/data/backups/) do not cover app volumes yet, so the old copy is the only copy
+of the app's data from before the move. Keep it until you have checked the app.
+</Aside>
+
+## When a move fails
+
+A failed move leaves the app where it was and starts it there again.
+
+- **During Copying** (for example, a server lost its connection): the new server deletes the
+  volumes it received, and the old server starts the app again. Nothing else changed.
+- **During Switching over** (for example, Docker could not be installed, the image could not be
+  pulled, or the app did not start on the new server): the app goes back to the old server in
+  the panel, the new server deletes its half-made copy with its volumes, and the old server
+  starts the app again with its data as it was.
+
+The card shows **Failed** and the reason. Fix the cause, then click **Move…** again.
+
+<Aside type="caution">
+Avoid updating or restarting the panel while a move runs. A move is not continued after the
+panel restarts: it is marked **Failed** ("the panel restarted during the move; it stays where it
+was"), and the app starts again on the old server as soon as the panel is back.
+</Aside>
+
+## With the API or ekctl
+
+An administrator's [API token](/guides/security/api-tokens/) with the `apps` scope can move
+apps. Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/apps/{id}/move` | Start a move. Body: `{"server_id": "…"}`. Answers `202` with the move. |
+| `GET /api/v1/apps/{id}/moves` | The app's moves, newest first (up to 20), with `phase`, `error` and `bytes`. |
+| `POST /api/v1/moves/{id}/cleanup` | Remove the old copy (scope `apps` or `sites`). Answers `202` with a [task](/reference/api/#tasks-following-slow-work). |
+
+With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api POST apps/<app id>/move --data '{"server_id":"<server id>"}'
+ekctl api GET apps/<app id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## Limits and what is not there yet
+
+- **Pull request previews.** An app with **Preview each pull request** on cannot move, and
+  neither can a preview. Turn previews off in the app's **Settings** and delete the previews
+  that remain first: an app that still has previews cannot move either.
+- **Folders of the host are not copied.** Only the app's Docker volumes move. An
+  administrator's own Compose file may mount a folder of the host (for example
+  `./data:/data` or `/opt/files:/files`) or use a volume marked `external`; neither is copied,
+  and the app starts on the new server without that data. Copy it yourself, or change the
+  Compose file to use named volumes before the move. A folder inside the app's own folder (such
+  as `./data`, which is `/srv/ekpanel/apps/<name>/data`) is deleted on the old server together
+  with the old copy. Customers' apps cannot mount folders of the
+  host, so all their data is in volumes. Volumes with another driver or driver options have not
+  been tried.
+- The app is down during the move; there is no way yet to copy first and stop only for the
+  last changes.
+- The panel does not check free disk space on the new server before it starts.
+- A move that takes longer than 11 hours in all is stopped and fails.
+- Moving a database on its own, restoring a backup onto another server and moving a whole
+  customer are not there yet (see the [roadmap](/project/roadmap/)).
+- Tested with two VMs (an nginx image app with one volume), not yet on real servers, with
+  Compose apps or with Git apps.
+
+## Troubleshooting
+
+The panel refuses to start a move with one of these messages:
+
+| Message (error code) | What to do |
+| --- | --- |
+| "The app must be working before it can move." (`app_not_active`) | Open the app and fix what its status shows, or wait until it is set up. |
+| "Apps with pull request previews cannot move. Turn previews off and delete the remaining previews first." (`app_has_previews`) | Turn off **Preview each pull request** in the app's **Settings** and delete its previews. A preview itself cannot move. |
+| "It is already on this server." (`same_server`) | Choose another server. |
+| "Choose a server to move to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
+| "The customer's package does not include this server. Add it to the package first." (`server_not_in_package`) | Add the server to the customer's [package](/guides/admin/customers/), or choose another server. |
+| "The server's agent is not connected." (`agent_offline`) | One of the two servers is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+| "The target server already has an app with this name." (`app_name_taken`) | Delete or rename the other app on the new server, or move to another server. |
+| "This is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | Wait for the move to finish, or remove the old copy. |
+| "You do not have permission to do that." (`forbidden`) | Only administrators can move apps. |
+
+Removing the old copy can answer "There is no old copy to remove." (`move_not_moved`): the move
+failed, or the old copy is already gone.
+
+**The move failed with "the new server could not run the app: …".** The app did not start on the
+new server. The rest of the message comes from Docker, as when you create an app: a wrong image
+name, a private image the new server cannot pull, or a crash. The app is back on the old server
+and running.
+
+**The app runs on the new server, but its data is missing.** The data was in a folder of the host
+or an `external` volume, which a move does not copy (see
+[Limits](#limits-and-what-is-not-there-yet)). The old server still has that folder or volume:
+copy it to the new server by hand (for example with `rsync` over SSH) before you remove the old
+copy, then restart the app.
+
+**Removing the old copy shows an error.** The card keeps the reason. The old server tries again
+each time the panel applies its state; to try at once, click the remove button on the card again
+(it stays there while the error is shown).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Move a website" href="/guides/websites/move/" description="The same for websites, with their databases." />
+	<LinkCard title="Docker apps" href="/guides/apps/docker-apps/" />
+	<LinkCard title="Git deploys" href="/guides/apps/git-deploys/" />
+	<LinkCard title="Servers" href="/guides/admin/servers/" description="Add, watch and remove servers." />
+</CardGrid>

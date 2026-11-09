@@ -10,8 +10,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। প্রতিটা phase শেষ হয় এমন কিছু দিয়ে যা আপনি একটা আসল server-এ
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
-description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর প্রথম অংশও তাই: একটা website অন্য server-এ সরানো। এরপর আসছে 4c-এর
-বাকিটা (app, শুধু database, backup, পুরো customer)।
+description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-এর প্রথম অংশও তাই: একটা website বা app অন্য server-এ সরানো। এরপর আসছে 4c-এর
+বাকিটা (শুধু database, অন্য server-এ backup, পুরো customer)।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -122,11 +122,15 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 - আপনার বেছে নেওয়া database সহ একটা [website অন্য ekPanel server-এ সরানো](/guides/websites/move/): owner আর ACL-সহ
   file, database, certificate, settings আর cron job। কিছু বদলানোর আগে নতুন server যাচাই করা হয়, panel যে DNS চালায় তা
   পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি চলতে থাকে। সরানো ব্যর্থ হলে website যেখানে ছিল সেখানেই থাকে
+- একটা [app অন্য ekPanel server-এ সরানো](/guides/apps/move/): সংখ্যায় owner-সহ তার Docker volume, Git app-এর বর্তমান
+  build (নতুন করে কিছু build হয় না), certificate, settings আর cron job। সরানোর সময় app বন্ধ থাকে; আপনি না মোছা পর্যন্ত
+  পুরোনো কপি তার data সহ বন্ধ থাকে, আর সরানো ব্যর্থ হলে app যেখানে ছিল সেখানে আবার চালু হয়। Pull request preview-ওয়ালা
+  app সরে না
 - Copy যায় panel-এর সাথে agent-দের নিজস্ব connection দিয়ে, public SSH দিয়ে নয়
 
 এখনো বাকি:
 
-- একটা app, বা শুধু একটা database সরানো
+- শুধু একটা database সরানো
 - অন্য server-এ backup restore করা; পুরো একজন customer সরানো
 
 ### 4d. Importer

@@ -127,7 +127,7 @@ Each website has its own Linux account, and its files live in that account's hom
 | `/etc/ekpanel/cron/` | Scripts of cron jobs. |
 | `/etc/ekpanel/ssh/` | SFTP keys, in root-owned files the site accounts cannot change. |
 | `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH settings that lock SFTP into each site's folder. |
-| `/srv/ekpanel/incoming/<move id>/` | On the new server during a [website move](/guides/websites/move/): the copied home folder (`home.tar`) and database dumps, until they are put in place. Deleted then, or when the move fails. Root only. |
+| `/srv/ekpanel/incoming/<move id>/` | On the new server during a [website move](/guides/websites/move/) or an [app move](/guides/apps/move/): the copied home folder (`home.tar`) and database dumps, or the app's volumes (`vol-<volume>.tar`), until they are put in place. Deleted then, or when the move fails. Root only. |
 
 `<account>` is the website's Linux account, shown as **Linux account** on the website's page.
 The ID of a website or app is the long ID in its address in the panel.

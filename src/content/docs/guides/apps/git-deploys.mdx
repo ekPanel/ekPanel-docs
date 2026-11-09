@@ -263,6 +263,10 @@ want a pull request's code to read.
   pull request with the preview's address, and previews of forks after approval. See the
   [roadmap](/project/roadmap/).
 - App volumes, including those of Git apps, are not part of [backups](/guides/data/backups/) yet.
+- An app with previews turned on, or with previews left, cannot be
+  [moved to another server](/guides/apps/move/); turn previews off and delete the remaining
+  previews first. A move takes only the current build along, not the older builds kept for
+  rollbacks.
 
 ## Troubleshooting
 
@@ -285,3 +289,4 @@ not `127.0.0.1`, inside the container.
 - [Docker apps](/guides/apps/docker-apps/): Domains, variables, kept folders and limits work the same way.
 - [Web terminal](/guides/apps/terminal/): A shell inside your running app.
 - [Notifications](/guides/admin/notifications/): Get told when a deploy fails.
+- [Move to another server](/guides/apps/move/): Move a Git app, with its current build and data.

@@ -118,7 +118,7 @@ segment of the path: `/sites/{id}/files` belongs to `sites`.
 | `read` | Every `GET` its owner may see, in all the areas below. Changes nothing. | all of them |
 | `sites` | Websites, WordPress, PHP apps, PHP versions, cron jobs and moving websites | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron`, `/moves` |
 | `databases` | Databases and their users | `/databases` |
-| `apps` | Docker and Git apps, deploys, the app catalogue and cron jobs | `/apps`, `/catalog`, `/cron` |
+| `apps` | Docker and Git apps, deploys, the app catalogue, cron jobs and moving apps | `/apps`, `/catalog`, `/cron`, `/moves` |
 | `dns` | Cloudflare and hosted DNS zones, records, templates, name servers | `/dns` |
 | `mail` | Email domains, mailboxes and forwarders | `/mail` |
 | `backups` | Backup storage, backups and restores | `/backups` |
@@ -131,7 +131,8 @@ The rules:
 - A `GET` works with `read` **or** the area's own scope. Anything else (`POST`, `PUT`,
   `PATCH`, `DELETE`) needs the area's scope. A token with `sites` can list and change
   websites; a token with only `read` can list them but not change them.
-- Cron jobs belong to both websites and apps, so `sites` or `apps` is enough for `/cron`.
+- Cron jobs and moves belong to both websites and apps, so `sites` or `apps` is enough for
+  `/cron` and `/moves`.
 - **Any token**, whatever its scopes, may read who it belongs to (`GET /auth/me`), its owner's
   usage (`GET /me/usage`) and tasks (`GET /tasks`, `GET /tasks/{id}`).
 - Public endpoints (`/health`, `/openapi.json`, `/setup/status`) also work when a token is
@@ -226,7 +227,7 @@ What you get back depends on the endpoint:
 | A backup, a restore, a service restart, a PHP extension, a malware scan, a panel update | The task, with its `id` | `GET /tasks/{id}` until `status` is `succeeded` or `failed` |
 | A website, database or app (create or change) | The item, with `state` `pending` | `GET /sites/{id}` (or `/databases/{id}`, `/apps/{id}`) until `state` is `active` and `applied_generation` has reached `generation`; `error` means it failed, with the reason in `message` |
 | A Git deploy | The deployment | `GET /apps/{id}/deployments/{did}` until `status` is `live` or `failed` |
-| A [website move](/guides/websites/move/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
+| A [website move](/guides/websites/move/) or [app move](/guides/apps/move/) | The move, with `phase` `copying` | `GET /sites/{id}/moves` (or `/apps/{id}/moves`) until the newest move's `phase` is `moved` or `failed`. Removing the old copy (`POST /moves/{id}/cleanup`) answers with a task |
 
 A task looks like this:
 
@@ -437,7 +438,8 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Updates | `/updates` |
 | Notification settings | `/settings/notifications` |
 | Audit log | `/audit` |
-| Moving websites | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move to another server](/guides/websites/move/#with-the-api-or-ekctl). |
+| Moving websites | `POST /sites/{id}/move`, `GET /sites/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a website](/guides/websites/move/#with-the-api-or-ekctl). |
+| Moving apps | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move an app](/guides/apps/move/#with-the-api-or-ekctl). |
 
 ## Protection against cross-site requests
 

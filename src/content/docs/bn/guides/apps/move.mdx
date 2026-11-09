@@ -1,0 +1,251 @@
+---
+title: অন্য server-এ সরান
+description: একটা Docker, Compose বা Git app তার data সহ অন্য server-এ সরান, domain সেখানে দিন, আর পুরোনো কপি মুছে ফেলুন।
+sidebar:
+  order: 5
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা app, তার Docker volume-এর data সহ, আপনার এক server থেকে আরেক server-এ সরাতে পারেন: ভরে যাওয়া server খালি করতে,
+পুরোনো server বাদ দিতে, বা ব্যস্ত কোনো app-কে আলাদা server দিতে। কপি সরাসরি এক server থেকে আরেক server-এ যায়, আর আপনি
+না মোছা পর্যন্ত পুরোনো কপি পুরোনো server-এ বন্ধ অবস্থায় থাকে।
+
+App সরানো অনেকটা [website সরানোর](/guides/websites/move/) মতোই, একটা বড় পার্থক্য ছাড়া: **সরানোর সময় app বন্ধ থাকে।**
+Website-এর পুরোনো কপি চলতে থাকে; কিন্তু app বন্ধ হওয়া থেকে নতুন server-এ চলা আর domain সেখানে যাওয়া পর্যন্ত app পাওয়া যায় না।
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এটা দেখেন না; app সরাতে হলে তাঁরা আপনাকে বলতে পারেন।
+- কোনো customer-এর app হলে, নতুন server তাঁর package-এ থাকতে হবে (না থাকলে: "গ্রাহকের প্যাকেজে এই সার্ভার নেই। আগে
+  প্যাকেজে যোগ করুন।")।
+- **দুটো server-ই connected।** নতুন server [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায়
+  **অনলাইন** (Online) দেখায়, app-এর বর্তমান server-ও তাই। নতুন server-এ Docker না থাকলেও চলে: সরানোর সময়ই সেটা install
+  হয়।
+- **App ঠিকমতো চলছে**: তার পাতায় কোনো error নেই, আর সেটা set up হওয়ার মাঝখানে নেই। বন্ধ করা app-ও সরানো যায়; নতুন
+  server-এ সেটা বন্ধই থাকে।
+- **নতুন server-এ একই নামের কোনো app নেই।** App তার নাম একই রাখে, আর এক server-এ দুটো app-এর একই নাম হতে পারে না।
+- **Pull request preview বন্ধ আর মোছা।** **প্রতিটি pull request-এর প্রিভিউ** (Preview each pull request) চালু থাকা app,
+  এখনো preview আছে এমন app, আর preview নিজে, সরানো যায় না। দেখুন [সীমা](#limits-and-what-is-not-there-yet)।
+- **নতুন server-এ যথেষ্ট disk জায়গা আছে**: app-এর volume-গুলোর size-এর প্রায় দ্বিগুণ, সাথে তার image-এর size। Unpack করার
+  আগে কপি হওয়া volume নতুন server-এ রাখা হয়। Server-এর পাতায় **ডিস্ক** (Disk) দেখুন।
+- **শান্ত সময় বেছে নিন।** সরানোর সময় app বন্ধ থাকে। দুটো VM দিয়ে একটা test-এ ছোট একটা app এক মিনিটেরও কম বন্ধ ছিল;
+  কয়েক GB data-র app কপি যতক্ষণ লাগে ততক্ষণ বন্ধ থাকে।
+
+<Aside type="tip">
+App-এর domain panel-এ না চালালে, এক দিন আগে আপনার DNS provider-এ তার `A` আর `AAAA` record-এর TTL কমিয়ে 300 second
+করুন। তাহলে visitor-রা কয়েক ঘণ্টার বদলে কয়েক মিনিটের মধ্যে নতুন address-এ চলে আসেন, আর app কম সময় বন্ধ থাকে।
+</Aside>
+
+## App সরান
+
+<Steps>
+
+1. App খুলুন (**অ্যাপ** (Apps), তারপর app টা)। **অন্য সার্ভারে সরান** (Move to another server) card খুঁজে **সরান…**
+   (Move…)-এ click করুন।
+
+2. **যেখানে সরাবেন** (Move to)-এ server বেছে নিন। শুধু বর্তমান server ছাড়া অন্যগুলো তালিকায় থাকে; connected নয় এমন
+   server **(অফলাইন)** ((Offline)) দেখায়, সেগুলো বেছে নেওয়া যায় না।
+
+3. ধাপগুলো আর সতর্কবার্তা ("অ্যাপ বন্ধ হওয়া থেকে নতুন সার্ভারে চলা আর ডোমেইন সেখানে যাওয়া পর্যন্ত অ্যাপ পাওয়া যায় না।")
+   পড়ে **সরানো শুরু করুন** (Start the move)-এ click করুন।
+
+</Steps>
+
+এবার card-এ সরানোর কাজটা দেখায়: তার phase, দুটো server (**পুরোনো → নতুন**), কখন শুরু হয়েছে, আর কতটা কপি হয়েছে। এটা
+নিজে থেকেই update হয়।
+
+## সরানোর সময় কী হয়
+
+| Phase | যা হয় |
+| --- | --- |
+| **কপি হচ্ছে** (Copying) | পুরোনো server app বন্ধ করে (`docker compose stop`), যাতে app-এর ভেতরের database-এর মতো file সম্পূর্ণ আর স্থির থাকে। তারপর panel-এর মাধ্যমে app-এর প্রতিটা Docker volume পাঠায়, আর Git app হলে তার বর্তমান build-ও। নতুন server volume-গুলো `/srv/ekpanel/incoming/<move>/`-এ রাখে আর build টা Docker-এ load করে (Docker না থাকলে আগে install করে)। App-এর domain-এর certificate সরাসরি নতুন server-এর web server-এ যায়। কপি শেষ না হওয়া পর্যন্ত app বন্ধই থাকে, এর মধ্যে panel পুরোনো server-এর state apply করলেও, তাই মাঝপথে তার data বদলাতে পারে না। **এখান থেকে app বন্ধ।** |
+| **বদলানো হচ্ছে** (Switching over) | Panel-এ app এখন নতুন server-এর, সেখানে নিজের একটা খালি local port পায়। নতুন server app টা নতুন app-এর মতো set up করে (Docker না থাকলে install করে, image বা Compose app-এর image pull করে) আর নতুন, খালি volume-এ চালু করে। তারপর app বন্ধ করে, প্রতিটা volume খালি করে কপি থেকে ভরে, আর app আবার চালু করে। পুরোনো কপি বন্ধই থাকে। |
+| **সরানো হয়েছে** (Moved) | App নতুন server-এ চলছে। Panel যে DNS record চালায়, সেগুলো এখন সেখানে point করে। পুরোনো কপি এখনো পুরোনো server-এ, বন্ধ অবস্থায়, তার data সহ আছে। |
+| **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy) | আপনি মুছতে বলার পরে: পুরোনো server তার কপি মুছে ফেলে। |
+| **শেষ** (Done) | App শুধু নতুন server-এ আছে। |
+| **ব্যর্থ** (Failed) | Card-এ error দেখায়। দেখুন [সরানো ব্যর্থ হলে](#when-a-move-fails)। |
+
+নতুন server-এ app-এর container চালু হলো কি না, panel সেটা check করে। Website সরানোর মতো app-এর page চেয়ে দেখে না, তাই
+নিজে app টা দেখে নিন (দেখুন [App যাচাই করুন](#check-the-app-on-the-new-server))।
+
+দুটো VM দিয়ে একটা test-এ, একটা data volume-সহ (একটা page আর user ID 101-এর একটা 5 MB file) একটা nginx app ৪৫ second-এ
+সরেছে, নতুন server-এ Docker install করা সহ। নতুন server-এ page, file-এর checksum আর তার owner একই ছিল।
+
+### কী কপি হয়
+
+- **Data**: app-এর প্রতিটা Docker volume: image বা Git app-এর [রাখা folder](/guides/apps/docker-apps/#folders-to-keep), আর
+  Compose app-এর named volume। Owner সংখ্যা হিসেবে থাকে (user ID 101 user ID 101-ই থাকে), যা প্রতিটা server-এ container-এর
+  ভেতরে একই মানে দেয়; সাথে permission, ACL আর extended attribute।
+- **Git app-এর বর্তমান build**: এখন যে image চলছে সেটা কপি হয় (পুরোনো server-এ `docker save`, নতুনটায় `docker load`), তাই
+  নতুন করে কিছু build করতে হয় না।
+- **Certificate**: web server-এর storage থেকে app-এর domain-এর certificate। DNS বদলানোর আগেই নতুন server-এ HTTPS সাথে
+  সাথে কাজ করে।
+- **Settings আর cron job**: Panel app-এর যা কিছু রাখে (image বা Compose file, variable, domain, রাখা folder, limit, public
+  port) সব নতুন server-এ apply হয়। এর [cron job](/guides/websites/cron/)-ও সাথে যায়, আর শুধু নতুন server-এ চলে।
+
+যা কপি হয় না:
+
+- **Image বা Compose app-এর image।** নতুন server সেটা আবার তার registry থেকে pull করে। `latest`-এর মতো বদলাতে থাকা tag
+  হলে পুরোনো server যে version চালাত, নতুন server তার চেয়ে নতুন version পেতে পারে। এটা জরুরি হলে নির্দিষ্ট tag (যেমন
+  `nginx:1.27`) ব্যবহার করুন।
+- **Git-এর পুরোনো build।** শুধু বর্তমান build যায়; [আগেরটায় ফেরার](/guides/apps/git-deploys/#rollbacks) জন্য রাখা build-গুলো
+  পুরোনো server-এই থাকে। সরানোর পরে, সরানোর আগের কোনো release-এ ফেরার বদলে আবার deploy করুন।
+- **App-এর volume-এর বাইরের যেকোনো কিছু**: container তার নিজের file system-এ যা লিখেছে (container নতুন করে বানালে এমনিতেই
+  সেটা হারায়), আর admin-এর Compose file host-এর যে folder mount করে (দেখুন [সীমা](#limits-and-what-is-not-there-yet))।
+
+## বন্ধ থাকার সময় আর DNS
+
+**কপি হচ্ছে** (Copying) শুরু হওয়া থেকে, যতক্ষণ না app নতুন server-এ চলে **আর** visitor-রা সেই server-এ পৌঁছান, ততক্ষণ app
+পাওয়া যায় না। দ্বিতীয় অংশে কত সময় লাগে, তা নির্ভর করে domain-এর DNS কে চালায় তার ওপর।
+
+### DNS যখন panel চালায়
+
+Domain panel-এর নিজের [name server](/guides/dns/name-servers/)-এ থাকলে বা [Cloudflare](/guides/dns/cloudflare/) দিয়ে
+connected থাকলে, এর record নিজে থেকেই switch-এর ঠিক পরে app-এর পেছনে যায়, website-এর মতোই। বিস্তারিত আর দুটো ব্যতিক্রমের
+জন্য website guide-এর [Domain নতুন server-এ দিন](/guides/websites/move/#when-the-panel-manages-the-dns) দেখুন।
+
+### যখন চালায় না
+
+Card-এ **সরানো হয়েছে** (Moved) দেখালে সেখানে লেখা থাকে: "এই ডোমেইনের DNS প্যানেল না চালালে, এখনই এর রেকর্ড …-এ দিন" (If
+the panel does not manage this domain's DNS, point its records to …), সাথে নতুন server-এর address। সাথে সাথেই আপনার DNS
+provider-এ domain-এর `A` record (আর থাকলে `AAAA`) বদলান: ততক্ষণ visitor-রা পুরোনো server-এ যান, যেখানে app বন্ধ, আর error
+পান।
+
+Address টা হলো নতুন server-এর পাতায় **DNS-এর জন্য পাবলিক ঠিকানা** (Public addresses for DNS)-এ দেওয়া address, নইলে server
+যে প্রথম address জানায় সেটা। দেখুন [Server](/guides/admin/servers/#public-addresses-for-dns)।
+
+### Domain ছাড়া app
+
+Domain ছাড়া একটা app-এ পৌঁছানো যায় কেবল তখনই, যদি তার Compose file
+[public port](/guides/apps/docker-apps/#allowing-public-ports) publish করে। সরানোর পরে সেই port-গুলো নতুন server-এর
+address-এ থাকে। যাঁরা সেগুলো ব্যবহার করেন, তাঁদের জানিয়ে দিন।
+
+App-এর local port (`127.0.0.1`-এ 20000 থেকে 29999-এর মধ্যে, দেখুন
+[Port private রাখা হয়](/guides/apps/docker-apps/#ports-are-kept-private)) নতুন server-এ নতুন করে বেছে নেওয়া হয়, আলাদা হতে
+পারে। Server-এর কোনো কিছু সরাসরি ওই port-এ কথা বললেই কেবল এটা গুরুত্বপূর্ণ।
+
+### নতুন server-এ app যাচাই করুন
+
+DNS বদলানোর আগেই নতুন server-এ app চালিয়ে দেখতে পারেন, `curl --resolve` দিয়ে, যেমন
+[আগে নতুন server যাচাই করুন](/guides/websites/move/#check-the-new-server-first)-এ বলা আছে। App-এর পাতায় **লগ** (Logs)-ও
+খুলে দেখুন সেটা তার data সহ ঠিকঠাক চালু হয়েছে কি না।
+
+## পুরোনো কপি মুছুন
+
+নতুন server-এ app যাচাই করার সময় পুরোনো কপিই আপনার ফেরার পথ। App সেখানে তার সব data সহ কাজ করছে, এ ব্যাপারে নিশ্চিত হলে:
+
+<Steps>
+
+1. App-এর পাতায়, **অন্য সার্ভারে সরান** (Move to another server) card-এ **_server_-এর পুরোনো কপি মুছে ফেলুন** (Remove the
+   old copy on _server_)-এ click করুন।
+
+2. নিশ্চিত করুন: "_server_-এর পুরোনো কপি মুছে ফেলবেন? সেখানকার কন্টেইনার আর ডেটা মুছে যাবে। নতুন সার্ভারে অ্যাপ চলার আর
+   ডোমেইন সেখানে যাওয়ার পরেই এটা করুন।"
+
+</Steps>
+
+Phase বদলে হয় **পুরোনো কপি মোছা হচ্ছে** (Removing the old copy), তারপর **শেষ** (Done)। পুরোনো server app-এর container, তার
+volume, তার folder `/srv/ekpanel/apps/<name>` আর তার web server setting মুছে ফেলে। এটা আর ফেরানো যায় না।
+
+পুরোনো কপি মোছা না হওয়া পর্যন্ত কেউই app টা delete করতে পারেন না: panel উত্তর দেয় "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো
+অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" সরানো **শেষ** (Done) হলে app আবার সরানো যায়, প্রথম server-এ ফেরতও।
+
+<Aside type="note">
+[Backup](/guides/data/backups/)-এ এখনো app volume থাকে না, তাই সরানোর আগের app data-র একমাত্র কপি হলো পুরোনো কপিটা। App
+যাচাই না করা পর্যন্ত সেটা রেখে দিন।
+</Aside>
+
+## সরানো ব্যর্থ হলে
+
+সরানো ব্যর্থ হলে app যেখানে ছিল সেখানেই থাকে, আর সেখানে আবার চালু হয়।
+
+- **কপি হওয়ার সময়** (যেমন কোনো server-এর connection চলে গেলে): নতুন server যে volume পেয়েছিল তা মুছে ফেলে, আর পুরোনো
+  server app আবার চালু করে। আর কিছু বদলায় না।
+- **বদলানোর সময়** (যেমন Docker install হয়নি, image pull করা যায়নি, বা নতুন server-এ app চালু হয়নি): panel-এ app পুরোনো
+  server-এ ফিরে যায়, নতুন server তার আধা-বানানো কপি volume সহ মুছে ফেলে, আর পুরোনো server app টা তার data যেমন ছিল তেমন
+  রেখে আবার চালু করে।
+
+Card-এ **ব্যর্থ** (Failed) আর কারণ দেখায়। কারণটা ঠিক করে আবার **সরান…** (Move…)-এ click করুন।
+
+<Aside type="caution">
+সরানো চলার সময় panel update বা restart এড়িয়ে চলুন। Panel restart হলে সরানোর কাজ আর এগোয় না: সেটা **ব্যর্থ** (Failed)
+হিসেবে চিহ্নিত হয় ("the panel restarted during the move; it stays where it was"), আর panel ফিরে আসার সাথে সাথেই app পুরোনো
+server-এ আবার চালু হয়।
+</Aside>
+
+## API বা ekctl দিয়ে
+
+`apps` scope-এর একটা admin-এর [API token](/guides/security/api-tokens/) দিয়ে app সরানো যায়। Customer-দের token দিয়ে
+যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/apps/{id}/move` | সরানো শুরু করে। Body: `{"server_id": "…"}`। সরানোর কাজটা সহ `202` উত্তর দেয়। |
+| `GET /api/v1/apps/{id}/moves` | App-এর সরানোর কাজগুলো, নতুনটা আগে (২০টা পর্যন্ত), `phase`, `error` আর `bytes` সহ। |
+| `POST /api/v1/moves/{id}/cleanup` | পুরোনো কপি মোছে (scope `apps` বা `sites`)। একটা [task](/reference/api/#tasks-following-slow-work) সহ `202` উত্তর দেয়। |
+
+[ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api POST apps/<app id>/move --data '{"server_id":"<server id>"}'
+ekctl api GET apps/<app id>/moves | jq '.[0].phase'
+ekctl api POST moves/<move id>/cleanup
+```
+
+## সীমা আর যা এখনো নেই
+
+- **Pull request preview।** **প্রতিটি pull request-এর প্রিভিউ** (Preview each pull request) চালু থাকা app সরানো যায় না,
+  preview-ও না। আগে app-এর **সেটিং** (Settings)-এ preview বন্ধ করুন আর বাকি preview-গুলো মুছে ফেলুন: এখনো preview আছে এমন
+  app-ও সরানো যায় না।
+- **Host-এর folder কপি হয় না।** শুধু app-এর Docker volume সরে। Admin-এর নিজের Compose file host-এর কোনো folder mount
+  করতে পারে (যেমন `./data:/data` বা `/opt/files:/files`) বা `external` চিহ্ন দেওয়া volume ব্যবহার করতে পারে; এগুলোর কোনোটাই
+  কপি হয় না, আর নতুন server-এ app ওই data ছাড়াই চালু হয়। নিজে কপি করুন, বা সরানোর আগে Compose file বদলে named volume
+  ব্যবহার করুন। App-এর নিজের folder-এর ভেতরের কোনো folder (যেমন `./data`, মানে `/srv/ekpanel/apps/<name>/data`) পুরোনো
+  কপির সাথে পুরোনো server থেকে মুছে যায়। Customer-দের app host-এর folder mount করতে পারে না, তাই তাদের সব data volume-এই
+  থাকে। অন্য driver বা driver option-এর volume চালিয়ে দেখা হয়নি।
+- সরানোর সময় app বন্ধ থাকে; আগে কপি করে শুধু শেষ পরিবর্তনগুলোর জন্য বন্ধ করার উপায় এখনো নেই।
+- শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
+- মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
+- শুধু একটা database সরানো, অন্য server-এ backup restore করা আর পুরো একজন customer সরানো এখনো নেই (দেখুন
+  [roadmap](/project/roadmap/))।
+- দুটো VM দিয়ে test করা হয়েছে (একটা volume-সহ একটা nginx image app), এখনো আসল server-এ, Compose app বা Git app দিয়ে না।
+
+## সমস্যা সমাধান
+
+এই message-গুলোর কোনো একটা দিয়ে panel সরানো শুরু করতে রাজি হয় না:
+
+| Message (error code) | যা করবেন |
+| --- | --- |
+| "সরানোর আগে অ্যাপটা ঠিকমতো চলতে হবে।" (`app_not_active`) | App খুলে তার status যা দেখায় তা ঠিক করুন, বা set up শেষ হওয়া পর্যন্ত অপেক্ষা করুন। |
+| "পুল রিকোয়েস্ট প্রিভিউ আছে এমন অ্যাপ সরানো যায় না। আগে প্রিভিউ বন্ধ করে বাকি প্রিভিউগুলো মুছে ফেলুন।" (`app_has_previews`) | App-এর **সেটিং** (Settings)-এ **প্রতিটি pull request-এর প্রিভিউ** (Preview each pull request) বন্ধ করুন আর তার preview-গুলো মুছে ফেলুন। Preview নিজে সরানো যায় না। |
+| "এটা আগে থেকেই এই সার্ভারে আছে।" (`same_server`) | অন্য server বেছে নিন। |
+| "কোন সার্ভারে সরাবেন বেছে নিন।" (`invalid_server`) | **যেখানে সরাবেন** (Move to)-এ একটা server বেছে নিন। API দিয়ে করলে server ID check করুন। |
+| "গ্রাহকের প্যাকেজে এই সার্ভার নেই। আগে প্যাকেজে যোগ করুন।" (`server_not_in_package`) | Customer-এর [package](/guides/admin/customers/)-এ server টা যোগ করুন, বা অন্য server বেছে নিন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" (`agent_offline`) | দুটো server-এর একটা offline। দেখুন [যখন একটা server offline হয়ে যায়](/guides/admin/servers/#when-a-server-goes-offline)। |
+| "নতুন সার্ভারে এই নামের অ্যাপ আগে থেকেই আছে।" (`app_name_taken`) | নতুন server-এর অন্য app টা মুছে ফেলুন বা নাম বদলান, বা অন্য server-এ সরান। |
+| "এটা সরানো হচ্ছে, বা এর পুরোনো কপি এখনো অন্য সার্ভারে আছে। আগে সরানো শেষ করুন।" (`move_open`) | সরানো শেষ হওয়া পর্যন্ত অপেক্ষা করুন, বা পুরোনো কপি মুছে ফেলুন। |
+| "এটা করার অনুমতি আপনার নেই।" (`forbidden`) | শুধু admin-রা app সরাতে পারেন। |
+
+পুরোনো কপি মোছার সময় উত্তর আসতে পারে "মুছে ফেলার মতো কোনো পুরোনো কপি নেই।" (`move_not_moved`): সরানো ব্যর্থ হয়েছিল, বা
+পুরোনো কপি আগেই মোছা হয়ে গেছে।
+
+**"the new server could not run the app: …" দিয়ে সরানো ব্যর্থ হয়েছে।** নতুন server-এ app চালু হয়নি। Message-এর বাকিটা
+Docker-এর, app বানানোর সময়ের মতোই: image-এর নাম ভুল, নতুন server pull করতে পারে না এমন private image, বা crash। App
+পুরোনো server-এ ফিরে গেছে আর চলছে।
+
+**নতুন server-এ app চলছে, কিন্তু তার data নেই।** Data ছিল host-এর কোনো folder-এ বা `external` volume-এ, যা সরানোর সময়
+কপি হয় না (দেখুন [সীমা](#limits-and-what-is-not-there-yet))। পুরোনো server-এ সেই folder বা volume এখনো আছে: পুরোনো কপি
+মোছার আগে হাতে করে সেটা নতুন server-এ কপি করুন (যেমন SSH দিয়ে `rsync`), তারপর app restart করুন।
+
+**পুরোনো কপি মোছার সময় error দেখায়।** Card-এ কারণটা থেকে যায়। Panel যতবার পুরোনো server-এর state apply করে, ততবার server
+আবার চেষ্টা করে; এখনই চেষ্টা করাতে card-এর মোছার button-এ আবার click করুন (error দেখানোর সময় button-টা থাকে)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Website সরান" href="/guides/websites/move/" description="Website-এর জন্য একই কাজ, তার database সহ।" />
+	<LinkCard title="Docker app" href="/guides/apps/docker-apps/" />
+	<LinkCard title="Git deploy" href="/guides/apps/git-deploys/" />
+	<LinkCard title="Server" href="/guides/admin/servers/" description="Server যোগ করুন, দেখুন আর সরান।" />
+</CardGrid>

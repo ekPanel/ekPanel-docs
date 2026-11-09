@@ -264,6 +264,9 @@ Preview চালু থাকলে app-এর branch-এ আসা প্র�
 - এখনো নেই: চলমান build বাতিল করা, সফল deploy-এর notification, pull request-এ preview-এর address দিয়ে
   comment, আর অনুমোদনের পর fork-এর preview। দেখুন [roadmap](/project/roadmap/)।
 - Git app-সহ কোনো app-এর volume এখনো [backup](/guides/data/backups/)-এর অংশ নয়।
+- Preview চালু থাকা, বা preview রয়ে যাওয়া app [অন্য server-এ সরানো](/guides/apps/move/) যায় না; আগে preview বন্ধ করে
+  বাকি preview-গুলো মুছে ফেলুন। সরানোর সময় শুধু
+  বর্তমান build যায়, আগেরটায় ফেরার জন্য রাখা পুরোনো build-গুলো না।
 
 ## সমস্যা সমাধান
 
@@ -286,3 +289,4 @@ deploy করুন।
 - [Docker app](/guides/apps/docker-apps/): Domain, variable, রেখে দেওয়া folder আর limit একইভাবে কাজ করে।
 - [Web terminal](/guides/apps/terminal/): আপনার চলমান app-এর ভেতরে একটা shell।
 - [Notification](/guides/admin/notifications/): Deploy fail করলে খবর পান।
+- [অন্য server-এ সরান](/guides/apps/move/): একটা Git app তার বর্তমান build আর data সহ সরান।

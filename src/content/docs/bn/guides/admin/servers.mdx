@@ -177,19 +177,21 @@ Server-এর এখনকার agent certificate সাথে সাথে ব
 Panel ওই server সম্পর্কে যা জানত সবকিছুও ভুলে যায়: তার website, database, app, cron job, backup
 location, mail setting আর metric-এর ইতিহাস panel থেকে হারিয়ে যায়। File, database আর container server-এ
 থেকে যায়, কিন্তু server আবার connect করলেও সেগুলো panel-এ ফিরে আসে না। আগে দরকারি জিনিসের backup নিন, আর
-যে website রাখতে চান সেগুলো [অন্য server-এ সরান](/guides/websites/move/)।
+যে [website](/guides/websites/move/) আর [app](/guides/apps/move/) রাখতে চান সেগুলো অন্য server-এ সরান।
 </Aside>
 
 ## Limit আর যা এখনো নেই
 
-- Website তার database সহ [অন্য server-এ সরানো](/guides/websites/move/) যায়, একবারে একটা করে। শুধু একটা app বা
-  database সরানো, বা একটা server-এর সব website একসাথে সরানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+- Website (তার database সহ) আর app অন্য server-এ সরানো যায়, একবারে একটা করে: দেখুন [Website সরান](/guides/websites/move/)
+  আর [App সরান](/guides/apps/move/)। শুধু একটা database সরানো, বা একটা server-এর সব website একসাথে সরানো: এখনো নেই
+  (দেখুন [roadmap](/project/roadmap/))।
 - Agent update হয় **আপডেট** (Updates) page থেকে, panel-এর সাথে, server page থেকে নয়। দেখুন
   [আপডেট](/guides/admin/updates/)।
 
 ## সম্পর্কিত
 
 - [Server যোগ করুন](/start/add-server/): একটা command দিয়ে নতুন server connect করুন।
-- [অন্য server-এ সরান](/guides/websites/move/): একটা website আর তার database অন্য server-এ সরান।
+- [Website সরান](/guides/websites/move/): একটা website আর তার database অন্য server-এ সরান।
+- [App সরান](/guides/apps/move/): একটা app আর তার data অন্য server-এ সরান।
 - [Web terminal](/guides/apps/terminal/): Browser-এ একটা server-এর root shell।
 - [Notification](/guides/admin/notifications/): Offline server আর ভরা disk-এর খবর পান।

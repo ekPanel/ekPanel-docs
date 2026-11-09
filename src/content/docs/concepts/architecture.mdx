@@ -96,7 +96,8 @@ The agent always opens the connection:
 Because the agent dials out, a server behind NAT or a home router works without any open
 incoming port. Only the panel's server must accept connections on TCP 7443.
 
-[Moving a website](/guides/websites/move/) to another server uses the same connections. The
+[Moving a website](/guides/websites/move/) or [an app](/guides/apps/move/) to another server
+uses the same connections. The
 panel opens an export stream on the old server's agent and an import stream on the new one,
 and passes the data from one to the other. The two servers never connect to each other: no SSH
 between them, no extra open port, and either can be behind NAT. The old server sends only as
@@ -119,7 +120,7 @@ checked parameters, defined in `internal/agentproto` in the source code. Some ex
 | `services.restart` | Restart one service from a fixed allowlist (Caddy, PostgreSQL, cron, the mail server, CrowdSec). |
 | `php.info`, `php.extension` | List PHP versions and extensions, add or remove one extension. |
 | `mail.check` | Test what decides whether other mail servers accept this server's mail. |
-| `transfer.export`, `transfer.import`, `transfer.finish`, `transfer.discard` | Move a website: pack it on the old server, receive it on the new one, put its files and database dumps in place, or throw away an unused copy. |
+| `transfer.export`, `transfer.import`, `transfer.finish`, `transfer.discard` | Move a website or an app: pack it on the old server, receive it on the new one, put its files, database dumps or app volumes in place, or throw away an unused copy. |
 
 An agent answers anything else with "unknown operation". **There is no operation that runs a
 shell command.** The one way to run any command is the [web terminal](/guides/apps/terminal/),
