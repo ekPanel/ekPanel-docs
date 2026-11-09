@@ -15,7 +15,8 @@ visitor-দের জন্য কিছুই বদলায় না।
 
 <Aside type="tip">
 একটা পুরো cPanel account (কয়েকটা website, email, cron job আর DNS zone) তার full backup থেকে আনতে হলে এর বদলে
-[cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) দেখুন।
+[cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) দেখুন। Coolify থেকে application আর service আনতে হলে দেখুন
+[Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/)।
 </Aside>
 
 ## শুরু করার আগে
@@ -109,7 +110,9 @@ password। যতক্ষণ দরকার শুধু ততক্ষণ�
 1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
    যেতে পারেন।
 
-2. **ওয়েবসাইট আর্কাইভ** (Website archive) tab-এ click করুন (".zip বা .tar.gz থেকে একটা ওয়েবসাইট, ডেটাবেস ডাম্পসহ")।
+2. পাতায় তিনটা tab আছে: **cPanel ব্যাকআপ** (cPanel backup), **ওয়েবসাইট আর্কাইভ** (Website archive) আর **Coolify** (দেখুন
+   [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/))। **ওয়েবসাইট আর্কাইভ**-এ click করুন (".zip বা .tar.gz থেকে একটা
+   ওয়েবসাইট, ডেটাবেস ডাম্পসহ")।
 
 3. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে file কপি করেছেন।
 
@@ -317,8 +320,8 @@ ekctl api POST imports/site --data '{"server_id":"<server id>","archive":"exampl
 - **`.htaccess` file পড়া হয় না** (দেখুন [ইমপোর্টের পরে](#after-the-import))।
 - **Subdomain-এ চলা WordPress multisite**-এর প্রতিটা subdomain হাতে
   [extra domain](/guides/websites/websites/#domains-and-extra-domains) হিসেবে যোগ করতে হয়; wildcard domain দেওয়া যায় না।
-- এসব host-এর মতো করে বানানো archive দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল archive দিয়ে না। Coolify-এর
-  importer আছে [roadmap](/project/roadmap/)-এ।
+- এসব host-এর মতো করে বানানো archive দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল archive দিয়ে না।
+- Coolify-এর app আসে [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/) দিয়ে।
 
 ## সমস্যা সমাধান
 

@@ -13,10 +13,11 @@ The first release, v0.1.0, came out of it on 9 November 2026. Since then the API
 (API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
 the next release, and so is 4c: moving a website, an app, a database or everything a
 customer has on a server to another server, and rebuilding a website on another server from
-its backup when its server is gone. 4d, importers, has started: a whole cPanel account can be
+its backup when its server is gone. 4d, importers, is done too: a whole cPanel account can be
 imported from its full backup, with its websites, files, MySQL databases, email with its mail,
-cron jobs and DNS zones, and one website at a time, from aaPanel or any other host, from an
-archive of its files with its database dump. Only the Coolify importer is left. The full plan, with every decision and test, is
+cron jobs and DNS zones; one website at a time, from aaPanel or any other host, from an
+archive of its files with its database dump; and Coolify's applications and services, through
+its API. Next is 4e, resellers and white-label. The full plan, with every decision and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -159,15 +160,23 @@ Left for later:
 - For app moves: fetching the app's page after the move, and taking a Git app's kept builds
   along (until then, deploy again before rolling back)
 
-### 4d. Importers
+### 4d. Importers <Badge text="done" variant="success" />
+
+Done in the `dev` branch; it comes with the **next release**. Each importer was tried in the VM
+(the cPanel and website archive imports with backups built like those hosts', the Coolify import
+with a real Coolify v4). Next is 4e.
 
 - cPanel backups: websites, files, MySQL databases, email with its mail, cron jobs and DNS
   zones <Badge text="done" variant="success" />. Certificates are not imported on purpose: new
   ones are issued once the domains point to the server
 - aaPanel sites and databases; plain WordPress (or any website) from another host, through the
   website archive import <Badge text="done" variant="success" />
-- Coolify applications and services
-- A report of what was imported and what was not (done for cPanel and website archives)
+- [Coolify applications and services](/guides/admin/import-coolify/), through Coolify's API
+  <Badge text="done" variant="success" />: image, Git and Compose apps with their variables,
+  first domain and port, and kept folders. The data in volumes is for the administrator to copy;
+  databases are not imported
+- A report of what was imported and what was not <Badge text="done" variant="success" /> (for
+  Coolify, notes on each app)
 
 ### 4e. Resellers and white-label
 

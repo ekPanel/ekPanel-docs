@@ -105,8 +105,8 @@ UI Arabic-এর মতো ডান-থেকে-বাম ভাষার জ�
 - এটা শুরু থেকেই অনেক ভাষার জন্য বানানো।
 
 cPanel-এর তুলনায় এতে এখনো যা **নেই**: reseller, একটা WAF, আর billing integration। এগুলো আছে
-[phase 4](/project/roadmap/)-এ। Server-এর মধ্যে website, app, database আর পুরো customer সরানো, আর cPanel backup ইমপোর্ট
-করা আসছে পরের release-এ।
+[phase 4](/project/roadmap/)-এ। Server-এর মধ্যে website, app, database আর পুরো customer সরানো, আর cPanel, website archive ও
+Coolify থেকে ইমপোর্ট করা আসছে পরের release-এ।
 
 ## এটা দিয়ে কি hosting বিক্রি করা যায়?
 
@@ -123,8 +123,9 @@ hosting বিক্রি করবেন না। দেখুন [Customer �
 হ্যাঁ, পরের release-এ। [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) একটা পুরো cPanel account তার full backup
 থেকে নিয়ে আসে, তার website, database, email আর DNS zone-সহ। [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)
 একটা একটা করে website আনে, তার file-এর archive আর database dump থেকে: aaPanel-এর নিজের backup, বা অন্য host থেকে সাধারণ
-WordPress বা অন্য যেকোনো website। Coolify-এর importer phase 4d-তে আসার plan আছে। ততদিন সেই app-গুলো
-[app](/guides/apps/docker-apps/) হিসেবে আবার deploy করুন।
+WordPress বা অন্য যেকোনো website। [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/) Coolify-এর application আর service
+তার API দিয়ে নিয়ে আসে, তাদের variable, domain আর রাখা folder-সহ image, Git আর Compose app হিসেবে; তাদের volume-এর data আপনি নিজে
+কপি করেন।
 
 ## এটা কি বাইরে তথ্য পাঠায় (phone home)?
 

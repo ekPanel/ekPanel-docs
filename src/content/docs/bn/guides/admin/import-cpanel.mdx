@@ -14,7 +14,8 @@ server-এ point না করা পর্যন্ত visitor-দের জন
 
 <Aside type="tip">
 aaPanel বা অন্য যেকোনো host থেকে একটা website তার file-এর archive আর database dump হিসেবে আনতে হলে দেখুন
-[ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)।
+[ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)। Coolify থেকে application আর service আনতে হলে দেখুন
+[Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/)।
 </Aside>
 
 ## শুরু করার আগে
@@ -73,9 +74,10 @@ Backup-এ account-এর সব file আর সব mail থাকে, সাথ
 1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
    যেতে পারেন।
 
-2. পাতায় দুটো tab আছে। **cPanel ব্যাকআপ** (cPanel backup) রাখুন ("পুরো অ্যাকাউন্ট: ওয়েবসাইট, ডেটাবেস, ইমেইল, ক্রন জব,
-   DNS"), পাতা খুললে এটাই খোলা থাকে। অন্য tab, **ওয়েবসাইট আর্কাইভ** (Website archive), হলো
-   [একটা archive থেকে একটা website](/guides/admin/import-website/) আনার জন্য।
+2. পাতায় তিনটা tab আছে। **cPanel ব্যাকআপ** (cPanel backup) রাখুন ("পুরো অ্যাকাউন্ট: ওয়েবসাইট, ডেটাবেস, ইমেইল, ক্রন জব,
+   DNS"), পাতা খুললে এটাই খোলা থাকে। বাকি দুটো হলো **ওয়েবসাইট আর্কাইভ** (Website archive),
+   [একটা archive থেকে একটা website](/guides/admin/import-website/) আনার জন্য, আর **Coolify**,
+   [Coolify থেকে application আর service](/guides/admin/import-coolify/) আনার জন্য।
 
 3. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে backup কপি করেছেন।
 
@@ -379,8 +381,8 @@ cPanel account-এর এই অংশগুলো **ইমপোর্ট হ�
 - একটা backup একটা server-এ ইমপোর্ট হয়।
 - cPanel-এর মতো করে বানানো ছোট backup দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল cPanel server-এর backup দিয়ে না,
   আর বাইরের আসল mail দিয়েও না।
-- aaPanel আর অন্য host-এর website একটা একটা করে আসে [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/) দিয়ে।
-  Coolify-এর importer আছে [roadmap](/project/roadmap/)-এ।
+- aaPanel আর অন্য host-এর website একটা একটা করে আসে [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/) দিয়ে, আর
+  Coolify-এর application আর service আসে [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/) দিয়ে।
 
 ## সমস্যা সমাধান
 
@@ -401,7 +403,7 @@ cPanel account-এর এই অংশগুলো **ইমপোর্ট হ�
 | "আগে ekPanel-এর name server চালু করুন (DNS পাতায়)।" | [Name server set up করুন](/guides/dns/name-servers/#set-up-the-name-servers), বা zone বাদ দিন। |
 | "আপনার প্যাকেজে আর ওয়েবসাইট যোগ করা যাবে না।" (বা ডেটাবেস, ক্রন জব, মেইল ডোমেইন, মেইলবক্স) | Customer-এর package-এর limit বাড়ান, বা কম জিনিস আনুন। |
 | "এই প্যাকেজ ওই সার্ভার ব্যবহার করতে পারে না।" | Customer-এর package-এ server-টা যোগ করুন, বা অন্য server বেছে নিন। |
-| "অন্তত একটা ওয়েবসাইট, ডেটাবেস, মেইল ডোমেইন বা DNS জোন বেছে নিন।" | অন্তত একটা website, database, mail domain বা zone-এ tick দিন। |
+| "ইমপোর্ট করার মতো অন্তত একটা কিছু বেছে নিন।" | অন্তত একটা website, database, mail domain বা zone-এ tick দিন। |
 
 **ইমপোর্ট ব্যর্থ হয়েছে।** পাতায় **ইমপোর্ট ব্যর্থ হয়েছে** (The import failed) আর কারণ দেখায়। "এর জন্য প্যানেল যে ওয়েবসাইট,
 ডেটাবেস, মেইল ডোমেইন আর DNS জোন বানিয়েছিল সেগুলো তালিকায় থেকে গেছে। আবার চেষ্টার আগে সেগুলো মুছে ফেলুন।" সেগুলো

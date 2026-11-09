@@ -13,7 +13,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Aside type="note">
 এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
-server-এ সরানো, আর backup থেকে website আবার বানানো ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+server-এ সরানো, backup থেকে website আবার বানানো, আর cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -242,7 +242,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) · [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) · [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/) · [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -273,6 +273,10 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   dump থেকে ইমপোর্ট করা: aaPanel-এর site আর database backup যেমন আছে তেমনই, বা অন্য host থেকে সাধারণ WordPress বা অন্য
   যেকোনো website। WordPress তার database password রেখে দেয়, আর তার `wp-config.php` নতুন database-এর দিকে বদলে যায়। Test
   VM-এ চালিয়ে দেখা।
+- <Badge text="পরের release" variant="note" /> Coolify-এর API দিয়ে তার application আর service ইমপোর্ট করা, শুধু ওই একটা
+  request-এর জন্য দেওয়া token দিয়ে: এগুলো তাদের variable, প্রথম domain আর port, আর রাখা folder-সহ Docker image, Git আর Compose
+  app হয়ে যায়। Volume-এর data আপনি নিজে কপি করেন; database তালিকায় আসে, ইমপোর্ট হয় না। একটা আসল Coolify v4 নিয়ে test VM-এ
+  চালিয়ে দেখা।
 
 ## API আর command line
 
@@ -302,7 +306,6 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| Importer | Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |

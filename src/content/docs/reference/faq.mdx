@@ -107,7 +107,8 @@ Other differences:
 
 What it does **not** have yet, compared to cPanel: resellers, a WAF, and billing integrations.
 These are in [phase 4](/project/roadmap/). Moving websites, apps, databases and whole customers
-between servers, and importing cPanel backups, come with the next release.
+between servers, and importing from cPanel, website archives and Coolify, come with the next
+release.
 
 ## Can I sell hosting with it?
 
@@ -125,8 +126,9 @@ Yes, with the next release. [Import from cPanel](/guides/admin/import-cpanel/) b
 cPanel account over from its full backup, with its websites, databases, email and DNS zones.
 [Import a website archive](/guides/admin/import-website/) brings one website at a time from an
 archive of its files and its database dump: aaPanel's own backups, or plain WordPress or any
-other website from another host. An importer for Coolify is planned for phase 4d. Until then,
-deploy those apps again as [apps](/guides/apps/docker-apps/).
+other website from another host. [Import from Coolify](/guides/admin/import-coolify/) brings
+Coolify's applications and services over through its API, as image, Git and Compose apps with
+their variables, domain and kept folders; you copy the data in their volumes yourself.
 
 ## Does it phone home?
 

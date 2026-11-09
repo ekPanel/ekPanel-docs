@@ -16,7 +16,8 @@ server.
 
 <Aside type="tip">
 To bring one website from aaPanel or any other host, as an archive of its files with its database
-dump, see [Import a website archive](/guides/admin/import-website/).
+dump, see [Import a website archive](/guides/admin/import-website/). To bring applications and
+services from Coolify, see [Import from Coolify](/guides/admin/import-coolify/).
 </Aside>
 
 ## Before you start
@@ -79,9 +80,10 @@ databases and mailboxes. Keep it only as long as you need it, and
 1. In the sidebar, under **Administration**, click **Import**. You can also press `Ctrl+K` and
    type "Import".
 
-2. The page has two tabs. Keep **cPanel backup** ("A whole account: websites, databases, email,
-   cron jobs, DNS"), which is open when the page opens. The other tab, **Website archive**, is
-   for [one website from an archive](/guides/admin/import-website/).
+2. The page has three tabs. Keep **cPanel backup** ("A whole account: websites, databases, email,
+   cron jobs, DNS"), which is open when the page opens. The others are **Website archive**, for
+   [one website from an archive](/guides/admin/import-website/), and **Coolify**, for
+   [applications and services from Coolify](/guides/admin/import-coolify/).
 
 3. In **Server**, choose the server you copied the backup to.
 
@@ -428,8 +430,8 @@ Also:
 - Tried in a test VM with small backups built like cPanel's, not yet with backups from many
   real cPanel servers, and not with real outside mail.
 - Websites from aaPanel and other hosts come over one at a time with
-  [Import a website archive](/guides/admin/import-website/). An importer for Coolify is on the
-  [roadmap](/project/roadmap/).
+  [Import a website archive](/guides/admin/import-website/), and Coolify's applications and
+  services with [Import from Coolify](/guides/admin/import-coolify/).
 
 ## Troubleshooting
 
@@ -450,7 +452,7 @@ Also:
 | "Set up ekPanel's name servers first (DNS page)." | [Set up the name servers](/guides/dns/name-servers/#set-up-the-name-servers), or leave the zones out. |
 | "Your package allows no more websites." (or databases, cron jobs, mail domains, mailboxes) | Raise the customer's package limits, or import less. |
 | "This package cannot use that server." | Add the server to the customer's package, or choose another server. |
-| "Choose at least one website, database, mail domain or DNS zone." | Tick at least one website, database, mail domain or zone. |
+| "Choose at least one thing to import." | Tick at least one website, database, mail domain or zone. |
 
 **The import failed.** The page shows **The import failed** with the reason. "Websites,
 databases, mail domains and DNS zones the panel made for it are still listed. Delete them before

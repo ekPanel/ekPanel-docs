@@ -14,8 +14,9 @@ outside service, the list says so.
 <Aside type="note">
 Everything on this page is in v0.1.0, the first release, except
 [API and command line](#api-and-command-line), moving websites, apps, databases and
-customers to another server, and rebuilding a website from a backup (under
-[Many servers](#many-servers)), which come with the next release. You can
+customers to another server, rebuilding a website from a backup, and importing from cPanel,
+website archives and Coolify (under [Many servers](#many-servers)), which come with the next
+release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -241,7 +242,7 @@ has not been tried yet.
 
 ## Many servers
 
-[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/) · [Import from cPanel](/guides/admin/import-cpanel/) · [Import a website archive](/guides/admin/import-website/)
+[Servers guide](/guides/admin/servers/) · [Add a server](/start/add-server/) · [Updates](/guides/admin/updates/) · [Move a website](/guides/websites/move/) · [Move an app](/guides/apps/move/) · [Move a database](/guides/data/move-database/) · [Move a customer](/guides/admin/move-customer/) · [Rebuild from a backup](/guides/websites/rebuild/) · [Import from cPanel](/guides/admin/import-cpanel/) · [Import a website archive](/guides/admin/import-website/) · [Import from Coolify](/guides/admin/import-coolify/)
 
 - Add servers with one command, which installs the agent and the web server. The agent dials
   out to the panel over mutual TLS, so it works behind NAT.
@@ -279,6 +280,11 @@ has not been tried yet.
   (`.zip`, `.tar.gz` or `.tar`) with its database dump: aaPanel's site and database backups as
   they are, or plain WordPress or any other website from another host. WordPress keeps its
   database password, and its `wp-config.php` is pointed at the new database. Tried in a test VM.
+- <Badge text="next release" variant="note" /> Importing applications and services from Coolify
+  through its API, with a token used for that one request: they become Docker image, Git and
+  Compose apps with their variables, first domain and port, and kept folders. The data in
+  volumes is for you to copy; databases are listed, not imported. Tried in a test VM with a real
+  Coolify v4.
 
 ## API and command line
 
@@ -310,7 +316,6 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Importers | Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |

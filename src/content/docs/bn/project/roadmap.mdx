@@ -11,9 +11,10 @@ ekPanel ধাপে ধাপে (phase) বানানো হচ্ছে। 
 install করে ব্যবহার করতে পারেন। **Phase 0 থেকে 3 শেষ হয়েছে**, phase 4-এর প্রথম অংশটাও: release আর
 update (4a)। এখান থেকেই 9 November 2026-এ প্রথম release, v0.1.0, বের হয়েছে। এরপর 4b-এর API অংশ (API token, OpenAPI
 description আর `ekctl` command-line tool) শেষ হয়েছে, আর আসবে পরের release-এ, 4c-ও তাই: একটা website, app, database বা একজন customer-এর এক server-এর সবকিছু অন্য
-server-এ সরানো, আর server চলে গেলে একটা website তার backup থেকে অন্য server-এ আবার বানানো। 4d, importer, শুরু হয়েছে: একটা পুরো cPanel account তার full backup থেকে
-import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে, আর aaPanel বা অন্য যেকোনো
-host থেকে একটা একটা করে website, তার file-এর archive আর database dump থেকে। বাকি আছে শুধু Coolify-এর importer।
+server-এ সরানো, আর server চলে গেলে একটা website তার backup থেকে অন্য server-এ আবার বানানো। 4d, importer-ও শেষ: একটা পুরো cPanel account তার full backup থেকে
+import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে; aaPanel বা অন্য যেকোনো
+host থেকে একটা একটা করে website, তার file-এর archive আর database dump থেকে; আর Coolify-এর application আর service, তার API
+দিয়ে। এরপর 4e, reseller আর white-label।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -147,14 +148,19 @@ build attestation যোগ করে, আর release publish করে। `v1.2
 - App সরানোয়: সরানোর পরে app-এর পাতা খুলে দেখা, আর Git app-এর রাখা build-গুলোও সাথে নেওয়া (ততদিন rollback-এর আগে আবার
   deploy করুন)
 
-### 4d. Importer
+### 4d. Importer <Badge text="শেষ" variant="success" />
+
+`dev` branch-এ শেষ; আসবে **পরের release-এ**। প্রতিটা importer VM-এ চালিয়ে দেখা হয়েছে (cPanel আর website archive ইমপোর্ট ওই
+host-গুলোর মতো করে বানানো backup দিয়ে, Coolify ইমপোর্ট একটা আসল Coolify v4 দিয়ে)। এরপর 4e।
 
 - cPanel backup: website, file, MySQL database, mail-সহ email, cron job আর DNS zone <Badge text="শেষ" variant="success" />।
   Certificate ইচ্ছা করেই import হয় না: domain server-এ point করলে নতুন certificate নেওয়া হয়
 - aaPanel-এর site আর database; অন্য host থেকে সাধারণ WordPress (বা যেকোনো website), website archive import দিয়ে
   <Badge text="শেষ" variant="success" />
-- Coolify-এর application আর service
-- কী import হয়েছে আর কী হয়নি, তার একটা report (cPanel আর website archive-এর জন্য শেষ)
+- [Coolify-এর application আর service](/guides/admin/import-coolify/), Coolify-এর API দিয়ে
+  <Badge text="শেষ" variant="success" />: variable, প্রথম domain আর port, আর রাখা folder-সহ image, Git আর Compose app। Volume-এর
+  data admin নিজে কপি করেন; database ইমপোর্ট হয় না
+- কী import হয়েছে আর কী হয়নি, তার একটা report <Badge text="শেষ" variant="success" /> (Coolify-এর জন্য প্রতিটা app-এর note)
 
 ### 4e. Reseller আর white-label
 

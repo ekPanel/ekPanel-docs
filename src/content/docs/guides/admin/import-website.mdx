@@ -16,7 +16,8 @@ you point the domain at the new server.
 
 <Aside type="tip">
 To bring a whole cPanel account (several websites, email, cron jobs and DNS zones) from its full
-backup, use [Import from cPanel](/guides/admin/import-cpanel/) instead.
+backup, use [Import from cPanel](/guides/admin/import-cpanel/) instead. For applications and
+services from Coolify, use [Import from Coolify](/guides/admin/import-coolify/).
 </Aside>
 
 ## Before you start
@@ -121,8 +122,9 @@ and [delete them after the import](#after-the-import).
 1. In the sidebar, under **Administration**, click **Import**. You can also press `Ctrl+K` and
    type "Import".
 
-2. Click the **Website archive** tab ("One website from a .zip or .tar.gz, with its database
-   dump").
+2. The page has three tabs: **cPanel backup**, **Website archive** and **Coolify** (see
+   [Import from Coolify](/guides/admin/import-coolify/)). Click **Website archive** ("One website
+   from a .zip or .tar.gz, with its database dump").
 
 3. In **Server**, choose the server you copied the files to.
 
@@ -359,7 +361,7 @@ ekctl api POST imports/site --data '{"server_id":"<server id>","archive":"exampl
   [extra domain](/guides/websites/websites/#domains-and-extra-domains); wildcard domains are not
   possible.
 - Tried in a test VM with archives built like these hosts', not yet with many real ones.
-  An importer for Coolify is on the [roadmap](/project/roadmap/).
+- Apps from Coolify come over with [Import from Coolify](/guides/admin/import-coolify/).
 
 ## Troubleshooting
 
