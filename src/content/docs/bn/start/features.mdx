@@ -12,8 +12,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 সাথে এখনো চালিয়ে দেখা না হয়ে থাকে, তালিকায় সেটা বলা আছে।
 
 <Aside type="note">
-এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ। এক command-এই আপনি
-[এটা install করতে](/start/install/) পারেন।
+এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line) ছাড়া, যা আসবে
+পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -247,6 +247,21 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - প্রতিটা server-এর service (Caddy, PostgreSQL, cron আর অন্যান্য), restart-সহ।
 - Background task, panel-এ তাদের অগ্রগতি দেখা যায়।
 
+## API আর command line
+
+[REST API](/reference/api/) · [API token](/guides/security/api-tokens/) · [ekctl](/reference/cli/)
+
+<Badge text="পরের release" variant="note" /> এগুলো main repository-র `dev` branch-এ আছে, আর আসবে v0.1.0-এর পরের
+release-এ।
+
+- Script-এর জন্য **API token**, administrator আর customer দুজনের জন্যই: প্রতিটা অংশের scope (read, website,
+  database, app, DNS, email, backup, server, customer, settings), মেয়াদ, একবার দেখানো, revoke করা যায়, শেষ ব্যবহার
+  দেখা যায়, আর audit log-এ নাম থাকে। Token কখনো account-এর নিরাপত্তা বদলাতে বা terminal খুলতে পারে না।
+- পুরো API-এর একটা **OpenAPI 3.1 description**, `/api/v1/openapi.json`-এ, প্রতিটা operation-এর দরকারি scope-সহ।
+- **ekctl**, Linux, macOS আর Windows-এর জন্য একটা command-line tool: server, website, database, app, DNS, backup
+  আর task, `--wait`, `--json` output, আর যেকোনো endpoint-এর জন্য `ekctl api`। Self-signed certificate-ওয়ালা
+  panel fingerprint দিয়ে বিশ্বাস করা হয়।
+
 ## ভাষা আর interface
 
 - English আর বাংলা, সম্পূর্ণ। তারিখ, সংখ্যা আর size আপনার ভাষা অনুযায়ী দেখায়।
@@ -259,7 +274,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 
 | বিষয় | যা plan করা আছে |
 | --- | --- |
-| API | Scope-সহ API token, একটা OpenAPI description, একটা `ekpanel` command-line tool, পরে একটা Terraform provider |
+| Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
 | সরানো | একটা website, app বা database অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো |
 | Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
 | Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |

@@ -122,7 +122,7 @@ your server.
 | Secret | How ekPanel keeps it |
 | --- | --- |
 | Your panel password | Hashed with argon2id |
-| Session and enrolment tokens | Only a SHA-256 hash |
+| Session and enrolment tokens, API tokens | Only a SHA-256 hash |
 | Database passwords | Never stored. Shown once; the panel keeps only the database's own hash (MariaDB's native hash, PostgreSQL's SCRAM-SHA-256 verifier) |
 | WordPress and PHP app admin passwords | Shown once, never stored |
 | SFTP, FTP and mailbox passwords | SHA-512 crypt hashes only |
@@ -150,6 +150,27 @@ agents trust. Back it up somewhere private, and never share it.
 - Session cookies are `HttpOnly`, `SameSite=Lax` and use the `__Host-` prefix. Requests that
   change something are protected against cross-site request forgery, and a strict Content
   Security Policy allows no inline scripts.
+
+## API tokens
+
+Scripts and the [ekctl](/reference/cli/) command-line tool sign in with
+[API tokens](/guides/security/api-tokens/) instead of a password. They are built so that a
+leaked token does as little harm as possible:
+
+- The panel keeps only a SHA-256 hash of each token, so a copy of the database does not reveal
+  them. The token is shown once, when it is made.
+- A token acts as its owner and never has more rights than the owner. Its **scopes** limit it
+  further: `read` for looking, and one scope per area (websites, databases, DNS, servers …)
+  for changes. Customers can only choose the scopes of what they own.
+- A token expires after 30, 90 or 365 days (or never, if you choose that), and tokens can be
+  revoked one by one. The panel shows when and from where each was last used.
+- Whatever its scopes, a token can **never** change a password or two-factor sign-in, end
+  sessions, make, see or revoke tokens, or open a terminal (a root or container shell). Those
+  need a person signed in in the browser. Tokens are made only in a browser session, and an
+  administrator signed in as a customer cannot make tokens for them.
+- Every change made with a token is in the audit log under its owner, with the token's name.
+
+The exact scopes and rules are in the [API reference](/reference/api/#scopes).
 
 ## The audit log
 
@@ -195,5 +216,6 @@ The [roadmap](/project/roadmap/) has the details.
 
 - [Security overview guide](/guides/security/overview/): what to tighten on your servers.
 - [Your account](/guides/security/accounts/): two-factor sign-in and sessions.
+- [API tokens](/guides/security/api-tokens/): keys for scripts and ekctl.
 - [Security policy](/project/security-policy/): how to report a vulnerability.
 - [Architecture](/concepts/architecture/)

@@ -99,6 +99,8 @@ Website, database বা app যোগ করার সময় **কার জ
   নিজের Cloudflare account connect করতে পারেন।
 - **নিরাপত্তা** (তাঁর password আর two-factor authentication) আর **নোটিফিকেশন** (তাঁর নিজের alert
   channel)।
+- **API টোকেন** (API tokens, পরের release থেকে): script আর ekctl-এর জন্য তাঁর নিজের
+  [token](/guides/security/api-tokens/), read, website, database, app, DNS আর email-এ সীমিত।
 
 তিনি দেখেন **না**: অন্য customer-দের জিনিস, **ব্যাকআপ**, **সার্ভার** (শুধু বেছে নেওয়ার জন্য server-এর
 নামের একটা তালিকা, তাঁর package অনুযায়ী সীমিত), **সার্ভার নিরাপত্তা**, **গ্রাহক**, **প্যাকেজ** বা
@@ -170,8 +172,8 @@ Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আ�
 - এটা সর্বোচ্চ **এক ঘণ্টা** থাকে।
 - Audit log প্রতিটা কাজ **আপনার** নামে record করে, আর এটাও যে আপনি customer হিসেবে কাজ করেছেন।
 - Customer-এর নিজের account security তাঁরই থাকে: তাঁর হয়ে sign in করা অবস্থায় আপনি তাঁর password
-  বদলাতে, two-factor authentication চালু বা বন্ধ করতে, তাঁর অন্য session sign out করাতে, বা তাঁর
-  notification channel বদলাতে পারবেন না।
+  বদলাতে, two-factor authentication চালু বা বন্ধ করতে, তাঁর অন্য session sign out করাতে, তাঁর
+  notification channel বদলাতে, বা তাঁর API token দেখতে বা বানাতে পারবেন না।
 - Customer হিসেবে sign in করা অবস্থায় terminal, app shell-সহ, পাওয়া যায় না।
 
 ## যা শুধু admin-রা পারেন

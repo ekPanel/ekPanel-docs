@@ -1,0 +1,468 @@
+---
+title: ekctl, command-line tool
+description: ekctl install করুন, API token দিয়ে login করুন, আর terminal বা script থেকে server, website, database, app, DNS, backup আর task manage করুন।
+sidebar:
+  order: 4
+  label: ekctl (CLI)
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+`ekctl` আপনার নিজের computer-এর (Linux, macOS বা Windows) জন্য একটা ছোট program, যা terminal থেকে একটা ekPanel
+panel চালায়। এটা একটা [API token](/guides/security/api-tokens/) দিয়ে login করে, তাই token-এর scope যতটুকু
+অনুমতি দেয় ততটুকুই করতে পারে, আর web UI-এর মতো একই [API](/reference/api/) ব্যবহার করে। Deploy script লিখতে,
+কোথায় কী চলছে দেখতে, বা cron job-এ backup-এর জন্য অপেক্ষা করতে এটা ব্যবহার করুন।
+
+```bash
+ekctl login --url https://panel.example.com
+ekctl sites create shop.example.com --server web1 --php 8.4 --wait
+```
+
+<Aside type="caution" title="v0.1.0-এ নেই">
+ekctl আছে main repository-র `dev` branch-এ, আর আসবে **পরের release-এ**। ততদিন [নিজে build করুন](#build-it-now)।
+এর জন্য একই release বা নতুনতর panel লাগে: v0.1.0-এর panel-এ API token নেই।
+</Aside>
+
+## Install
+
+### Release থেকে
+
+পরের release থেকে প্রতিটা [release](https://github.com/ekPanel/ekpanel/releases)-এ প্রতিটা system-এর জন্য একটা
+archive থাকবে: `ekctl-<version>-<os>-<arch>.tar.gz`, `linux`, `darwin` (macOS) আর `windows`-এর জন্য, প্রতিটা
+`amd64` আর `arm64`-এর জন্য। Archive-এ থাকে `ekctl` (Windows-এ `ekctl.exe`) আর licence।
+
+<Tabs>
+<TabItem label="Linux আর macOS">
+
+```bash
+VERSION=vX.Y.Z         # the newest release
+OS=linux               # or darwin for macOS
+ARCH=amd64             # or arm64 (such as Apple silicon)
+curl -fsSLO https://github.com/ekPanel/ekpanel/releases/download/$VERSION/ekctl-$VERSION-$OS-$ARCH.tar.gz
+tar -xzf ekctl-$VERSION-$OS-$ARCH.tar.gz
+sudo install ekctl-$VERSION-$OS-$ARCH/ekctl /usr/local/bin/ekctl
+ekctl version
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+PowerShell-এ (Windows 10 আর নতুনতর-এ `tar` আছে):
+
+```powershell
+$VERSION = "vX.Y.Z"   # the newest release
+curl.exe -fsSLO "https://github.com/ekPanel/ekpanel/releases/download/$VERSION/ekctl-$VERSION-windows-amd64.tar.gz"
+tar -xzf "ekctl-$VERSION-windows-amd64.tar.gz"
+```
+
+খোলা folder থেকে `ekctl.exe` আপনার `PATH`-এর কোনো folder-এ সরান, তারপর `ekctl version` চালান।
+
+</TabItem>
+</Tabs>
+
+Archive-গুলো release-এর `SHA256SUMS`-এ তালিকাভুক্ত, যেটা ekPanel release key দিয়ে sign করা। একটা archive check
+করতে এর পাশে `SHA256SUMS` download করুন আর চালান `sha256sum --ignore-missing -c SHA256SUMS` (macOS-এ:
+`shasum -a 256 --ignore-missing -c SHA256SUMS`)। Signature নিজে কীভাবে check করবেন তা আছে
+[install page](/start/install/#how-the-download-is-checked)-এ।
+
+<Aside type="note">
+ekctl Apple বা Microsoft দিয়ে sign করা নয়। Browser দিয়ে download করা copy macOS খুলতে না দিলে চালান
+`xattr -d com.apple.quarantine ekctl`, অথবা উপরের মতো `curl` দিয়ে download করুন। Windows SmartScreen চালানোর
+আগে একবার জিজ্ঞেস করতে পারে।
+</Aside>
+
+### এখনই build করা
+
+পরের release পর্যন্ত `dev` branch থেকে ekctl build করুন। লাগবে Git আর [Go](https://go.dev/dl/) 1.27 বা নতুনতর
+(আর `make`; Windows-এ `go build`-এর লাইনটা ব্যবহার করুন)।
+
+```bash
+git clone --branch dev https://github.com/ekPanel/ekpanel.git
+cd ekpanel
+make ekctl                       # builds bin/ekctl for this computer
+sudo install bin/ekctl /usr/local/bin/ekctl
+```
+
+`make` ছাড়া: `go build -o ekctl ./cmd/ekctl` (Windows-এ `.exe` যোগ করুন)। অন্য system-এর জন্য build করতে
+`GOOS` আর `GOARCH` দিন, যেমন `GOOS=windows GOARCH=amd64 go build -o ekctl.exe ./cmd/ekctl`। Source থেকে build
+করা ekctl নিজের version বলে `dev`, অথবা `make ekctl` দিয়ে করলে Git-এর version।
+
+## Login করা
+
+<Steps>
+
+1. Panel-এ **আপনার অ্যাকাউন্ট → API টোকেন** (Your account → API tokens)-এ একটা token বানান, command line থেকে
+   যে scope ব্যবহার করতে চান সেগুলো দিয়ে। দেখুন [API token](/guides/security/api-tokens/)।
+
+2. আপনার panel-এর address দিয়ে login করুন:
+
+   ```bash
+   ekctl login --url https://panel.example.com
+   ```
+
+3. ekctl চাইলে token paste করুন। যা টাইপ করেন তা দেখায় না।
+
+   ```
+   API token (create one in the panel under Account → API tokens):
+   Logged in to https://panel.example.com as Your Name <you@example.com> (admin).
+   Saved in /home/you/.config/ekctl/config.json.
+   ```
+
+4. Check করুন:
+
+   ```bash
+   ekctl whoami
+   ```
+
+</Steps>
+
+Address সম্পর্কে:
+
+- `https://` না লিখলে যোগ হয়, আর শেষের `/` বা `/api/v1` বাদ যায়, তাই `panel.example.com`-ও চলে।
+- ekctl প্রথমে check করে address-টা ekPanel panel-এর মতো উত্তর দেয় কিনা (`/api/v1/health`), তারপর panel
+  token-টা নেয় কিনা।
+- `http://` address দিলে ekctl সতর্ক করে যে token encrypt না হয়ে যাচ্ছে। এটা শুধু আপনার নিজের computer-এর
+  panel-এর জন্য ব্যবহার করুন।
+
+অন্য panel-এ login করতে তার address দিয়ে আবার `ekctl login` চালান: ekctl একবারে একটা panel আর একটা token রাখে।
+
+### Self-signed certificate-ওয়ালা panel
+
+`--domain` ছাড়া install করা panel একটা self-signed certificate ব্যবহার করে, যাকে আপনার computer বিশ্বাস করে না।
+তখন ekctl certificate-টা দেখায় আর জিজ্ঞেস করে বিশ্বাস করবেন কিনা:
+
+```
+The certificate of https://203.0.113.7 is not trusted: x509: certificate signed by unknown authority.
+This is normal for a panel with a self-signed certificate.
+  Subject:  CN=panel
+  Issuer:   CN=panel
+  Valid:    2026-11-09 14:31 to 2029-02-12 14:31
+  SHA-256:  21:8B:06:02:D0:5D:20:7D:3B:91:AC:78:B2:53:CB:A2:D4:C5:0F:B7:12:7A:B0:48:5A:36:2F:E8:AD:A6:D3:3B
+Compare it with the fingerprint your browser shows for the panel.
+Trust this certificate? [y/N]
+```
+
+`y` দেওয়ার আগে `SHA-256` লাইনটা certificate-এর fingerprint-এর সাথে মিলিয়ে নিন। এটা পাবেন আপনার browser-এ
+(address-এর পাশের তালা বা সতর্ক চিহ্ন, তারপর certificate-এর details), অথবা panel-এর server-এ:
+
+```bash
+sudo openssl x509 -in /etc/ekpanel/tls/panel.crt -noout -fingerprint -sha256
+```
+
+`y` দিলে ekctl ওই address আর port-এর জন্য fingerprint রেখে দেয়, আর তারপর থেকে সেখানে ঠিক ওই certificate-টাই
+নেয় (অথবা এমন certificate যাকে আপনার system বিশ্বাস করে)। Panel-এর certificate বদলে গেলে ekctl থেমে যায়, সতর্ক
+করে যে এটা আপনার বিশ্বাস করা certificate নয়, আর নতুন fingerprint দেখায়। কেন বদলাল check করুন, তারপর আবার
+`ekctl login` চালান।
+
+### Terminal ছাড়া
+
+Script বা CI job-এ কেউ প্রশ্নের উত্তর দিতে পারে না। তখন:
+
+- token দিন standard input-এ: `echo "$EKP_TOKEN" | ekctl login --url …`, অথবা `--token` দিয়ে (যেটা computer-এর
+  অন্য user process list-এ দেখতে পারে);
+- যে fingerprint check করেছেন সেটা দিন `--fingerprint` দিয়ে; এটা ছাড়া ekctl অবিশ্বস্ত certificate ফিরিয়ে দেয়
+  আর মিলিয়ে দেখার জন্য fingerprint দেখায়।
+
+```bash
+echo "$EKP_TOKEN" | ekctl login --url https://203.0.113.7 \
+  --fingerprint 21:8B:06:02:D0:5D:20:7D:3B:91:AC:78:B2:53:CB:A2:D4:C5:0F:B7:12:7A:B0:48:5A:36:2F:E8:AD:A6:D3:3B
+```
+
+Fingerprint colon-সহ বা ছাড়া, ছোট বা বড় হাতের অক্ষরে লেখা যায়, `openssl` যেভাবে দেখায় সেভাবেও।
+
+বিশ্বস্ত certificate-ওয়ালা panel-এর জন্য login করারই দরকার নেই: `EKCTL_URL` আর `EKCTL_TOKEN` দিন (দেখুন
+[Configuration](#configuration))।
+
+## Configuration
+
+`ekctl login` panel-এর address, token আর আপনার বিশ্বাস করা certificate রাখে একটা config file-এ, যেটা শুধু আপনি
+পড়তে পারেন (file `0600`, তার folder `0700`):
+
+| System | Default config file |
+| --- | --- |
+| Linux | `~/.config/ekctl/config.json` (অথবা `$XDG_CONFIG_HOME/ekctl/config.json`) |
+| macOS | `~/Library/Application Support/ekctl/config.json` |
+| Windows | `%AppData%\ekctl\config.json` |
+
+```json
+{
+  "url": "https://panel.example.com",
+  "token": "ekp_…",
+  "trusted_certs": {
+    "203.0.113.7:443": "21:8B:06:…:D3:3B"
+  }
+}
+```
+
+Flag আর environment variable file-এর চেয়ে আগে আসে:
+
+| Setting | Flag | Environment | নইলে |
+| --- | --- | --- | --- |
+| Panel-এর address | `--url URL` | `EKCTL_URL` | রাখা `url` |
+| Token | `--token TOKEN` | `EKCTL_TOKEN` | রাখা `token` |
+| Config file | `--config FILE` | `EKCTL_CONFIG` | উপরের default |
+
+Flag জেতে environment variable-এর ওপর, আর environment variable জেতে file-এর ওপর।
+
+<Aside type="tip" title="রাখা token তার panel-এর সাথেই থাকে">
+রাখা token **শুধু** রাখা address-এই পাঠানো হয়। `--url` বা `EKCTL_URL` দিয়ে ekctl-কে অন্য panel-এ পাঠালে রাখা
+token সেখানে যায় না: ওই panel-এর token দিন `--token` বা `EKCTL_TOKEN` দিয়ে, অথবা সেখানে login করুন।
+</Aside>
+
+`ekctl login` token নেয় শুধু `--token` বা standard input থেকে, `EKCTL_TOKEN` থেকে নয়।
+
+`ekctl logout` রাখা token মুছে দেয়; address আর বিশ্বাস করা certificate থেকে যায়। Panel-এ revoke না করা পর্যন্ত
+token নিজে কাজ করতে থাকে।
+
+Global flag `--url`, `--token`, `--config` আর `--json` command line-এর যেকোনো জায়গায় বসতে পারে:
+`ekctl --json sites list` আর `ekctl sites list --json` একই।
+
+## Command
+
+যেখানে কোনো command একটা server, website, database, app, backup repository বা zone নেয়, সেখানে এর **ID বা নাম**
+(website-এর ক্ষেত্রে domain) দিতে পারেন। দুটোর একই নাম হলে ekctl তাদের ID দেখায় আর একটা ব্যবহার করতে বলে। নাম
+খুঁজতে আগে তালিকা পড়তে হয়, তাই সেই তালিকা পড়ার scope লাগে।
+
+বেশিরভাগ command-এর ছোট রূপ আছে: `list`-এর জন্য `ls`, `get`-এর জন্য `show`, `delete`-এর জন্য `rm`, আর
+`databases`-এর জন্য `db`। `ekctl help <command>` বা `ekctl <command> --help` একটা command-এর help দেখায়।
+
+**Scope** column বলে token-এর কী লাগে; প্রতিটা তালিকার জন্য `read` কাজ করে।
+
+### Account
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl login --url URL` | Token দিয়ে login করে আর রেখে দেয় | যেকোনো |
+| `ekctl logout` | রাখা token ভুলে যায় | লাগে না |
+| `ekctl whoami` | আপনি কে হিসেবে login করেছেন, আর panel-এর version | যেকোনো |
+| `ekctl version` | ekctl-এর নিজের version (`ekctl --version`-ও) | লাগে না |
+
+### Server
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl servers list` | ID, নাম, host name, status (online, offline, not enrolled), OS আর agent version | `read` বা `servers` |
+| `ekctl servers get SERVER` | একটা server-এর সব details | `read` বা `servers` |
+
+```bash
+ekctl servers get web1
+```
+
+### Website
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl sites list [--server SERVER]` | Website, চাইলে একটা server-এর | `read` বা `sites` |
+| `ekctl sites get SITE` | একটা website: alias, kind, PHP, SSL, state, Linux user, disk use | `read` বা `sites` |
+| `ekctl sites create DOMAIN --server SERVER` | Website বানায় | `sites` |
+| `ekctl sites delete SITE` | Website **আর তার সব file** মুছে ফেলে | `sites` |
+
+`sites create` যা নেয়:
+
+| Flag | কী করে |
+| --- | --- |
+| `--server SERVER` | যে server-এ বানাবেন (লাগবেই) |
+| `--php VERSION` | এই version-এর PHP site বানায়, যেমন `8.4` |
+| `--kind static\|php` | Kind; `--php` বা `--kind` না দিলে site static হয়, আর শুধু `--kind php` দিলে panel-এর default PHP version নেয় |
+| `--alias DOMAIN` | একটা বাড়তি domain; আরও দিতে বারবার দিন |
+| `--tls auto\|internal` | Let's Encrypt (default) বা self-signed certificate |
+| `--owner ID` | Administrator: এই customer-এর জন্য বানান |
+| `--wait` | Server-এ site set up না হওয়া পর্যন্ত অপেক্ষা করে |
+| `--timeout DURATION` | `--wait`-এর সাথে, এতক্ষণ পর হাল ছাড়ে (default `15m`) |
+
+```bash
+ekctl sites create example.com --server web1 --php 8.4 --alias www.example.com --wait
+ekctl sites delete old.example.com
+```
+
+`sites delete` নিশ্চিত করতে domain টাইপ করতে বলে। Script-এ `--yes` যোগ করুন।
+
+### Database
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl databases list [--server SERVER]` | Engine, user, state আর size-সহ database | `read` বা `databases` |
+| `ekctl databases get DATABASE` | একটা database | `read` বা `databases` |
+| `ekctl databases create NAME --server SERVER --engine mariadb\|postgresql` | একটা database আর তার জন্য একটা user বানায় | `databases` |
+| `ekctl databases delete DATABASE` | Database, **তার data** আর তার user মুছে ফেলে | `databases` |
+
+`databases create` আরও নেয় `--user NAME` (default: database-এর নাম), `--owner ID`, `--wait` আর `--timeout`। নাম
+হলো 1 থেকে 32টা ছোট হাতের অক্ষর, সংখ্যা আর `_`, শুরুতে একটা অক্ষর।
+
+```bash
+ekctl databases create shop --server web1 --engine mariadb --wait
+```
+
+User-এর password **একবারই** দেখানো হয়; রেখে দিন। `databases delete` নাম টাইপ করতে বলে, অথবা `--yes` নেয়।
+
+### App
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl apps list [--server SERVER]` | Kind, domain আর state-সহ app | `read` বা `apps` |
+| `ekctl apps get APP` | একটা app: image বা Git repository আর branch, port, domain | `read` বা `apps` |
+| `ekctl apps restart APP` | App-এর container restart করে | `apps` |
+| `ekctl apps deploy APP [--wait]` | Git app এখনই তার branch থেকে build আর deploy করে | `apps` |
+
+```bash
+ekctl apps deploy shop-api --wait
+```
+
+`--wait` দিলে ekctl deployment live না হওয়া পর্যন্ত খোঁজ রাখে। Build fail করলে build log কীভাবে পড়বেন তা বলে:
+`ekctl api GET apps/<id>/deployments/<id>/log`।
+
+### DNS
+
+`zones` আর `records` হলো [Cloudflare](/guides/dns/cloudflare/)-এ রাখা zone; `hosted` হলো
+[ekPanel-এর নিজের name server](/guides/dns/name-servers/)-এর zone।
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl dns zones list` | Cloudflare zone | `read` বা `dns` |
+| `ekctl dns records list ZONE` | একটা Cloudflare zone-এর record; `MANAGED` গুলো কোনো website বা app-এর | `read` বা `dns` |
+| `ekctl dns records add ZONE --type TYPE --name NAME --content CONTENT` | Record যোগ করে | `dns` |
+| `ekctl dns records delete ZONE RECORD_ID` | Record মুছে ফেলে (managed নয় এমন) | `dns` |
+| `ekctl dns hosted list` | Hosted zone | `read` বা `dns` |
+| `ekctl dns hosted records ZONE` | একটা hosted zone-এর record; source `ekpanel` গুলো website, app আর mail-এর জন্য বানানো | `read` বা `dns` |
+
+`records add` আরও নেয় `--ttl SECONDS` (60 থেকে 86400, অথবা automatic-এর জন্য 1, default), MX record-এর জন্য
+`--priority N`, Cloudflare দিয়ে traffic পাঠাতে `--proxied`, আর `--comment NOTE`। `NAME` হলো `www`, zone নিজের
+জন্য `@`, অথবা zone-এর ভেতরের পুরো host name।
+
+```bash
+ekctl dns records add example.com --type A --name www --content 203.0.113.7 --proxied
+ekctl dns records add example.com --type MX --name @ --content mail.example.com --priority 10
+```
+
+`records delete` record-এর নাম টাইপ করতে বলে, অথবা `--yes` নেয়। Hosted zone এখন পর্যন্ত ekctl থেকে শুধু পড়া
+যায়; বদলাতে `ekctl api` বা panel ব্যবহার করুন।
+
+### Backup
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl backups list` | Schedule, শেষ run আর পরের run-সহ backup repository | `read` বা `backups` |
+| `ekctl backups run REPO [--wait]` | ওই repository-র server এখনই backup করে | `backups` |
+
+```bash
+ekctl backups run offsite --wait --timeout 2h
+```
+
+`--wait` ছাড়া ekctl task-এর ID আর কীভাবে এর জন্য অপেক্ষা করবেন তা দেখায়।
+
+### Task
+
+| Command | কী করে | Scope |
+| --- | --- | --- |
+| `ekctl tasks list` | সাম্প্রতিক task: kind, status, server, error | যেকোনো |
+| `ekctl tasks wait TASK_ID` | Task শেষ না হওয়া পর্যন্ত অপেক্ষা করে | যেকোনো |
+
+`tasks list` নেয় `--active` (শুধু queued আর running task), `--server SERVER` আর `--limit N` (1 থেকে 200,
+default 20)। `tasks wait` নেয় `--timeout` (default `15m`), আর task সফল হলে `0`, ব্যর্থ হলে `1` দিয়ে শেষ হয়। দেখুন
+[Task](/reference/api/#tasks-following-slow-work)।
+
+### যেকোনো endpoint: ekctl api
+
+`ekctl api` যেকোনো endpoint call করে আর তার JSON উত্তর দেখায়। অন্য command এখনো যা ঢাকে না, তার সবকিছুর জন্য এটা
+ব্যবহার করুন।
+
+```bash
+ekctl api METHOD PATH [--data JSON|@FILE|-]
+```
+
+- `METHOD` হলো `GET`, `POST`, `PUT`, `PATCH` বা `DELETE`।
+- `PATH` হয় `/api/v1`-এর সাপেক্ষে (`sites`) অথবা পুরো (`/api/v1/sites`), আর এতে query থাকতে পারে
+  (`'tasks?active=1'`)।
+- `--data` হলো body: command line-এ JSON, file পড়তে `@file.json`, বা standard input পড়তে `-`। পাঠানোর আগে ekctl
+  check করে এটা valid JSON কিনা।
+
+```bash
+ekctl api GET openapi.json | jq '.paths | keys'      # every endpoint
+ekctl api GET 'tasks?active=1'
+ekctl api POST cron --data @job.json
+echo '{"name":"web2"}' | ekctl api POST servers --data -
+```
+
+Panel error দিয়ে উত্তর দিলেও ekctl error-এর JSON standard output-এ দেখায়, কী ভুল হয়েছে তা standard error-এ বলে,
+আর `1` দিয়ে শেষ হয়।
+
+<Aside type="caution">
+`PATCH /sites/{id}` একটা website-এর **সব** setting বসায়: `aliases` বা `tls` বাদ দিলে সেগুলো reset হয়ে যায় (কোনো
+বাড়তি domain নেই, Let's Encrypt)। আগে site-টা পড়ুন (`ekctl api GET sites/<id>`) আর যা রাখতে চান তার প্রতিটা field
+ফেরত পাঠান।
+</Aside>
+
+## Script-এর জন্য output
+
+- সাধারণ output হলো standard output-এ একটা table বা `Key: value` লাইন, সময় আপনার local time zone-এ। Message,
+  progress আর hint যায় standard error-এ, তাই কখনো pipe-এ গিয়ে পড়ে না।
+- খালি তালিকা standard output-এ কিছু দেখায় না (standard error-এ বলে "No sites."), তাই pipe data ছাড়া কোনো header
+  পায় না।
+- `--json` panel-এর JSON উত্তর যেমন আছে তেমন, indent করে দেখায়। Field-এর নাম API-এর, যা table-এর column-এর চেয়ে
+  বেশি স্থির। [jq](https://jqlang.org/)-এর সাথে ব্যবহার করুন:
+
+```bash
+# Websites that failed to apply
+ekctl sites list --json | jq -r '.[] | select(.state == "error") | "\(.domain): \(.message)"'
+
+# The IDs of all websites on one server
+ekctl sites list --server web1 --json | jq -r '.[].id'
+
+# Create a database and keep its password in a file only you can read
+ekctl databases create shop --server web1 --engine mariadb --json \
+  | jq -r .password > shop.password && chmod 600 shop.password
+```
+
+`--json`-এর সাথে `--wait` অপেক্ষা শেষে শেষ state দেখায়।
+
+## Exit code
+
+| Code | মানে |
+| --- | --- |
+| `0` | কাজ হয়েছে। `tasks wait` আর `--wait`-এর ক্ষেত্রে: কাজটা সফল হয়েছে। |
+| `1` | ব্যর্থ: panel ফিরিয়ে দিয়েছে (যেকোনো API error), network fail করেছে, task বা deployment fail করেছে, `--wait`-এর সময় শেষ, বা আপনি Ctrl+C চেপেছেন। |
+| `2` | Command line ভুল: অচেনা command বা flag, একটা argument নেই, বা কেউ নিশ্চিত করতে পারে না এমন অবস্থায় `--yes` ছাড়া delete। |
+
+Timeout panel-এর কাজ থামায় না: ekctl সেটা বলে আর `ekctl tasks list` দেখতে বলে।
+
+## সমস্যা হলে
+
+**"Not logged in."** `ekctl login --url …` চালান। Login করে থাকলে check করুন `--url` বা `EKCTL_URL` সেই একই
+address কিনা যেখানে login করেছিলেন: রাখা token শুধু সেখানেই পাঠানো হয়।
+
+`invalid_token`-এর পরে **"Log in again with a valid token"**। Token revoke হয়েছে, মেয়াদ শেষ, বা ভুল টাইপ হয়েছে।
+নতুন একটা বানান আর আবার `ekctl login` চালান।
+
+`token_scope`-এর পরে **"Create a token with that scope in the panel"**। Token-এর একটা scope নেই; message-এ বলা থাকে
+কোনগুলো হলে চলত। মনে রাখবেন, নাম দিয়ে server দিলে খুঁজতে `read` বা `servers` লাগে; সেটা এড়াতে বরং ID দিন।
+
+**"API tokens cannot do this."** (`token_not_allowed`) কাজটার জন্য web UI লাগে, যেমন password বদলানো বা terminal
+খোলা।
+
+**"The certificate of … is not trusted"** বা **"is not the one you trusted"**। দেখুন
+[Self-signed certificate-ওয়ালা panel](#panels-with-a-self-signed-certificate)। Panel ইচ্ছা করে নতুন certificate
+পেয়ে থাকলে আবার login করুন আর নতুন fingerprint বিশ্বাস করুন।
+
+**"This answer did not come from the ekPanel API. Check the panel URL."** অন্য কিছু উত্তর দিয়েছে, যেমন কোনো proxy-র
+error page বা অন্য website। Address check করুন।
+
+**"No site is called …"** নাম হুবহু মিলতে হবে (ছোট-বড় হাতের অক্ষরে কিছু যায় আসে না)। তালিকার command থেকে ID
+ব্যবহার করুন।
+
+**টাইপ করার সময় token screen-এ দেখা যাচ্ছে।** এটা হয় Windows-এ, যেখানে ekctl টাইপ করা লেখা লুকাতে পারে না; আগে
+সতর্ক করে। বরং token pipe করে দিন: `Get-Content token.txt | ekctl login --url …`।
+
+## সীমা আর যা এখনো নেই
+
+- একবারে একটা panel: এখনো নাম দেওয়া profile নেই। প্রতিটা panel-এর জন্য একটা config file রাখতে `--config` বা
+  `EKCTL_CONFIG` ব্যবহার করুন।
+- Command আছে server, website, database, app, DNS, backup আর task-এর জন্য। বাকি সব (email, cron job, customer,
+  firewall …) `ekctl api` দিয়ে।
+- এখনো shell completion নেই।
+- ekctl আসবে পরের release-এ; ততদিন [build করুন](#build-it-now)।
+
+## সম্পর্কিত
+
+- [API token](/guides/security/api-tokens/)
+- [REST API](/reference/api/)
+- [Roadmap](/project/roadmap/)

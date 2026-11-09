@@ -99,6 +99,8 @@ A customer signs in at the same address as you. They see:
   apps. They can connect their own Cloudflare account.
 - **Security** (their password and two-factor authentication) and **Notifications** (their own
   alert channels).
+- **API tokens** (from the next release): their own [tokens](/guides/security/api-tokens/) for
+  scripts and ekctl, limited to read, websites, databases, apps, DNS and email.
 
 They do **not** see: other customers' things, **Backups**, **Servers** (only a list of server names
 to choose from, limited by their package), **Server security**, **Customers**, **Packages** or the
@@ -173,8 +175,8 @@ To see exactly what a customer sees, or to fix something for them:
 - This lasts **one hour** at most.
 - The audit log records each action with **your** name and that you acted as the customer.
 - The customer's own account security stays theirs: while signed in as them you cannot change their
-  password, turn two-factor authentication on or off, sign out their other sessions, or change
-  their notification channels.
+  password, turn two-factor authentication on or off, sign out their other sessions, change
+  their notification channels, or see or make their API tokens.
 - Terminals, including app shells, are not available while signed in as a customer.
 
 ## Only administrators can

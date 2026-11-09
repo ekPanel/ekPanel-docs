@@ -198,6 +198,7 @@ Before you open the pull request:
 - [ ] Ownership checked for customers; package limits enforced in the reconcile
 - [ ] An audit log entry for every change, with its text in `audit.actions`
 - [ ] Errors with a stable `code`, translated in `errors`
+- [ ] A new route: `docs/openapi.json` updated (`UPDATE_OPENAPI=1 go test ./internal/api -run TestOpenAPIFile`); a new first path segment has its scope in `routeScopes` (`internal/api/tokens.go`), or API tokens cannot use it
 - [ ] UI text in `en.json` (and `bn.json` if you can); `npm run i18n:check` passes
 - [ ] Tests for the agent and the API; `make test` and `gofmt -l .` clean
 - [ ] Tried in the test VM, including failures and turning it off again

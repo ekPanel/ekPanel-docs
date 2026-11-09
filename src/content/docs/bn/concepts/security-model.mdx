@@ -121,7 +121,7 @@ code আপনার server-এ চলত।
 | Secret | ekPanel কীভাবে রাখে |
 | --- | --- |
 | আপনার panel password | argon2id দিয়ে hash করা |
-| Session আর enrolment token | শুধু একটা SHA-256 hash |
+| Session আর enrolment token, API token | শুধু একটা SHA-256 hash |
 | Database password | কখনো রাখা হয় না। একবার দেখানো হয়; panel শুধু database-এর নিজের hash রাখে (MariaDB-র native hash, PostgreSQL-এর SCRAM-SHA-256 verifier) |
 | WordPress আর PHP app-এর admin password | একবার দেখানো হয়, কখনো রাখা হয় না |
 | SFTP, FTP আর mailbox password | শুধু SHA-512 crypt hash |
@@ -149,6 +149,26 @@ agent-রা বিশ্বাস করে। এর backup কোনো গ�
 - Session cookie `HttpOnly`, `SameSite=Lax`, আর `__Host-` prefix ব্যবহার করে। কিছু বদলায় এমন request
   cross-site request forgery থেকে সুরক্ষিত, আর একটা কড়া Content Security Policy কোনো inline script
   চলতে দেয় না।
+
+## API token
+
+Script আর [ekctl](/reference/cli/) command-line tool password-এর বদলে [API token](/guides/security/api-tokens/)
+দিয়ে sign in করে। এগুলো এমনভাবে বানানো, যাতে কোনো token ফাঁস হলে যত কম সম্ভব ক্ষতি হয়:
+
+- Panel প্রতিটা token-এর শুধু একটা SHA-256 hash রাখে, তাই database-এর copy থেকে token জানা যায় না। Token দেখানো
+  হয় একবারই, বানানোর সময়।
+- Token তার মালিক হিসেবে কাজ করে, আর কখনো মালিকের চেয়ে বেশি অধিকার পায় না। এর **scope** একে আরও সীমিত করে:
+  দেখার জন্য `read`, আর পরিবর্তনের জন্য প্রতিটা অংশের (website, database, DNS, server …) একটা করে scope।
+  Customer-রা শুধু নিজেদের জিনিসের scope বেছে নিতে পারেন।
+- Token-এর মেয়াদ শেষ হয় 30, 90 বা 365 দিনে (অথবা কখনো না, যদি আপনি তা বেছে নেন), আর একটা একটা করে revoke করা যায়। Panel
+  দেখায় প্রতিটা শেষ কখন আর কোথা থেকে ব্যবহার হয়েছে।
+- Scope যা-ই হোক, token **কখনো** password বা two-factor sign-in বদলাতে, session শেষ করতে, token বানাতে, দেখতে বা
+  revoke করতে, বা terminal (root বা container-এর shell) খুলতে পারে না। এগুলোর জন্য browser-এ sign in করা একজন
+  মানুষ লাগে। Token বানানো যায় শুধু browser session থেকে, আর customer হিসেবে ঢোকা administrator তাঁর জন্য token
+  বানাতে পারেন না।
+- Token দিয়ে করা প্রতিটা পরিবর্তন audit log-এ মালিকের নামে থাকে, token-এর নামসহ।
+
+ঠিক কোন scope আর কী নিয়ম, তা আছে [API reference](/reference/api/#scopes)-এ।
 
 ## Audit log
 
@@ -193,5 +213,6 @@ GitHub environment-এ থাকে। Public key-টা installer আর দু
 
 - [নিরাপত্তার overview guide](/guides/security/overview/): আপনার server-এ কী কী শক্ত করবেন।
 - [আপনার account](/guides/security/accounts/): two-factor sign-in আর session।
+- [API token](/guides/security/api-tokens/): script আর ekctl-এর key।
 - [Security policy](/project/security-policy/): কীভাবে vulnerability জানাবেন।
 - [Architecture](/concepts/architecture/)

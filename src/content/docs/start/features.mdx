@@ -12,7 +12,8 @@ was tested on an Ubuntu 24.04 test server; where something has not been tried ag
 outside service, the list says so.
 
 <Aside type="note">
-Everything on this page is in v0.1.0, the first release. You can
+Everything on this page is in v0.1.0, the first release, except
+[API and command line](#api-and-command-line), which comes with the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -242,6 +243,23 @@ has not been tried yet.
 - Services on each server (Caddy, PostgreSQL, cron and others) with restart.
 - Background tasks with their progress shown in the panel.
 
+## API and command line
+
+[REST API](/reference/api/) · [API tokens](/guides/security/api-tokens/) · [ekctl](/reference/cli/)
+
+<Badge text="next release" variant="note" /> These are in the main repository's `dev` branch
+and come with the release after v0.1.0.
+
+- **API tokens** for scripts, for administrators and customers: scopes per area (read,
+  websites, databases, apps, DNS, email, backups, servers, customers, settings), an expiry,
+  shown once, revocable, last use shown, and named in the audit log. Tokens can never change
+  account security or open a terminal.
+- An **OpenAPI 3.1 description** of the whole API at `/api/v1/openapi.json`, with the scope
+  each operation needs.
+- **ekctl**, a command-line tool for Linux, macOS and Windows: servers, websites, databases,
+  apps, DNS, backups and tasks, with `--wait`, `--json` output, and `ekctl api` for any
+  endpoint. Panels with a self-signed certificate are trusted by fingerprint.
+
 ## Languages and interface
 
 - English and বাংলা (Bangla), complete. Dates, numbers and sizes follow your language.
@@ -254,7 +272,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 
 | Area | What is planned |
 | --- | --- |
-| API | API tokens with scopes, an OpenAPI description, an `ekpanel` command-line tool, later a Terraform provider |
+| Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
 | Moving | Move a website, app or database to another server; restore a backup onto another server; move a whole customer |
 | Importers | cPanel backups, aaPanel, plain WordPress from another host, Coolify |
 | Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users, passkeys, a list of active sessions |
