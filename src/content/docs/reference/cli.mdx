@@ -1,0 +1,486 @@
+---
+title: ekctl, the command-line tool
+description: Install ekctl, log in with an API token, and manage servers, websites, databases, apps, DNS, backups and tasks from your terminal or scripts.
+sidebar:
+  order: 4
+  label: ekctl (CLI)
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+`ekctl` is a small program for your own computer (Linux, macOS or Windows) that manages an
+ekPanel panel from the terminal. It logs in with an [API token](/guides/security/api-tokens/),
+so it can do only what the token's scopes allow, and it uses the same
+[API](/reference/api/) as the web UI. Use it to script deploys, check what runs where, or
+wait for a backup in a cron job.
+
+```bash
+ekctl login --url https://panel.example.com
+ekctl sites create shop.example.com --server web1 --php 8.4 --wait
+```
+
+<Aside type="caution" title="Not in v0.1.0">
+ekctl is in the main repository's `dev` branch and comes with the **next release**. Until
+then, [build it yourself](#build-it-now). It needs a panel from the same release or newer:
+a v0.1.0 panel has no API tokens.
+</Aside>
+
+## Install
+
+### From a release
+
+From the next release on, every [release](https://github.com/ekPanel/ekpanel/releases) has an
+archive per system: `ekctl-<version>-<os>-<arch>.tar.gz`, for `linux`, `darwin` (macOS) and
+`windows`, each for `amd64` and `arm64`. The archive holds `ekctl` (`ekctl.exe` on Windows) and
+the licence.
+
+<Tabs>
+<TabItem label="Linux and macOS">
+
+```bash
+VERSION=vX.Y.Z         # the newest release
+OS=linux               # or darwin for macOS
+ARCH=amd64             # or arm64 (such as Apple silicon)
+curl -fsSLO https://github.com/ekPanel/ekpanel/releases/download/$VERSION/ekctl-$VERSION-$OS-$ARCH.tar.gz
+tar -xzf ekctl-$VERSION-$OS-$ARCH.tar.gz
+sudo install ekctl-$VERSION-$OS-$ARCH/ekctl /usr/local/bin/ekctl
+ekctl version
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+In PowerShell (Windows 10 and newer have `tar`):
+
+```powershell
+$VERSION = "vX.Y.Z"   # the newest release
+curl.exe -fsSLO "https://github.com/ekPanel/ekpanel/releases/download/$VERSION/ekctl-$VERSION-windows-amd64.tar.gz"
+tar -xzf "ekctl-$VERSION-windows-amd64.tar.gz"
+```
+
+Move `ekctl.exe` from the unpacked folder to a folder on your `PATH`, then run
+`ekctl version`.
+
+</TabItem>
+</Tabs>
+
+The archives are listed in the release's `SHA256SUMS`, which is signed with the ekPanel
+release key. To check an archive, download `SHA256SUMS` next to it and run
+`sha256sum --ignore-missing -c SHA256SUMS` (on macOS: `shasum -a 256 --ignore-missing -c
+SHA256SUMS`). How to check the signature itself is on the
+[install page](/start/install/#how-the-download-is-checked).
+
+<Aside type="note">
+ekctl is not signed by Apple or Microsoft. If macOS refuses to open a copy downloaded with a
+browser, run `xattr -d com.apple.quarantine ekctl`, or download it with `curl` as above.
+Windows SmartScreen may ask once before it runs.
+</Aside>
+
+### Build it now
+
+Until the next release, build ekctl from the `dev` branch. You need Git and
+[Go](https://go.dev/dl/) 1.27 or newer (and `make`; on Windows, use the `go build` line).
+
+```bash
+git clone --branch dev https://github.com/ekPanel/ekpanel.git
+cd ekpanel
+make ekctl                       # builds bin/ekctl for this computer
+sudo install bin/ekctl /usr/local/bin/ekctl
+```
+
+Without `make`: `go build -o ekctl ./cmd/ekctl` (add `.exe` on Windows). To build for another
+system, set `GOOS` and `GOARCH`, such as `GOOS=windows GOARCH=amd64 go build -o ekctl.exe
+./cmd/ekctl`. A build from source reports its version as `dev`, or the Git version with
+`make ekctl`.
+
+## Log in
+
+<Steps>
+
+1. In the panel, make a token under **Your account → API tokens** with the scopes you want to
+   use from the command line. See [API tokens](/guides/security/api-tokens/).
+
+2. Log in with your panel's address:
+
+   ```bash
+   ekctl login --url https://panel.example.com
+   ```
+
+3. Paste the token when ekctl asks for it. What you type is not shown.
+
+   ```
+   API token (create one in the panel under Account → API tokens):
+   Logged in to https://panel.example.com as Your Name <you@example.com> (admin).
+   Saved in /home/you/.config/ekctl/config.json.
+   ```
+
+4. Check it:
+
+   ```bash
+   ekctl whoami
+   ```
+
+</Steps>
+
+About the address:
+
+- `https://` is added when you leave it out, and a trailing `/` or `/api/v1` is removed, so
+  `panel.example.com` works.
+- ekctl first checks that the address answers like an ekPanel panel (`/api/v1/health`), then
+  that the panel accepts the token.
+- With an `http://` address ekctl warns that the token travels unencrypted. Use it only for a
+  panel on your own computer.
+
+To log in to another panel, run `ekctl login` again with its address: ekctl keeps one panel
+and one token at a time.
+
+### Panels with a self-signed certificate
+
+A panel installed without `--domain` uses a self-signed certificate, which your computer does
+not trust. ekctl then shows the certificate and asks whether to trust it:
+
+```
+The certificate of https://203.0.113.7 is not trusted: x509: certificate signed by unknown authority.
+This is normal for a panel with a self-signed certificate.
+  Subject:  CN=panel
+  Issuer:   CN=panel
+  Valid:    2026-11-09 14:31 to 2029-02-12 14:31
+  SHA-256:  21:8B:06:02:D0:5D:20:7D:3B:91:AC:78:B2:53:CB:A2:D4:C5:0F:B7:12:7A:B0:48:5A:36:2F:E8:AD:A6:D3:3B
+Compare it with the fingerprint your browser shows for the panel.
+Trust this certificate? [y/N]
+```
+
+Compare the `SHA-256` line with the certificate's fingerprint before you answer `y`. Find it
+in your browser (the padlock or warning sign next to the address, then the certificate's
+details), or on the panel's server:
+
+```bash
+sudo openssl x509 -in /etc/ekpanel/tls/panel.crt -noout -fingerprint -sha256
+```
+
+After you answer `y`, ekctl saves the fingerprint for that address and port, and from then on
+accepts exactly that certificate there (or a certificate your system trusts). If the panel's
+certificate changes, ekctl stops with a warning that it is not the one you trusted, and shows
+the new fingerprint. Check why it changed, then run `ekctl login` again.
+
+### Without a terminal
+
+In a script or CI job nobody can answer questions. Then:
+
+- give the token on standard input: `echo "$EKP_TOKEN" | ekctl login --url …`, or with
+  `--token` (which other users of the computer may see in the process list);
+- give the fingerprint you checked with `--fingerprint`; without it, ekctl refuses an
+  untrusted certificate and prints the fingerprint to compare.
+
+```bash
+echo "$EKP_TOKEN" | ekctl login --url https://203.0.113.7 \
+  --fingerprint 21:8B:06:02:D0:5D:20:7D:3B:91:AC:78:B2:53:CB:A2:D4:C5:0F:B7:12:7A:B0:48:5A:36:2F:E8:AD:A6:D3:3B
+```
+
+The fingerprint may be written with or without colons, in either case, as `openssl` prints
+it.
+
+For a panel with a trusted certificate you do not need to log in at all: set `EKCTL_URL` and
+`EKCTL_TOKEN` (see [Configuration](#configuration)).
+
+## Configuration
+
+`ekctl login` saves the panel's address, the token and the certificates you trusted in a
+config file that only you can read (the file is `0600`, its folder `0700`):
+
+| System | Default config file |
+| --- | --- |
+| Linux | `~/.config/ekctl/config.json` (or `$XDG_CONFIG_HOME/ekctl/config.json`) |
+| macOS | `~/Library/Application Support/ekctl/config.json` |
+| Windows | `%AppData%\ekctl\config.json` |
+
+```json
+{
+  "url": "https://panel.example.com",
+  "token": "ekp_…",
+  "trusted_certs": {
+    "203.0.113.7:443": "21:8B:06:…:D3:3B"
+  }
+}
+```
+
+Flags and environment variables override the file:
+
+| Setting | Flag | Environment | Otherwise |
+| --- | --- | --- | --- |
+| Panel address | `--url URL` | `EKCTL_URL` | the saved `url` |
+| Token | `--token TOKEN` | `EKCTL_TOKEN` | the saved `token` |
+| Config file | `--config FILE` | `EKCTL_CONFIG` | the default above |
+
+A flag wins over the environment variable, which wins over the file.
+
+<Aside type="tip" title="The saved token stays with its panel">
+The saved token is sent **only** to the saved address. If you point ekctl at another panel
+with `--url` or `EKCTL_URL`, it does not send the saved token there: give that panel's token
+with `--token` or `EKCTL_TOKEN`, or log in to it.
+</Aside>
+
+`ekctl login` takes the token only from `--token` or standard input, not from `EKCTL_TOKEN`.
+
+`ekctl logout` removes the saved token; the address and trusted certificates stay. The token
+itself keeps working until you revoke it in the panel.
+
+The global flags `--url`, `--token`, `--config` and `--json` can go anywhere on the command
+line: `ekctl --json sites list` and `ekctl sites list --json` are the same.
+
+## Commands
+
+Wherever a command takes a server, website, database, app, backup repository or zone, you can
+give its **ID or its name** (a website's domain). If two have the same name, ekctl lists their
+IDs and asks you to use one. Looking up a name reads the list first, so it needs the scope to
+read that list.
+
+Most commands have short forms: `ls` for `list`, `show` for `get`, `rm` for `delete`, and `db`
+for `databases`. `ekctl help <command>` or `ekctl <command> --help` shows a command's help.
+
+The **Scope** column says what the token needs; `read` works for every listing.
+
+### Account
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl login --url URL` | Log in with a token and save it | any |
+| `ekctl logout` | Forget the saved token | none |
+| `ekctl whoami` | Who you are logged in as, and the panel's version | any |
+| `ekctl version` | ekctl's own version (also `ekctl --version`) | none |
+
+### Servers
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl servers list` | ID, name, host name, status (online, offline, not enrolled), OS and agent version | `read` or `servers` |
+| `ekctl servers get SERVER` | All details of one server | `read` or `servers` |
+
+```bash
+ekctl servers get web1
+```
+
+### Websites
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl sites list [--server SERVER]` | Websites, optionally of one server | `read` or `sites` |
+| `ekctl sites get SITE` | One website: aliases, kind, PHP, SSL, state, Linux user, disk use | `read` or `sites` |
+| `ekctl sites create DOMAIN --server SERVER` | Create a website | `sites` |
+| `ekctl sites delete SITE` | Delete a website **and all its files** | `sites` |
+
+`sites create` takes:
+
+| Flag | What it does |
+| --- | --- |
+| `--server SERVER` | The server to create it on (required) |
+| `--php VERSION` | Make a PHP site with this version, such as `8.4` |
+| `--kind static\|php` | The kind; without `--php` or `--kind` the site is static, and `--kind php` alone uses the panel's default PHP version |
+| `--alias DOMAIN` | An extra domain; repeat for more |
+| `--tls auto\|internal` | Let's Encrypt (the default) or a self-signed certificate |
+| `--owner ID` | Administrators: create it for this customer |
+| `--wait` | Wait until the site is set up on its server |
+| `--timeout DURATION` | With `--wait`, give up after this long (default `15m`) |
+
+```bash
+ekctl sites create example.com --server web1 --php 8.4 --alias www.example.com --wait
+ekctl sites delete old.example.com
+```
+
+`sites delete` asks you to type the domain to confirm. In a script, add `--yes`.
+
+### Databases
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl databases list [--server SERVER]` | Databases with engine, user, state and size | `read` or `databases` |
+| `ekctl databases get DATABASE` | One database | `read` or `databases` |
+| `ekctl databases create NAME --server SERVER --engine mariadb\|postgresql` | Create a database and a user for it | `databases` |
+| `ekctl databases delete DATABASE` | Delete a database, **its data** and its user | `databases` |
+
+`databases create` also takes `--user NAME` (default: the database's name), `--owner ID`,
+`--wait` and `--timeout`. Names are 1 to 32 lowercase letters, digits and `_`, starting with a
+letter.
+
+```bash
+ekctl databases create shop --server web1 --engine mariadb --wait
+```
+
+The user's password is printed **once**; save it. `databases delete` asks you to type the
+name, or takes `--yes`.
+
+### Apps
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl apps list [--server SERVER]` | Apps with kind, domain and state | `read` or `apps` |
+| `ekctl apps get APP` | One app: image or Git repository and branch, ports, domain | `read` or `apps` |
+| `ekctl apps restart APP` | Restart an app's containers | `apps` |
+| `ekctl apps deploy APP [--wait]` | Build and deploy a Git app from its branch now | `apps` |
+
+```bash
+ekctl apps deploy shop-api --wait
+```
+
+With `--wait`, ekctl follows the deployment until it is live. If the build fails, it says
+how to read the build log: `ekctl api GET apps/<id>/deployments/<id>/log`.
+
+### DNS
+
+`zones` and `records` are zones kept in [Cloudflare](/guides/dns/cloudflare/); `hosted` are
+zones on [ekPanel's own name servers](/guides/dns/name-servers/).
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl dns zones list` | Cloudflare zones | `read` or `dns` |
+| `ekctl dns records list ZONE` | A Cloudflare zone's records; `MANAGED` ones belong to a website or app | `read` or `dns` |
+| `ekctl dns records add ZONE --type TYPE --name NAME --content CONTENT` | Add a record | `dns` |
+| `ekctl dns records delete ZONE RECORD_ID` | Delete a record (not a managed one) | `dns` |
+| `ekctl dns hosted list` | Hosted zones | `read` or `dns` |
+| `ekctl dns hosted records ZONE` | A hosted zone's records; those with source `ekpanel` are made for websites, apps and mail | `read` or `dns` |
+
+`records add` also takes `--ttl SECONDS` (60 to 86400, or 1 for automatic, the default),
+`--priority N` for MX records, `--proxied` to send traffic through Cloudflare, and
+`--comment NOTE`. `NAME` is `www`, `@` for the zone itself, or a full host name in the zone.
+
+```bash
+ekctl dns records add example.com --type A --name www --content 203.0.113.7 --proxied
+ekctl dns records add example.com --type MX --name @ --content mail.example.com --priority 10
+```
+
+`records delete` asks you to type the record's name, or takes `--yes`. Hosted zones can only
+be read from ekctl so far; use `ekctl api` or the panel to change them.
+
+### Backups
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl backups list` | Backup repositories with schedule, last run and next run | `read` or `backups` |
+| `ekctl backups run REPO [--wait]` | Back up that repository's server now | `backups` |
+
+```bash
+ekctl backups run offsite --wait --timeout 2h
+```
+
+Without `--wait`, ekctl prints the task's ID and how to wait for it.
+
+### Tasks
+
+| Command | What it does | Scope |
+| --- | --- | --- |
+| `ekctl tasks list` | Recent tasks: kind, status, server, error | any |
+| `ekctl tasks wait TASK_ID` | Wait until a task has finished | any |
+
+`tasks list` takes `--active` (only queued and running tasks), `--server SERVER` and
+`--limit N` (1 to 200, default 20). `tasks wait` takes `--timeout` (default `15m`) and exits
+with `0` when the task succeeded and `1` when it failed. See
+[Tasks](/reference/api/#tasks-following-slow-work).
+
+### Any endpoint: ekctl api
+
+`ekctl api` calls any endpoint and prints its JSON answer. Use it for everything the other
+commands do not cover yet.
+
+```bash
+ekctl api METHOD PATH [--data JSON|@FILE|-]
+```
+
+- `METHOD` is `GET`, `POST`, `PUT`, `PATCH` or `DELETE`.
+- `PATH` is relative to `/api/v1` (`sites`) or absolute (`/api/v1/sites`), and may have a
+  query (`'tasks?active=1'`).
+- `--data` is the body: JSON on the command line, `@file.json` to read a file, or `-` to read
+  standard input. ekctl checks that it is valid JSON before sending it.
+
+```bash
+ekctl api GET openapi.json | jq '.paths | keys'      # every endpoint
+ekctl api GET 'tasks?active=1'
+ekctl api POST cron --data @job.json
+echo '{"name":"web2"}' | ekctl api POST servers --data -
+```
+
+When the panel answers with an error, ekctl still prints the error's JSON on standard output,
+says what went wrong on standard error, and exits with `1`.
+
+<Aside type="caution">
+`PATCH /sites/{id}` sets **all** of a website's settings: leave out `aliases` or `tls` and they
+are reset (no extra domains, Let's Encrypt). Read the site first
+(`ekctl api GET sites/<id>`) and send back every field you want to keep.
+</Aside>
+
+## Output for scripts
+
+- Normal output is a table or `Key: value` lines on standard output, with times in your local
+  time zone. Messages, progress and hints go to standard error, so they never end up in a
+  pipe.
+- An empty list prints nothing on standard output (it says "No sites." on standard error), so
+  a pipe gets no header without data.
+- `--json` prints the panel's JSON answer as it is, indented. Field names are the API's,
+  which are more stable than the table columns. Use it with [jq](https://jqlang.org/):
+
+```bash
+# Websites that failed to apply
+ekctl sites list --json | jq -r '.[] | select(.state == "error") | "\(.domain): \(.message)"'
+
+# The IDs of all websites on one server
+ekctl sites list --server web1 --json | jq -r '.[].id'
+
+# Create a database and keep its password in a file only you can read
+ekctl databases create shop --server web1 --engine mariadb --json \
+  | jq -r .password > shop.password && chmod 600 shop.password
+```
+
+With `--json`, `--wait` prints the final state once the wait is over.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | It worked. For `tasks wait` and `--wait`: the work succeeded. |
+| `1` | It failed: the panel refused (any API error), the network failed, the task or deployment failed, `--wait` timed out, or you pressed Ctrl+C. |
+| `2` | The command line was wrong: an unknown command or flag, a missing argument, or a delete without `--yes` when nobody can confirm. |
+
+A timeout does not stop the work in the panel: ekctl says so and points to `ekctl tasks list`.
+
+## Troubleshooting
+
+**"Not logged in."** Run `ekctl login --url …`. If you logged in, check that `--url` or
+`EKCTL_URL` is the same address you logged in to: the saved token is sent only there.
+
+**"Log in again with a valid token"** after `invalid_token`. The token was revoked, has
+expired, or was mistyped. Make a new one and run `ekctl login` again.
+
+**"Create a token with that scope in the panel"** after `token_scope`. The token lacks a
+scope; the message names the ones that would work. Remember that giving a server by name
+needs `read` or `servers` to look it up; give its ID instead to avoid that.
+
+**"API tokens cannot do this."** (`token_not_allowed`) The action needs the web UI, such as
+changing your password or opening a terminal.
+
+**"The certificate of … is not trusted"** or **"is not the one you trusted"**. See
+[Panels with a self-signed certificate](#panels-with-a-self-signed-certificate). If the panel
+got a new certificate on purpose, log in again and trust the new fingerprint.
+
+**"This answer did not come from the ekPanel API. Check the panel URL."** Something else
+answered, such as a proxy's error page or another website. Check the address.
+
+**"No site is called …"** The name must match exactly (case does not matter). Use the ID from
+the list command.
+
+**The token shows on screen when I type it.** That happens on Windows, where ekctl cannot hide
+what you type; it warns first. Pipe the token in instead: `Get-Content token.txt | ekctl login
+--url …`.
+
+## Limits and what is not there yet
+
+- One panel at a time: there are no named profiles yet. Use `--config` or `EKCTL_CONFIG` to
+  keep one config file per panel.
+- Commands cover servers, websites, databases, apps, DNS, backups and tasks. Everything else
+  (email, cron jobs, customers, firewall …) is reached with `ekctl api`.
+- No shell completion yet.
+- ekctl comes with the next release; until then [build it](#build-it-now).
+
+## Related
+
+- [API tokens](/guides/security/api-tokens/)
+- [REST API](/reference/api/)
+- [Roadmap](/project/roadmap/)

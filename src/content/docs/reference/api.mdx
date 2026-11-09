@@ -1,39 +1,74 @@
 ---
 title: REST API
-description: How ekPanel's JSON API works today, how it signs you in and protects you, its errors, roles and endpoint groups.
+description: ekPanel's JSON API - the base address, API tokens and scopes, errors, tasks for slow work, the OpenAPI description, and curl examples.
 sidebar:
   order: 3
 ---
 
 import { Aside, Steps, Badge } from '@astrojs/starlight/components';
 
-Everything the web UI does goes through a JSON API under `/api/v1`. This page explains how
-that API works today, so you can read it, debug the UI, or script a few things with care.
+Everything the web UI does goes through a JSON API under `/api/v1`. Use it to script your
+panel: create websites from a deploy script, list what runs on a server, or start a backup
+from a cron job. Scripts sign in with an [API token](/guides/security/api-tokens/) that may
+do only what you allow. For the command line, [ekctl](/reference/cli/) wraps the same API.
 
-<Aside type="caution" title="Not a stable public API yet">
-The API has no stable version promise yet. **API tokens, an OpenAPI description and the
-`ekpanel` command line tool come in phase 4b** (see the [roadmap](/project/roadmap/)). Until
-then the API signs in with the same session cookie as the browser, and endpoints may change
-between commits.
+<Aside type="caution" title="New after v0.1.0">
+API tokens, the OpenAPI description and `GET /tasks/{id}` are in the main repository's `dev`
+branch and come with the **next release**. A panel on v0.1.0 accepts only the browser's
+session cookie. The API has no stability promise yet: endpoints can still change between
+releases. The [changelog](https://github.com/ekPanel/ekpanel/blob/HEAD/CHANGELOG.md) lists
+what changed.
 </Aside>
 
 ## Basics
 
-- **Base address:** `https://<your panel>/api/v1`
-- **Format:** JSON in and out. Request bodies must be sent as `application/json` (file
-  uploads use `application/octet-stream`).
+- **Base address:** `https://<your panel>/api/v1`. All paths on this page are below it.
+- **Format:** JSON in and out. Send request bodies as `application/json` (file uploads use
+  `application/octet-stream`).
 - **Body size:** at most 1 MB per JSON request. Unknown fields in a body are refused, so
   typing mistakes do not go unnoticed. File uploads go in pieces of at most 512 KB.
-- **Health check:** `GET /api/v1/health` needs no sign-in and answers
-  `{"status":"ok","version":"…"}`. The installer uses it to see that the panel started.
+- **Health check:** `GET /health` needs no sign-in and answers `{"status":"ok","version":"…"}`.
+- **Description:** `GET /openapi.json` needs no sign-in and lists every endpoint. See
+  [The OpenAPI description](#the-openapi-description).
+- **IDs:** `{id}` in a path is the long ID of a thing (a UUID such as
+  `0b6c2f1e-…`), the same as in the panel's addresses.
 
-## Signing in
+## Authentication
 
-The API uses a session cookie, the same one the browser gets.
+There are two ways to sign in. Scripts use an API token; the web UI uses a session cookie.
+
+### API tokens
+
+Send the token in the `Authorization` header:
+
+```bash
+curl -sS -H "Authorization: Bearer $EKP_TOKEN" https://panel.example.com/api/v1/auth/me
+```
+
+- A token looks like `ekp_` followed by 43 characters. Make one in the panel under
+  **Your account → API tokens**; see [API tokens](/guides/security/api-tokens/).
+- A token acts as **its owner**, with the owner's role, limited by its
+  [scopes](#scopes). An administrator's token can reach administrator endpoints; a
+  customer's token sees only what the customer owns.
+- When a request has an `Authorization` header, the token alone decides. The panel does not
+  look at a session cookie on that request, and a header that is not `Bearer ekp_…` is refused
+  with `401 invalid_token`.
+- The panel notes when and from which address each token was last used (at most once a
+  minute), and the [audit log](#errors) names the token behind every change.
+
+<Aside type="tip">
+Keep the token out of your shell history and out of Git. Put it in an environment variable
+or a secret store, as `$EKP_TOKEN` in the examples here.
+</Aside>
+
+### Browser session
+
+The web UI signs in with a session cookie. You can use it from a script too, but a token is
+the better choice: it has limited scopes, an expiry, and you can revoke it on its own.
 
 <Steps>
 
-1. Sign in with `POST /api/v1/auth/login`:
+1. Sign in with `POST /auth/login`:
 
    ```bash
    curl -sS -c cookies.txt -H 'Content-Type: application/json' \
@@ -62,43 +97,74 @@ About the session:
 
 - The cookie is `__Host-ekpanel_session` on a normal install (`ekpanel_session` in plain-HTTP
   development). It is `HttpOnly`, `SameSite=Lax` and, on HTTPS, `Secure`.
-- A session lasts 7 days. The panel stores only a SHA-256 hash of its token.
+- A session lasts 7 days. The panel stores only a SHA-256 hash of it.
 - **Sign out all other devices** in your account ends every other session
-  (`POST /api/v1/auth/sessions/revoke-others`).
+  (`POST /auth/sessions/revoke-others`). It does not revoke API tokens.
 - After 10 failed sign-ins from one address or for one email address, sign-ins are refused for
   15 minutes (code `too_many_attempts`).
 
 <Aside type="danger">
-A session cookie is as powerful as your password. Keep `cookies.txt` private and delete it
-afterwards. Do not put an administrator's session into scripts that run unattended: wait for
-API tokens with limited scopes (phase 4b).
+A session cookie is as powerful as your password, with no scopes and no way to revoke it on
+its own. Never put a session into a script that runs unattended: use an API token.
 </Aside>
 
-## Protection against cross-site requests
+## Scopes
 
-The panel only accepts changes (anything but `GET`, `HEAD` and `OPTIONS`) that come from its
-own pages. Every such request must pass three checks:
+A token's scopes decide which parts of the API it may use. The part comes from the first
+segment of the path: `/sites/{id}/files` belongs to `sites`.
 
-| Check | Refused when | Error |
+| Scope | What it allows | Paths |
 | --- | --- | --- |
-| `Sec-Fetch-Site` header | It is present and is not `same-origin` or `none` | `403 cross_site` |
-| `Origin` header | It is present and is not the panel's own address | `403 cross_site` |
-| Content type | A body is sent that is not `application/json` or `application/octet-stream` | `415 json_required` |
+| `read` | Every `GET` its owner may see, in all the areas below. Changes nothing. | all of them |
+| `sites` | Websites, WordPress, PHP apps, PHP versions and cron jobs | `/sites`, `/wordpress`, `/php-apps`, `/php-versions`, `/cron` |
+| `databases` | Databases and their users | `/databases` |
+| `apps` | Docker and Git apps, deploys, the app catalogue and cron jobs | `/apps`, `/catalog`, `/cron` |
+| `dns` | Cloudflare and hosted DNS zones, records, templates, name servers | `/dns` |
+| `mail` | Email domains, mailboxes and forwarders | `/mail` |
+| `backups` | Backup storage, backups and restores | `/backups` |
+| `servers` | Servers, their services, firewall, security, mail server and PHP extensions | `/servers` |
+| `customers` | Customers and packages | `/customers`, `/packages` |
+| `settings` | Notification settings, updates, notifications and the audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
-HTML forms cannot send JSON, so a page on another site cannot submit to the panel. Tools such
-as `curl` send neither `Sec-Fetch-Site` nor `Origin`, so they pass as long as they send JSON.
-Live views (server statistics, the terminal) are WebSockets, and they also refuse other
-sites' pages.
+The rules:
 
-On top of this, every answer carries a strict Content-Security-Policy with no inline scripts,
-and `X-Frame-Options: DENY`.
+- A `GET` works with `read` **or** the area's own scope. Anything else (`POST`, `PUT`,
+  `PATCH`, `DELETE`) needs the area's scope. A token with `sites` can list and change
+  websites; a token with only `read` can list them but not change them.
+- Cron jobs belong to both websites and apps, so `sites` or `apps` is enough for `/cron`.
+- **Any token**, whatever its scopes, may read who it belongs to (`GET /auth/me`), its owner's
+  usage (`GET /me/usage`) and tasks (`GET /tasks`, `GET /tasks/{id}`).
+- Public endpoints (`/health`, `/openapi.json`, `/setup/status`) also work when a token is
+  sent, so a client may send its token on every request.
+- A scope never adds rights. A customer's token with `sites` still sees only that customer's
+  websites, and an administrator endpoint answers `403 forbidden` for it.
+- Customers can choose only `read`, `sites`, `databases`, `apps`, `dns` and `mail`.
+
+<Aside type="caution">
+`read` is broad: it sees everything its owner sees, including the audit log (for an
+administrator), website files (`GET /sites/{id}/files/download`) and logs. Give it only to
+tools you trust with that.
+</Aside>
+
+### What tokens can never do
+
+These need a signed-in browser session. With a token they answer `403 token_not_allowed`:
+
+- **Account security:** everything under `/auth` except `GET /auth/me`: changing the
+  password, two-factor sign-in, signing out, ending other sessions, confirming the password,
+  changing your language.
+- **Tokens themselves:** `GET /tokens`, `POST /tokens` and `DELETE /tokens/{id}`. A token can
+  never make, see or revoke tokens.
+- **Terminals:** any path with a `terminal` segment (server and app terminals). A terminal is
+  a root or container shell.
+- Paths that are not in the table above.
 
 ## Errors
 
 Every error has the same shape:
 
 ```json
-{ "code": "invalid_credentials", "message": "email or password is not correct" }
+{ "code": "token_scope", "message": "this API token does not have the scope for this: sites" }
 ```
 
 - `code` is stable and machine-readable. The web UI translates it (the key `errors.<code>` in
@@ -111,17 +177,25 @@ Common codes:
 | --- | --- | --- |
 | 400 | `invalid_body` | The body is empty, not valid JSON, or has an unknown field. |
 | 401 | `unauthenticated` | You are not signed in, or the session expired. |
+| 401 | `invalid_token` | The `Authorization` header is not `Bearer ekp_…`, or the token does not exist, was revoked or has expired. |
 | 401 | `totp_required` | The password was right; send the two-factor code too. |
 | 403 | `forbidden` | Your role may not do this. |
+| 403 | `token_scope` | The token lacks the scope. The message names the scopes that would allow it. |
+| 403 | `token_not_allowed` | API tokens can never do this; use the web UI. |
 | 403 | `cross_site` | The request came from another site. |
-| 404 | `not_found` | It does not exist, **or it is not yours**. |
+| 404 | `not_found` | It does not exist, **or it is not yours**. Most areas have their own code, such as `site_not_found` or `task_not_found`. |
+| 409 | `too_many_tokens` | You already have 50 tokens; revoke one first. |
 | 413 | `body_too_large` | The body is over the limit. |
 | 415 | `json_required` | Send the body as `application/json`. |
 | 429 | `too_many_attempts` | Too many failures; wait and try again. |
 | 500 | `internal` | Something went wrong in the panel; the details are in its log. |
 
 Features add their own codes, such as `ftp_not_allowed` when a customer's package does not
-include FTP.
+include FTP, or `invalid_php_version`.
+
+Every change is written to the audit log (`GET /audit`, administrators only, needs `read` or
+`settings` with a token). A change made with a token carries the token's name and ID in its
+details: `"via_token": "deploy script"`, `"token_id": "…"`.
 
 ## Roles
 
@@ -134,25 +208,194 @@ include FTP.
 Customers never see what is not theirs: asking for someone else's website gives `404`, the same
 as a website that does not exist. An administrator who uses **Sign in as** on a customer acts
 with the customer's rights for one hour, is recorded as themselves in the audit log, and cannot
-change the customer's password or two-factor settings.
+change the customer's password or two-factor settings, or make tokens for them.
 
 Some actions need a fresh confirmation of the password (and two-factor code): opening a web
-terminal asks for it with `POST /api/v1/auth/confirm`, and the confirmation lasts 15 minutes.
+terminal asks for it with `POST /auth/confirm`, and the confirmation lasts 15 minutes.
 
-Every change is written to the audit log (`GET /api/v1/audit`, administrators only).
+## Tasks: following slow work
+
+Work that takes time, such as setting up a server, running a backup or installing a PHP
+extension, runs in the background as a **task**. An endpoint that starts one answers
+`202 Accepted` at once, and you follow the work with `GET /tasks/{id}`.
+
+What you get back depends on the endpoint:
+
+| You start | The answer | Follow it with |
+| --- | --- | --- |
+| A backup, a restore, a service restart, a PHP extension, a malware scan, a panel update | The task, with its `id` | `GET /tasks/{id}` until `status` is `succeeded` or `failed` |
+| A website, database or app (create or change) | The item, with `state` `pending` | `GET /sites/{id}` (or `/databases/{id}`, `/apps/{id}`) until `state` is `active` and `applied_generation` has reached `generation`; `error` means it failed, with the reason in `message` |
+| A Git deploy | The deployment | `GET /apps/{id}/deployments/{did}` until `status` is `live` or `failed` |
+
+A task looks like this:
+
+```json
+{
+  "id": "8f1c372b-e6d1-425b-9398-fcb98e41d4aa",
+  "kind": "backup.run",
+  "server_id": "0395af16-0ca2-4262-a77f-550fe2c1b2ce",
+  "server_name": "web1",
+  "params": {},
+  "status": "running",
+  "attempts": 1,
+  "max_attempts": 3,
+  "result": null,
+  "error": null,
+  "created_by": "4465a7bf-4577-48c8-9c09-9e6d6d8235e4",
+  "created_at": "2026-11-09T14:31:27Z",
+  "started_at": "2026-11-09T14:31:28Z",
+  "finished_at": null
+}
+```
+
+- `status` is `queued`, `running`, `succeeded` or `failed`. A task that fails may be tried
+  again up to `max_attempts` times; `error` holds the last reason.
+- `GET /tasks` lists recent tasks, newest first: `?active=1` for queued and running ones only,
+  `?server_id=` for one server, `?limit=` up to 200 (50 by default).
+- Customers see only the tasks they started. Asking for another task gives
+  `404 task_not_found`.
+
+## The OpenAPI description
+
+The panel describes its own API in [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.0) at
+`GET /api/v1/openapi.json`, with no sign-in. The same file is
+[`docs/openapi.json`](https://github.com/ekPanel/ekpanel/blob/HEAD/docs/openapi.json) in the
+main repository.
+
+It is made from the panel's router, so it lists every endpoint the panel has: a test fails
+when a route is added without a description, or when the file in the repository is out of
+date. For each operation it gives:
+
+- the method, path and path parameters;
+- a short summary and a tag (the area: `sites`, `dns`, `servers` …);
+- `x-ekpanel-scope`: the scope a token needs, such as `sites`, `read or sites`, or `any`
+  (any token). Operations that tokens can never use have `x-ekpanel-token` instead, and only
+  the session as their security. Public ones (`/health`, `/openapi.json`, sign-in, setup,
+  Git webhooks) have an empty `security`;
+- the error shape (`{"code","message"}`).
+
+<Aside type="note">
+**Request and response bodies are not described yet.** Bodies show only as "a JSON object".
+The fields are the Go types in the handlers in
+[`internal/api/`](https://github.com/ekPanel/ekpanel/tree/HEAD/internal/api), and the
+TypeScript types the UI uses are in
+[`web/src/lib/api.ts`](https://github.com/ekPanel/ekpanel/blob/HEAD/web/src/lib/api.ts).
+Full schemas come with the Terraform provider (see the [roadmap](/project/roadmap/)).
+</Aside>
+
+To see the endpoints of one area, with `jq`:
+
+```bash
+curl -sS https://panel.example.com/api/v1/openapi.json \
+  | jq -r '.paths | to_entries[] | .key as $p | .value | to_entries[]
+      | select(.value.tags[0] == "sites")
+      | "\(.key | ascii_upcase) \($p)  [\(.value["x-ekpanel-scope"] // "session only")]"'
+```
+
+## Examples
+
+The examples use `curl` and `jq`, a token in `$EKP_TOKEN`, and the panel at
+`https://panel.example.com`. For a panel with a self-signed certificate, see the
+[note below](#self-signed-certificates).
+
+```bash
+export EKP_TOKEN='ekp_…'   # from Your account → API tokens
+PANEL=https://panel.example.com/api/v1
+```
+
+### List websites
+
+Needs `read` or `sites`.
+
+```bash
+curl -sS -H "Authorization: Bearer $EKP_TOKEN" "$PANEL/sites" \
+  | jq -r '.[] | [.id, .domain, .kind, .state] | @tsv'
+```
+
+Add `?server_id=<id>` for the websites of one server. `GET /servers` (needs `read` or
+`servers`) lists the servers and their IDs.
+
+### Create a website
+
+Needs `sites`. The body takes:
+
+| Field | Required | What it is |
+| --- | --- | --- |
+| `domain` | yes | The website's domain, such as `example.com` |
+| `server_id` | yes | The ID of the server to create it on |
+| `kind` | yes | `static` or `php` |
+| `php_version` | with `php` | One of `8.5`, `8.4`, `8.3`, `8.2`, `8.1`, `7.4` (`GET /php-versions` lists them, with the default; a customer's package may allow fewer) |
+| `aliases` | no | Extra domains, at most 20 |
+| `tls` | no | `auto` (Let's Encrypt, the default) or `internal` (self-signed) |
+| `owner_id` | no | Administrators: create it for this customer |
+
+```bash
+curl -sS -H "Authorization: Bearer $EKP_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"domain":"shop.example.com","server_id":"0395af16-0ca2-4262-a77f-550fe2c1b2ce","kind":"php","php_version":"8.4"}' \
+  "$PANEL/sites"
+```
+
+The answer is `201 Created` with the new website, its `state` `pending`. The panel then sets
+it up on the server. Wait until it is ready:
+
+```bash
+SITE=<the id from the answer>
+until curl -sS -H "Authorization: Bearer $EKP_TOKEN" "$PANEL/sites/$SITE" \
+  | jq -e '.state == "active" and .applied_generation >= .generation' >/dev/null; do
+  sleep 2
+done
+```
+
+Stop the loop by hand if the state becomes `error`; `message` says why. `ekctl sites create
+--wait` does all of this for you.
+
+### Follow a task
+
+Running a backup needs `backups` (administrators). It answers with the task:
+
+```bash
+TASK=$(curl -sS -X POST -H "Authorization: Bearer $EKP_TOKEN" "$PANEL/backups/<repo id>/run" | jq -r .id)
+
+while :; do
+  STATUS=$(curl -sS -H "Authorization: Bearer $EKP_TOKEN" "$PANEL/tasks/$TASK" | jq -r .status)
+  echo "$STATUS"
+  case "$STATUS" in succeeded) break ;; failed) exit 1 ;; esac
+  sleep 2
+done
+```
+
+`ekctl backups run <repo> --wait` and `ekctl tasks wait <id>` do the same.
+
+### Self-signed certificates
+
+A panel installed without `--domain` has a self-signed certificate, which `curl` refuses.
+Do not use `-k`, which accepts any certificate. Instead, copy the certificate from the panel's
+server and trust only that one:
+
+```bash
+scp root@203.0.113.7:/etc/ekpanel/tls/panel.crt ./panel.crt
+curl -sS --cacert panel.crt -H "Authorization: Bearer $EKP_TOKEN" https://203.0.113.7/api/v1/sites
+```
+
+The installer puts the server's host name and the public address it found into the
+certificate. If `curl` still refuses because the certificate does not name the address you
+use, use [ekctl](/reference/cli/#panels-with-a-self-signed-certificate), which trusts a
+certificate by its fingerprint.
 
 ## Endpoint groups
 
-All paths are below `/api/v1`. `{id}` is the long ID of a thing, as in the panel's addresses.
+All paths are below `/api/v1`. The full list, with methods and scopes, is the
+[OpenAPI description](#the-openapi-description).
 
 ### Open to everyone
 
 | Endpoints | What for |
 | --- | --- |
 | `GET /health` | Is the panel up, and which version. |
+| `GET /openapi.json` | The API description. |
 | `GET /setup/status`, `POST /setup` | First administrator, with the setup token. |
 | `POST /auth/login` | Sign in. |
-| `POST /hooks/git/{id}` | Git webhooks from GitHub, GitLab, Gitea, Forgejo and Gogs. Checked by the app's webhook secret, not a session. |
+| `POST /hooks/git/{id}` | Git webhooks from GitHub, GitLab, Gitea, Forgejo and Gogs. Checked by the app's webhook secret, not a session or token. |
 
 ### Your account (any signed-in user)
 
@@ -161,6 +404,7 @@ All paths are below `/api/v1`. `{id}` is the long ID of a thing, as in the panel
 | `/auth/me`, `/auth/logout` | Who you are, your language, signing out. |
 | `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable` | Two-factor authentication. |
 | `/auth/sessions/revoke-others`, `/auth/confirm`, `/auth/impersonation/end` | Sessions, password confirmation, ending **Sign in as**. |
+| `/tokens`, `/tokens/{id}` | Your API tokens: list, create, revoke (browser session only). |
 
 ### Administrators and customers
 
@@ -176,7 +420,7 @@ All paths are below `/api/v1`. `{id}` is the long ID of a thing, as in the panel
 | Apps and Git deploys | `/catalog`, `/apps` (and `/apps/{id}/...` for start, stop, logs, terminal, deployments, previews) |
 | Email | `/mail/servers`, `/mail/domains`, `/mail/mailboxes`, `/mail/forwarders` |
 | Cron jobs | `/cron` |
-| Servers and tasks (read) | `GET /servers`, `GET /tasks` |
+| Servers and tasks (read) | `GET /servers`, `GET /tasks`, `GET /tasks/{id}` |
 
 ### Administrators only
 
@@ -189,30 +433,52 @@ All paths are below `/api/v1`. `{id}` is the long ID of a thing, as in the panel
 | Email servers | `/servers/{id}/mail` |
 | Name servers | `/dns/nameservers` |
 | Backups | `/backups` |
+| Updates | `/updates` |
 | Notification settings | `/settings/notifications` |
 | Audit log | `/audit` |
 
-The full list, with methods, is in
-[`internal/api/server.go`](https://github.com/ekPanel/ekpanel/blob/HEAD/internal/api/server.go)
-in the main repository. Request and answer fields are the Go types in the handlers next to it,
-and the TypeScript types the UI uses are in
-[`web/src/lib/api.ts`](https://github.com/ekPanel/ekpanel/blob/HEAD/web/src/lib/api.ts).
+## Protection against cross-site requests
+
+The panel only accepts changes (anything but `GET`, `HEAD` and `OPTIONS`) that come from its
+own pages or from programs such as `curl` and ekctl. Every such request must pass three checks:
+
+| Check | Refused when | Error |
+| --- | --- | --- |
+| `Sec-Fetch-Site` header | It is present and is not `same-origin` or `none` | `403 cross_site` |
+| `Origin` header | It is present and is not the panel's own address | `403 cross_site` |
+| Content type | A body is sent that is not `application/json` or `application/octet-stream` | `415 json_required` |
+
+HTML forms cannot send JSON, so a page on another site cannot submit to the panel. Tools such
+as `curl` send neither `Sec-Fetch-Site` nor `Origin`, so they pass as long as they send JSON.
+This also means the API cannot be called with a token from JavaScript on another website.
+Live views (server statistics, the terminal) are WebSockets, and they also refuse other
+sites' pages.
+
+On top of this, every answer carries a strict Content-Security-Policy with no inline scripts,
+and `X-Frame-Options: DENY`.
 
 ## The agent endpoints
 
 Agents talk to a different listener (port 7443) with mutual TLS: `/api/v1/agent/enroll`,
 `/api/v1/agent/renew` and the WebSocket `/api/v1/agent/connect`. These are not for people or
-scripts. See [Architecture](/concepts/architecture/).
+scripts, and API tokens do not work there. See [Architecture](/concepts/architecture/).
 
 ## Limits and what is not there yet
 
-- No API tokens yet: only session cookies (phase 4b).
-- No OpenAPI description and no API docs site yet (phase 4b).
-- No `ekpanel` command line tool for the API yet, and no Terraform provider (phase 4b).
-- Endpoints can change without notice until there is a release.
+- **No stability promise yet.** Endpoints can change between releases; read the changelog
+  before you update a panel that scripts depend on.
+- **No request and response schemas** in the OpenAPI description yet. They come with the
+  Terraform provider.
+- **No Terraform provider** yet: later in phase 4.
+- Slow work answers in three ways (a task, an item with its state, a deployment). One
+  `task_id` on all of them is planned.
+- No rate limit on API calls with a token, other than on sign-ins.
+- Tokens cannot be limited to one website, server or address: a scope covers the whole area
+  its owner can see.
 
 ## Related
 
+- [API tokens](/guides/security/api-tokens/)
+- [ekctl, the command-line tool](/reference/cli/)
 - [Security model](/concepts/security-model/)
-- [Configuration](/reference/configuration/)
 - [Roadmap](/project/roadmap/)

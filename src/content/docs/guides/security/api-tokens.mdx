@@ -1,0 +1,233 @@
+---
+title: API tokens
+description: Make an API token for a script or for ekctl, choose its scopes and expiry, see where it is used, and revoke it.
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+An API token is a key that lets a script, a CI job or the [ekctl](/reference/cli/) command-line
+tool use the panel's [API](/reference/api/) as you. Each token can do only what you allow (its
+**scopes**), can expire, and can be revoked on its own, so you never have to put your password
+into a script. Administrators and customers both have tokens.
+
+<Aside type="caution" title="New after v0.1.0">
+API tokens are in the main repository's `dev` branch and come with the **next release**. A
+panel on v0.1.0 does not have the **API tokens** page yet.
+</Aside>
+
+## Before you start
+
+- Sign in to the panel in your browser as yourself. Tokens are made and revoked only in a
+  browser session: never with another token, and not while an administrator is signed in as a
+  customer.
+- Decide what the token is for. Make **one token per script or computer**, so you can revoke
+  one without breaking the others.
+
+## Make a token
+
+<Steps>
+
+1. In the sidebar, under **Your account**, open **API tokens**.
+
+2. Choose **New token**.
+
+3. Fill in **Name**: what uses it, such as "Laptop" or "Deploy script". You see this name in
+   the token list and in the audit log.
+
+4. Under **Scopes**, tick what the token may do. **Read** is ticked to start with. See
+   [Choose the scopes](#choose-the-scopes).
+
+5. Under **Expires**, choose **In 30 days**, **In 90 days** (the default), **In 365 days** or
+   **Never**.
+
+6. Choose **Create token**.
+
+7. The panel shows **Your new token**, a long text that starts with `ekp_`. Copy it with the
+   copy button and keep it somewhere safe, such as a password manager or your CI's secret
+   store. Then choose **Done**.
+
+</Steps>
+
+<Aside type="danger" title="You see the token only once">
+The panel keeps only a fingerprint (a SHA-256 hash) of the token, so it cannot show it to you
+again. If you lose it, revoke it and make a new one. Anyone who has the token can do what its
+scopes allow, as you, until it expires or you revoke it.
+</Aside>
+
+## Choose the scopes
+
+Give each token only the scopes it needs. A scope covers one area of the panel; **Read** lets a
+token look at everything you can see but change nothing.
+
+| In the panel | Scope | The token may |
+| --- | --- | --- |
+| **Read** | `read` | See everything you can see in the panel, but change nothing. |
+| **Websites** | `sites` | Manage websites, WordPress, PHP apps and cron jobs. |
+| **Databases** | `databases` | Manage databases and their users. |
+| **Apps** | `apps` | Manage Docker apps, deploys and the app catalogue (and cron jobs). |
+| **DNS** | `dns` | Manage DNS zones and records. |
+| **Email** | `mail` | Manage email domains, mailboxes and forwarders. |
+| **Backups** | `backups` | Manage backup storage, run backups and restore. Administrators only. |
+| **Servers** | `servers` | Manage servers, their services, firewall and security. Administrators only. |
+| **Customers** | `customers` | Manage customers and packages. Administrators only. |
+| **Settings** | `settings` | Panel settings, updates, notifications and the audit log. For a customer: their own notifications and notification channels. |
+
+Each area's own scope also lets the token read that area, so a token with only **Websites**
+can list websites too.
+
+Some examples:
+
+| The token is for | Tick |
+| --- | --- |
+| A deploy script that creates websites | **Websites** |
+| A monitoring script that only looks | **Read** |
+| A nightly script that starts backups | **Backups** |
+| ekctl on your own laptop | **Read**, plus each area you want to change from the command line |
+
+<Aside type="caution">
+**Read** sees a lot: for an administrator, every server, customer and the audit log; for
+everyone, website files and logs. Do not give it to a tool that only needs one area.
+</Aside>
+
+The exact rules, with the API paths each scope covers, are in the
+[API reference](/reference/api/#scopes).
+
+## Choose an expiry
+
+A token that expires stops working by itself, which limits the damage if it leaks.
+
+- **In 30 days** or **In 90 days** for a laptop or a test.
+- **In 365 days** for a script you look after once a year.
+- **Never** only for a script on a machine you trust, and revoke it when the script goes away.
+
+An expired token stays in the list with <Badge text="Expired" variant="danger" /> until you
+revoke it. You cannot extend a token: make a new one and change the script to use it.
+
+## Use the token
+
+Send it in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer ekp_…" https://panel.example.com/api/v1/sites
+```
+
+Or log in with ekctl, which asks for the token and keeps it in its config file:
+
+```bash
+ekctl login --url https://panel.example.com
+```
+
+The **Using a token** card at the bottom of the **API tokens** page shows the same, with your
+panel's address filled in. See the [API reference](/reference/api/) and
+[ekctl](/reference/cli/).
+
+## See where a token is used
+
+The token list shows, for each token:
+
+| Column | What it shows |
+| --- | --- |
+| **Name** | The name, and the first characters of the token (such as `ekp_45fx70…`), so you can tell which one a script has |
+| **Scopes** | What it may do |
+| **Last used** | When it was last used, such as "5 minutes ago", or **Never**. Hold the pointer over it to see the address it came from |
+| **Expires** | The date, **Never**, or <Badge text="Expired" variant="danger" /> |
+
+"Last used" is updated at most once a minute, and at once when the token is used from a new
+address.
+
+Everything a token changes is written to the audit log under its owner's name, and the
+entry's details name the token (`via_token` and `token_id`). Making and revoking tokens are in
+the audit log too (`token.created`, `token.revoked`). Today the **Audit log** page shows who
+made a change but not yet which token; read the details through the API
+(`GET /api/v1/audit`).
+
+## Revoke a token
+
+<Steps>
+
+1. Open **Your account → API tokens**.
+
+2. Choose **Revoke** next to the token.
+
+3. Confirm. For a token named "Laptop" the panel asks: *Revoke the token "Laptop"? Anything
+   that uses it stops working at once.*
+
+</Steps>
+
+The token stops working immediately: its next request gets `401 invalid_token`. Revoking
+cannot be undone.
+
+Revoke a token when the script or computer that used it goes away, when someone who knew it
+leaves, or when you think it leaked.
+
+<Aside type="note">
+**Sign out all other devices** and changing your password do **not** revoke tokens. If your
+account may be in the wrong hands, revoke your tokens too.
+</Aside>
+
+## Tokens for customers
+
+Customers have the same **API tokens** page under **Your account**, with seven scopes: **Read**,
+**Websites**, **Databases**, **Apps**, **DNS**, **Email** and **Settings** (their own notifications). A customer's token:
+
+- acts as the customer: it sees and changes only what the customer owns, within their
+  package's limits, like the customer's own browser;
+- can never reach administrator pages, whatever its scopes;
+- is the customer's own. An administrator who uses **Sign in as** on a customer cannot see or
+  make the customer's tokens; the page says "These settings belong to the customer. Go back to
+  your own account to change yours."
+
+So a customer can deploy their own website from GitHub Actions, or use ekctl, without asking
+you for anything.
+
+## How it works
+
+- A token is `ekp_` and 43 random characters. The panel stores only its SHA-256 hash, with
+  the first characters (to tell tokens apart), its name, scopes, expiry, and when and from
+  where it was last used.
+- On each request the panel hashes the token it receives and looks it up. A token that does
+  not exist, was revoked or has expired gets `401 invalid_token`.
+- A token never adds rights: it acts as its owner, limited by its scopes.
+- Whatever its scopes, a token can **never** change your password or two-factor sign-in, sign
+  you out, make, see or revoke tokens, or open a terminal. These need you in the browser.
+- When a user is deleted, their tokens go with them.
+
+See the [security model](/concepts/security-model/#api-tokens).
+
+## Limits and what is not there yet
+
+- At most **50 tokens** per user.
+- The expiry is 30, 90 or 365 days, or never. It cannot be changed later, and neither can the
+  name or the scopes: make a new token instead.
+- A token cannot be limited to one website, one server or one address.
+- The **Audit log** page does not show the token's name yet (the API's audit details do).
+
+## Troubleshooting
+
+**"This API token does not exist, was revoked or has expired" (`invalid_token`).** Check that
+you copied all of the token, that it is still in the list and not
+<Badge text="Expired" variant="danger" />. The header must be exactly
+`Authorization: Bearer ekp_…`.
+
+**"This API token does not have the scope for this" (`token_scope`).** The answer names the
+scopes that would allow it. Make a new token with that scope; scopes cannot be added to an
+existing token.
+
+**"This needs a signed-in session; API tokens cannot do it" (`token_not_allowed`).** The
+action is one that tokens can never do, such as changing your password or opening a terminal.
+Do it in the browser.
+
+**"You have 50 tokens" (`too_many_tokens`).** Revoke tokens you no longer use, expired ones
+included.
+
+**I lost the token.** It cannot be shown again. Revoke it and make a new one.
+
+## Related
+
+<CardGrid>
+	<LinkCard title="ekctl" href="/reference/cli/" description="The command-line tool that logs in with a token." />
+	<LinkCard title="REST API" href="/reference/api/" description="Scopes, errors, tasks and examples." />
+	<LinkCard title="Account security" href="/guides/security/accounts/" description="Two-factor sign-in and sessions." />
+</CardGrid>

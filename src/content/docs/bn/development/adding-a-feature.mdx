@@ -192,6 +192,7 @@ Pull request খোলার আগে:
 - [ ] Customer-দের জন্য ownership check করা; reconcile-এ package-এর limit কার্যকর করা
 - [ ] প্রতিটা change-এর জন্য একটা audit log entry, `audit.actions`-এ তার text-সহ
 - [ ] Stable `code`-সহ error, `errors`-এ অনুবাদ করা
+- [ ] নতুন route: `docs/openapi.json` update করা (`UPDATE_OPENAPI=1 go test ./internal/api -run TestOpenAPIFile`); নতুন প্রথম path segment-এর scope `routeScopes`-এ (`internal/api/tokens.go`) আছে, নইলে API token এটা ব্যবহার করতে পারে না
 - [ ] UI text `en.json`-এ (আর পারলে `bn.json`-এ); `npm run i18n:check` pass করে
 - [ ] Agent আর API-এর জন্য test; `make test` আর `gofmt -l .` পরিষ্কার
 - [ ] Test VM-এ চেষ্টা করা, failure আর আবার বন্ধ করাসহ

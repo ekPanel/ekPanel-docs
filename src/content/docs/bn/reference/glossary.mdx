@@ -2,7 +2,7 @@
 title: শব্দকোষ
 description: ekPanel আর এই docs-এ ব্যবহৃত শব্দগুলোর ছোট ব্যাখ্যা, agent থেকে zone পর্যন্ত।
 sidebar:
-  order: 6
+  order: 7
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -23,6 +23,10 @@ Linux account, database ইত্যাদি তৈরি করে। এট�
 
 **Allowlist**: এমন address যা CrowdSec আর country blocking কখনো block করে না, যেমন আপনার office-এর
 address। Server-এর নিজের আর Cloudflare-এর address সবসময় এতে থাকে। Panel-এ এটা **অনুমোদিত তালিকা**।
+
+**API token**: একটা key, যা দিয়ে কোনো script বা [ekctl](/reference/cli/) আপনার হয়ে panel-এর API ব্যবহার করতে পারে,
+এর **scope** (কোন অংশ পড়তে বা বদলাতে পারবে) দিয়ে সীমিত। একবার দেখানো হয়, মেয়াদ শেষ হতে পারে, revoke করা যায়।
+Panel-এ এটা **আপনার অ্যাকাউন্ট → API টোকেন**-এ। দেখুন [API token](/guides/security/api-tokens/)।
 
 **App**: এমন কিছু যা Docker container-এ চলে: একটা Docker image, একটা Compose file, server-এ build করা
 একটা Git repository, বা catalogue-এর একটা service। App একটা domain পেতে পারে, HTTPS-সহ। এটা
@@ -86,6 +90,9 @@ resolve হবে না।
 configuration file। পরের apply-এ agent এটা ঠিক করে দেয়।
 
 ## E
+
+**ekctl**: আপনার নিজের computer-এর জন্য ekPanel-এর command-line tool। এটা API token দিয়ে login করে আর server,
+website, database, app, DNS, backup আর task manage করে। দেখুন [ekctl](/reference/cli/)।
 
 **Enrolment, connection command**: একটা server-কে panel-এর সাথে connect করা। Panel এক-বারের token আর
 CA pin-সহ একটা command দেখায়; server-এ সেটা চালালে এর agent একটা certificate পায়। Token একবারই আর এক
@@ -168,6 +175,9 @@ container image build করে। Dockerfile নেই এমন Git app-এর
 রাখা হয়।
 
 ## S
+
+**Scope**: একটা [API token](#a) কী করতে পারে: মালিক যা দেখতে পারেন সব দেখতে `read`, অথবা বদলানোর জন্য একটা অংশ,
+যেমন `sites` বা `dns`। দেখুন [Scope](/reference/api/#scopes)।
 
 **Server**: ekPanel-এর manage করা একটা Linux machine, যাতে একটা agent আছে। সাধারণত panel-এর নিজের
 server-ই প্রথমটা।

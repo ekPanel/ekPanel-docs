@@ -7,8 +7,8 @@ sidebar:
 
 import { Aside, FileTree } from '@astrojs/starlight/components';
 
-The main repository holds the panel, the agent, the web UI, the installer and the test VM
-script, in one Go module named `ekpanel`. This page is a map: what each folder is, and where
+The main repository holds the panel, the agent, the `ekctl` command-line tool, the web UI,
+the installer and the test VM script, in one Go module named `ekpanel`. This page is a map: what each folder is, and where
 to look when you want to change something.
 
 ## Top level
@@ -21,9 +21,11 @@ to look when you want to change something.
 - cmd/
   - ekpanel/ the panel program
   - ekpanel-agent/ the agent program
+  - ekctl/ the command-line tool for the API
 - deploy/
   - install.sh installer for a fresh Ubuntu or Debian server
 - docs/
+  - openapi.json the API description, made from the router (a test keeps it current)
   - TRANSLATING.md how to translate the UI
 - internal/ all Go packages (see below)
 - scripts/
@@ -42,12 +44,13 @@ to look when you want to change something.
 
 `bin/`, `dist/` and `.data/` (the development database) are made by `make` and are not in Git.
 
-## The two programs
+## The programs
 
 | Folder | Program | What `main.go` does |
 | --- | --- | --- |
 | `cmd/ekpanel` | `ekpanel` | Loads the configuration, opens and migrates the database, creates the agent CA, starts the task runner, notifier and cleanup loop, then serves the web UI and API and the agent listener. Also has the `version` and `add-server` commands. |
 | `cmd/ekpanel-agent` | `ekpanel-agent` | `enroll`, `run`, `version`, and the internal `files` worker. |
+| `cmd/ekctl` | `ekctl` | Runs `internal/cli` with the real terminal, environment and config folder. A separate program for your own computer (Linux, macOS, Windows), built with `make ekctl`. See [ekctl](/reference/cli/). |
 
 ## Go packages in `internal/`
 
@@ -57,9 +60,10 @@ Each line comes from the package's own doc comment.
 | --- | --- |
 | `agent` | The server-side agent: collects facts and metrics from Linux, streams them to the panel, and carries out the panel's typed operations. One file per area: `sites.go`, `fpm.go`, `databases.go`, `apps.go`, `builds.go`, `backup.go`, `firewall.go`, `mail.go`, `nameserver.go`, `ftp.go`, `malware.go`, `countries.go`, `security.go`, `wordpress.go`, `wptoolkit.go`, `terminal.go`… |
 | `agentproto` | The messages exchanged between the panel and agents: the enrolment and connect paths, operation names, and every spec and result type. |
-| `api` | The panel's HTTP layer: the JSON API under `/api/v1`, the agent endpoints and the embedded web UI. `server.go` lists every route. |
+| `api` | The panel's HTTP layer: the JSON API under `/api/v1`, the agent endpoints and the embedded web UI. `server.go` lists every route; `tokens.go` has API tokens and the scope of each route (`routeScopes`); `openapi.go` makes the OpenAPI description from the router. |
 | `auth` | Password hashing (argon2id), random tokens and TOTP helpers. |
 | `catalog` | The one-click services: Compose files reviewed by the project (`templates/<id>.yaml`), with the variables each needs. |
+| `cli` | `ekctl`, the command-line tool for the ekPanel API. Everything it needs from the outside world comes in through `Env`, so tests run it against `httptest` servers. One file per area: `resources.go` (servers, sites, databases, apps), `dns.go`, `tasks.go` (tasks, backups, `ekctl api`), `login.go`, `config.go`, `client.go` (HTTP and certificate pinning). |
 | `cloudflare` | The part of Cloudflare's API ekPanel uses: zones, DNS records, the SSL mode and cache purges. `cloudflaretest/` has a fake Cloudflare for tests and local use. |
 | `config` | Loads panel settings from flags and `EKPANEL_*` environment variables. |
 | `cron` | Reads five-field cron schedules, finds their next run times, and writes them as systemd `OnCalendar` expressions. Used by both panel and agent. |
@@ -77,7 +81,7 @@ Each line comes from the package's own doc comment.
 
 ### Migrations
 
-`internal/db/migrations/` holds SQL files named `0001_init.sql` to (today) `0029_updates.sql`.
+`internal/db/migrations/` holds SQL files named `0001_init.sql` to (today) `0030_api_tokens.sql`.
 The panel applies new ones in name order when it starts. Add a new file with the next number;
 never change one that is already on `dev`.
 
@@ -131,6 +135,9 @@ self-hosted Noto Sans, Noto Sans Bengali and JetBrains Mono.
 | Change a notification's text | `internal/notify/locales/en.json` (and `bn.json`) |
 | Change the installer | `deploy/install.sh`, then test it in the [test VM](/development/test-vm/) |
 | Change sign-in, sessions, roles | `internal/api/auth.go`, `internal/auth/` |
+| Change API tokens or the scope a route needs | `internal/api/tokens.go` (`routeScopes`), `internal/store/tokens.go`, `web/src/pages/TokensPage.tsx` |
+| Update the API description after changing routes | `UPDATE_OPENAPI=1 go test ./internal/api -run TestOpenAPIFile` rewrites `docs/openapi.json`; a route without a good summary goes into `summaryOverrides` in `internal/api/openapi.go` |
+| Add or change an ekctl command | `internal/cli/` and its tests in `cli_test.go` |
 | Change the panel's settings | `internal/config/config.go` |
 
 For a walk through all of these with one real feature, see

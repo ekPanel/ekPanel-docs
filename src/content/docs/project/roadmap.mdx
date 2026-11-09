@@ -9,8 +9,10 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 ekPanel is built in phases. Each phase ends with something you can install on a real server and
 use. **Phases 0 to 3 are done**, and so is the first part of phase 4: releases and updates (4a).
-The first release, v0.1.0, came out of it on 9 November 2026; next is the API (4b). The full
-plan, with every decision and test, is
+The first release, v0.1.0, came out of it on 9 November 2026. Since then the API part of 4b
+(API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
+the next release; next is moving between servers (4c). The full plan, with every decision and
+test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -94,12 +96,27 @@ reproducible archives for amd64 and arm64, signs `SHA256SUMS` with the key kept 
 protected `release` environment, adds build attestations and publishes the release. Tags such
 as `v1.2.3-rc.1` become pre-releases, which panels never offer as updates.
 
-### 4b. API, CLI, Terraform
+### 4b. API, CLI, Terraform <Badge text="partly done" variant="caution" />
 
-- API tokens per user, with scopes and expiry, shown once, revocable, in the audit log
-- An OpenAPI description of the API, checked in CI, and a docs site
-- The `ekpanel` command line tool for the same API
-- A Terraform provider, later in phase 4, once the API is stable
+Done in the `dev` branch and tested; it comes with the **next release** (it is not in v0.1.0):
+
+- [API tokens](/guides/security/api-tokens/) per user, with scopes and an expiry, shown once,
+  revocable, and named in the audit log. Customers have them too, with fewer scopes. Tokens can
+  never change account security, manage tokens or open a terminal
+- An [OpenAPI description](/reference/api/#the-openapi-description) of the whole API at
+  `/api/v1/openapi.json` (and `docs/openapi.json`), made from the router and checked in CI,
+  with the scope each operation needs; and these API docs
+- [`ekctl`](/reference/cli/), a command-line tool for Linux, macOS and Windows: servers,
+  websites, databases, apps, DNS, backups and tasks, `--json` output, and `ekctl api` for any
+  endpoint
+- `GET /api/v1/tasks/{id}`, to follow one background task
+
+Still to come:
+
+- A Terraform provider, later in phase 4, once the API is stable. Request and response schemas
+  in the OpenAPI description come with it
+- One way to follow slow work: a `task_id` on every answer that starts it (today some answers
+  are a task, some an item with its state, some a deployment)
 
 ### 4c. Moving between servers
 

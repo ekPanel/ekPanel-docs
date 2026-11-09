@@ -7,8 +7,8 @@ sidebar:
 
 import { Aside, FileTree } from '@astrojs/starlight/components';
 
-Main repository-তে আছে panel, agent, web UI, installer আর test VM script, সব `ekpanel` নামের একটা Go
-module-এ। এই page একটা map: প্রতিটা folder কী, আর কিছু বদলাতে চাইলে কোথায় দেখবেন।
+Main repository-তে আছে panel, agent, `ekctl` command-line tool, web UI, installer আর test VM script, সব
+`ekpanel` নামের একটা Go module-এ। এই page একটা map: প্রতিটা folder কী, আর কিছু বদলাতে চাইলে কোথায় দেখবেন।
 
 ## Top level
 
@@ -20,9 +20,11 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 - cmd/
   - ekpanel/ panel program
   - ekpanel-agent/ agent program
+  - ekctl/ API-এর command-line tool
 - deploy/
   - install.sh নতুন Ubuntu বা Debian server-এর installer
 - docs/
+  - openapi.json API-এর description, router থেকে বানানো (একটা test এটা হালনাগাদ রাখে)
   - TRANSLATING.md UI কীভাবে অনুবাদ করবেন
 - internal/ সব Go package (নিচে দেখুন)
 - scripts/
@@ -41,12 +43,13 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 
 `bin/`, `dist/` আর `.data/` (development database) `make` বানায়, আর এগুলো Git-এ নেই।
 
-## দুটো program
+## Program-গুলো
 
 | Folder | Program | `main.go` কী করে |
 | --- | --- | --- |
 | `cmd/ekpanel` | `ekpanel` | Configuration load করে, database খোলে আর migrate করে, agent CA বানায়, task runner, notifier আর cleanup loop চালু করে, তারপর web UI আর API, আর agent listener serve করে। এতে `version` আর `add-server` command-ও আছে। |
 | `cmd/ekpanel-agent` | `ekpanel-agent` | `enroll`, `run`, `version`, আর internal `files` worker। |
+| `cmd/ekctl` | `ekctl` | আসল terminal, environment আর config folder দিয়ে `internal/cli` চালায়। আপনার নিজের computer-এর (Linux, macOS, Windows) জন্য আলাদা একটা program, `make ekctl` দিয়ে build হয়। দেখুন [ekctl](/reference/cli/)। |
 
 ## `internal/`-এর Go package
 
@@ -56,9 +59,10 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 | --- | --- |
 | `agent` | Server-এর দিকের agent: Linux থেকে fact আর metric জোগাড় করে, panel-এ stream করে, আর panel-এর typed operation কার্যকর করে। প্রতিটা area-র জন্য একটা file: `sites.go`, `fpm.go`, `databases.go`, `apps.go`, `builds.go`, `backup.go`, `firewall.go`, `mail.go`, `nameserver.go`, `ftp.go`, `malware.go`, `countries.go`, `security.go`, `wordpress.go`, `wptoolkit.go`, `terminal.go`… |
 | `agentproto` | Panel আর agent-এর মধ্যে আদান-প্রদান হওয়া message: enrolment আর connect path, operation-এর নাম, আর প্রতিটা spec আর result type। |
-| `api` | Panel-এর HTTP layer: `/api/v1`-এর নিচে JSON API, agent endpoint আর embed করা web UI। `server.go`-তে প্রতিটা route-এর list আছে। |
+| `api` | Panel-এর HTTP layer: `/api/v1`-এর নিচে JSON API, agent endpoint আর embed করা web UI। `server.go`-তে প্রতিটা route-এর list আছে; `tokens.go`-তে API token আর প্রতিটা route-এর scope (`routeScopes`); `openapi.go` router থেকে OpenAPI description বানায়। |
 | `auth` | Password hashing (argon2id), random token আর TOTP helper। |
 | `catalog` | One-click service: project-এর review করা Compose file (`templates/<id>.yaml`), প্রতিটার দরকারি variable-সহ। |
+| `cli` | `ekctl`, ekPanel API-এর command-line tool। বাইরের দুনিয়া থেকে যা লাগে সব আসে `Env` দিয়ে, তাই test এটাকে `httptest` server-এর সাথে চালায়। প্রতিটা area-র জন্য একটা file: `resources.go` (server, site, database, app), `dns.go`, `tasks.go` (task, backup, `ekctl api`), `login.go`, `config.go`, `client.go` (HTTP আর certificate pinning)। |
 | `cloudflare` | Cloudflare-এর API-এর যে অংশ ekPanel ব্যবহার করে: zone, DNS record, SSL mode আর cache purge। `cloudflaretest/`-এ test আর local ব্যবহারের জন্য একটা fake Cloudflare আছে। |
 | `config` | Flag আর `EKPANEL_*` environment variable থেকে panel-এর settings load করে। |
 | `cron` | পাঁচ-field-এর cron schedule পড়ে, পরের run-এর সময় বের করে, আর সেগুলো systemd `OnCalendar` expression হিসেবে লেখে। Panel আর agent দুটোই ব্যবহার করে। |
@@ -76,7 +80,7 @@ module-এ। এই page একটা map: প্রতিটা folder কী,
 
 ### Migration
 
-`internal/db/migrations/`-এ `0001_init.sql` থেকে (আজকের হিসেবে) `0029_updates.sql` নামের SQL file আছে।
+`internal/db/migrations/`-এ `0001_init.sql` থেকে (আজকের হিসেবে) `0030_api_tokens.sql` নামের SQL file আছে।
 Panel চালু হওয়ার সময় নতুনগুলো নামের ক্রমে apply করে। পরের number দিয়ে একটা নতুন file যোগ করুন; যেটা আগেই
 `dev`-এ আছে সেটা কখনো বদলাবেন না।
 
@@ -130,6 +134,9 @@ CodeMirror (file manager-এর editor) আর xterm.js (terminal)। Font হ�
 | একটা notification-এর text বদলাতে | `internal/notify/locales/en.json` (আর `bn.json`) |
 | Installer বদলাতে | `deploy/install.sh`, তারপর [test VM](/development/test-vm/)-এ test করুন |
 | Sign-in, session, role বদলাতে | `internal/api/auth.go`, `internal/auth/` |
+| API token বা কোনো route-এর দরকারি scope বদলাতে | `internal/api/tokens.go` (`routeScopes`), `internal/store/tokens.go`, `web/src/pages/TokensPage.tsx` |
+| Route বদলানোর পরে API description update করতে | `UPDATE_OPENAPI=1 go test ./internal/api -run TestOpenAPIFile` `docs/openapi.json` নতুন করে লেখে; ভালো summary নেই এমন route যায় `internal/api/openapi.go`-এর `summaryOverrides`-এ |
+| ekctl-এর command যোগ করতে বা বদলাতে | `internal/cli/` আর `cli_test.go`-তে এর test |
 | Panel-এর settings বদলাতে | `internal/config/config.go` |
 
 একটা আসল feature দিয়ে এগুলোর সবকটা ধাপে ধাপে দেখতে [Feature যোগ করা](/development/adding-a-feature/)

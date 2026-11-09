@@ -1,0 +1,222 @@
+---
+title: API token
+description: Script বা ekctl-এর জন্য API token বানান, এর scope আর মেয়াদ বেছে নিন, কোথায় ব্যবহার হচ্ছে দেখুন, আর revoke করুন।
+sidebar:
+  order: 7
+---
+
+import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+API token হলো একটা key, যা দিয়ে কোনো script, CI job বা [ekctl](/reference/cli/) command-line tool আপনার হয়ে
+panel-এর [API](/reference/api/) ব্যবহার করতে পারে। প্রতিটা token শুধু আপনার অনুমতি দেওয়া কাজটুকু (এর
+**scope**) করতে পারে, এর মেয়াদ শেষ হতে পারে, আর আলাদা করে revoke করা যায়, তাই কোনো script-এ আপনার password
+রাখতে হয় না। Administrator আর customer দুজনেরই token আছে।
+
+<Aside type="caution" title="v0.1.0-এর পরে নতুন">
+API token আছে main repository-র `dev` branch-এ, আর আসবে **পরের release-এ**। v0.1.0-এর panel-এ এখনো **API
+টোকেন** (API tokens) page নেই।
+</Aside>
+
+## শুরু করার আগে
+
+- Browser-এ নিজের account দিয়ে panel-এ sign in করুন। Token বানানো আর revoke করা যায় শুধু browser session
+  থেকে: কখনো অন্য token দিয়ে না, আর administrator কোনো customer হিসেবে ঢুকে থাকা অবস্থায়ও না।
+- Token-টা কীসের জন্য ঠিক করুন। **প্রতিটা script বা computer-এর জন্য একটা token** বানান, যাতে বাকিগুলো না ভেঙে
+  একটা revoke করা যায়।
+
+## Token বানানো
+
+<Steps>
+
+1. Sidebar-এ **আপনার অ্যাকাউন্ট** (Your account)-এর নিচে **API টোকেন** (API tokens) খুলুন।
+
+2. **নতুন টোকেন** (New token) বেছে নিন।
+
+3. **নাম** (Name) লিখুন: কোথায় ব্যবহার হবে, যেমন "ল্যাপটপ" বা "ডিপ্লয় স্ক্রিপ্ট"। এই নাম token-এর তালিকায় আর
+   audit log-এ দেখবেন।
+
+4. **স্কোপ** (Scopes)-এর নিচে token কী করতে পারবে তাতে টিক দিন। শুরুতে **পড়া** (Read)-তে টিক দেওয়া থাকে।
+   দেখুন [Scope বেছে নেওয়া](#choose-the-scopes)।
+
+5. **মেয়াদ শেষ** (Expires)-এ বেছে নিন **30 দিন পরে** (In 30 days), **90 দিন পরে** (In 90 days, default),
+   **365 দিন পরে** (In 365 days) বা **কখনো না** (Never)।
+
+6. **টোকেন বানান** (Create token) বেছে নিন।
+
+7. Panel দেখায় **আপনার নতুন টোকেন** (Your new token), `ekp_` দিয়ে শুরু হওয়া একটা লম্বা লেখা। Copy button দিয়ে
+   copy করুন আর নিরাপদ কোথাও রাখুন, যেমন password manager বা আপনার CI-এর secret store-এ। তারপর **হয়ে গেছে**
+   (Done) বেছে নিন।
+
+</Steps>
+
+<Aside type="danger" title="Token শুধু একবারই দেখবেন">
+Panel token-এর শুধু একটা fingerprint (SHA-256 hash) রাখে, তাই এটা আর আপনাকে দেখাতে পারে না। হারিয়ে ফেললে
+revoke করে নতুন একটা বানান। Token যার কাছে আছে, মেয়াদ শেষ বা revoke না হওয়া পর্যন্ত সে আপনার হয়ে এর scope-এর
+সব কাজ করতে পারে।
+</Aside>
+
+## Scope বেছে নেওয়া
+
+প্রতিটা token-কে শুধু দরকারি scope দিন। একটা scope panel-এর একটা অংশ ঢাকে; **পড়া** (Read) দিয়ে token আপনি যা
+দেখতে পান সব দেখতে পারে, কিন্তু কিছু বদলাতে পারে না।
+
+| Panel-এ | Scope | Token যা করতে পারে |
+| --- | --- | --- |
+| **পড়া** (Read) | `read` | Panel-এ আপনি যা দেখতে পান সব দেখা, কিন্তু কিছু না বদলানো। |
+| **ওয়েবসাইট** (Websites) | `sites` | Website, WordPress, PHP app আর cron job manage করা। |
+| **ডেটাবেস** (Databases) | `databases` | Database আর তাদের user manage করা। |
+| **অ্যাপ** (Apps) | `apps` | Docker app, deploy আর app catalogue (আর cron job) manage করা। |
+| **DNS** | `dns` | DNS zone আর record manage করা। |
+| **ইমেইল** (Email) | `mail` | Email domain, mailbox আর forwarder manage করা। |
+| **ব্যাকআপ** (Backups) | `backups` | Backup storage manage করা, backup চালানো আর restore করা। শুধু administrator। |
+| **সার্ভার** (Servers) | `servers` | Server, তাদের service, firewall আর security manage করা। শুধু administrator। |
+| **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা। শুধু administrator। |
+| **সেটিংস** (Settings) | `settings` | Panel-এর setting, update, notification আর audit log। Customer-এর জন্য: তাঁর নিজের notification আর notification channel। |
+
+প্রতিটা অংশের নিজের scope দিয়ে token সেই অংশটা পড়তেও পারে, তাই শুধু **ওয়েবসাইট**-ওয়ালা token website-এর
+তালিকাও দেখতে পারে।
+
+কিছু উদাহরণ:
+
+| Token যার জন্য | টিক দিন |
+| --- | --- |
+| Website বানায় এমন deploy script | **ওয়েবসাইট** |
+| শুধু দেখে এমন monitoring script | **পড়া** |
+| রাতে backup শুরু করে এমন script | **ব্যাকআপ** |
+| আপনার নিজের laptop-এ ekctl | **পড়া**, আর command line থেকে যে যে অংশ বদলাতে চান |
+
+<Aside type="caution">
+**পড়া** অনেক কিছু দেখে: administrator-এর জন্য প্রতিটা server, customer আর audit log; সবার জন্য website-এর
+file আর log। যে tool-এর শুধু একটা অংশ লাগে, তাকে এটা দেবেন না।
+</Aside>
+
+প্রতিটা scope কোন API path ঢাকে, সেই নিয়মসহ পুরোটা আছে [API reference](/reference/api/#scopes)-এ।
+
+## মেয়াদ বেছে নেওয়া
+
+মেয়াদ শেষ হওয়া token নিজে থেকেই কাজ বন্ধ করে, তাই ফাঁস হলে ক্ষতি কম হয়।
+
+- Laptop বা test-এর জন্য **30 দিন পরে** বা **90 দিন পরে**।
+- বছরে একবার দেখাশোনা করেন এমন script-এর জন্য **365 দিন পরে**।
+- **কখনো না** শুধু এমন machine-এর script-এর জন্য যাকে আপনি বিশ্বাস করেন, আর script বাদ দিলে token revoke করুন।
+
+মেয়াদ শেষ হওয়া token <Badge text="মেয়াদ শেষ" variant="danger" /> (Expired) নিয়ে তালিকায় থেকে যায়, যতক্ষণ না আপনি
+revoke করেন। Token-এর মেয়াদ বাড়ানো যায় না: নতুন একটা বানান আর script-কে সেটা ব্যবহার করতে দিন।
+
+## Token ব্যবহার করা
+
+এটা `Authorization` header-এ পাঠান:
+
+```bash
+curl -H "Authorization: Bearer ekp_…" https://panel.example.com/api/v1/sites
+```
+
+অথবা ekctl দিয়ে login করুন, যেটা token চায় আর নিজের config file-এ রেখে দেয়:
+
+```bash
+ekctl login --url https://panel.example.com
+```
+
+**API টোকেন** page-এর নিচে **টোকেন ব্যবহার** (Using a token) card একই জিনিস দেখায়, আপনার panel-এর address-সহ।
+দেখুন [API reference](/reference/api/) আর [ekctl](/reference/cli/)।
+
+## Token কোথায় ব্যবহার হচ্ছে দেখা
+
+Token-এর তালিকা প্রতিটা token-এর জন্য দেখায়:
+
+| Column | কী দেখায় |
+| --- | --- |
+| **নাম** (Name) | নাম, আর token-এর প্রথম কয়েকটা character (যেমন `ekp_45fx70…`), যাতে বুঝতে পারেন কোন script-এ কোনটা আছে |
+| **স্কোপ** (Scopes) | এটা কী করতে পারে |
+| **শেষ ব্যবহার** (Last used) | শেষ কখন ব্যবহার হয়েছে, যেমন "৫ মিনিট আগে", অথবা **কখনো না** (Never)। কোন address থেকে এসেছে দেখতে এর ওপর pointer ধরে রাখুন |
+| **মেয়াদ শেষ** (Expires) | তারিখ, **কখনো না**, অথবা <Badge text="মেয়াদ শেষ" variant="danger" /> |
+
+"শেষ ব্যবহার" মিনিটে সর্বোচ্চ একবার update হয়, আর নতুন address থেকে ব্যবহার হলে সাথে সাথে।
+
+Token যা কিছু বদলায়, সব audit log-এ তার মালিকের নামে লেখা হয়, আর entry-র details-এ token-এর নাম থাকে
+(`via_token` আর `token_id`)। Token বানানো আর revoke করাও audit log-এ থাকে (`token.created`, `token.revoked`)।
+আজ **অডিট লগ** (Audit log) page দেখায় কে পরিবর্তন করেছে, কিন্তু কোন token দিয়ে তা এখনো দেখায় না; details পড়ুন
+API দিয়ে (`GET /api/v1/audit`)।
+
+## Token revoke করা
+
+<Steps>
+
+1. **আপনার অ্যাকাউন্ট → API টোকেন** (Your account → API tokens) খুলুন।
+
+2. Token-এর পাশে **বাতিল করুন** (Revoke) বেছে নিন।
+
+3. নিশ্চিত করুন। "ল্যাপটপ" নামের token-এর জন্য panel জিজ্ঞেস করে: *"ল্যাপটপ" টোকেন বাতিল করবেন? যা কিছু এটা
+   ব্যবহার করে, সাথে সাথে কাজ বন্ধ হয়ে যাবে।*
+
+</Steps>
+
+Token সাথে সাথে কাজ বন্ধ করে: এর পরের request পায় `401 invalid_token`। Revoke করা ফিরিয়ে আনা যায় না।
+
+যে script বা computer token ব্যবহার করত সেটা বাদ গেলে, token জানত এমন কেউ চলে গেলে, বা token ফাঁস হয়েছে মনে
+হলে revoke করুন।
+
+<Aside type="note">
+**অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) আর password বদলানো token revoke **করে না**।
+আপনার account ভুল হাতে পড়তে পারে মনে হলে token-গুলোও revoke করুন।
+</Aside>
+
+## Customer-দের token
+
+Customer-দেরও **আপনার অ্যাকাউন্ট**-এর নিচে একই **API টোকেন** page আছে, সাতটা scope-সহ: **পড়া**, **ওয়েবসাইট**,
+**ডেটাবেস**, **অ্যাপ**, **DNS**, **ইমেইল** আর **সেটিংস** (নিজের notification)। Customer-এর token:
+
+- customer হিসেবেই কাজ করে: শুধু customer-এর নিজের জিনিস দেখে আর বদলায়, তাঁর package-এর সীমার মধ্যে, ঠিক
+  customer-এর নিজের browser-এর মতো;
+- scope যা-ই হোক, কখনো administrator page-এ পৌঁছাতে পারে না;
+- customer-এর নিজের। কোনো administrator customer-এর ওপর **তাঁর হয়ে ঢুকুন** (Sign in as) ব্যবহার করলে customer-এর
+  token দেখতে বা বানাতে পারেন না; page বলে "এই সেটিংগুলো গ্রাহকের নিজের। আপনার নিজেরটা বদলাতে নিজের অ্যাকাউন্টে
+  ফিরুন।"
+
+তাই একজন customer আপনার কাছে কিছু না চেয়েই GitHub Actions থেকে নিজের website deploy করতে বা ekctl ব্যবহার করতে
+পারেন।
+
+## কীভাবে কাজ করে
+
+- Token হলো `ekp_` আর 43টা random character। Panel শুধু এর SHA-256 hash রাখে, সাথে প্রথম কয়েকটা character
+  (token আলাদা করে চিনতে), নাম, scope, মেয়াদ, আর শেষ কখন ও কোথা থেকে ব্যবহার হয়েছে।
+- প্রতিটা request-এ panel পাওয়া token-এর hash করে খোঁজে। যে token নেই, revoke হয়েছে বা মেয়াদ শেষ, সেটা পায়
+  `401 invalid_token`।
+- Token কখনো বাড়তি অধিকার দেয় না: এটা মালিক হিসেবে কাজ করে, scope দিয়ে সীমিত।
+- Scope যা-ই হোক, token **কখনো** আপনার password বা two-factor sign-in বদলাতে, আপনাকে sign out করাতে, token
+  বানাতে, দেখতে বা revoke করতে, বা terminal খুলতে পারে না। এগুলোর জন্য browser-এ আপনাকে লাগে।
+- কোনো user মুছে ফেললে তাঁর token-ও মুছে যায়।
+
+দেখুন [security model](/concepts/security-model/#api-tokens)।
+
+## সীমা আর যা এখনো নেই
+
+- প্রতি user-এর সর্বোচ্চ **50টা token**।
+- মেয়াদ 30, 90 বা 365 দিন, অথবা কখনো না। পরে এটা বদলানো যায় না, নাম বা scope-ও না: বদলে নতুন token বানান।
+- Token-কে একটা website, একটা server বা একটা address-এ সীমিত করা যায় না।
+- **অডিট লগ** page এখনো token-এর নাম দেখায় না (API-এর audit details দেখায়)।
+
+## সমস্যা হলে
+
+**"এই API টোকেন নেই, বাতিল করা হয়েছে, বা মেয়াদ শেষ।" (`invalid_token`)।** Check করুন token-এর পুরোটা copy
+করেছেন কিনা, আর এটা এখনো তালিকায় আছে এবং <Badge text="মেয়াদ শেষ" variant="danger" /> নয়। Header হতে হবে ঠিক
+`Authorization: Bearer ekp_…`।
+
+**"এই API টোকেনের এটা করার অনুমতি (স্কোপ) নেই।" (`token_scope`)।** উত্তরে বলা থাকে কোন scope হলে চলত। সেই
+scope দিয়ে নতুন token বানান; পুরোনো token-এ scope যোগ করা যায় না।
+
+**"এর জন্য সাইন-ইন করা সেশন লাগে; API টোকেন দিয়ে এটা করা যায় না।" (`token_not_allowed`)।** এটা এমন কাজ যা
+token কখনো করতে পারে না, যেমন password বদলানো বা terminal খোলা। Browser থেকে করুন।
+
+**"আপনার ৫০টা টোকেন আছে।" (`too_many_tokens`)।** যেগুলো আর ব্যবহার করেন না সেগুলো revoke করুন, মেয়াদ শেষ
+হওয়াগুলোসহ।
+
+**Token হারিয়ে ফেলেছি।** এটা আর দেখানো যায় না। Revoke করে নতুন একটা বানান।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="ekctl" href="/reference/cli/" description="যে command-line tool token দিয়ে login করে।" />
+	<LinkCard title="REST API" href="/reference/api/" description="Scope, error, task আর উদাহরণ।" />
+	<LinkCard title="Account-এর নিরাপত্তা" href="/guides/security/accounts/" description="Two-factor sign-in আর session।" />
+</CardGrid>
