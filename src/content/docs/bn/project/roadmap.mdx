@@ -15,8 +15,9 @@ server-এ সরানো, আর server চলে গেলে একটা we
 import করা যায়, তার website, file, MySQL database, mail-সহ email, cron job আর DNS zone নিয়ে; aaPanel বা অন্য যেকোনো
 host থেকে একটা একটা করে website, তার file-এর archive আর database dump থেকে; আর Coolify-এর application আর service, তার API
 দিয়ে। 4e শুরু হয়েছে: এর প্রথম অংশ, account-এর নিরাপত্তা (two-factor sign-in-এর recovery code, কারও
-two-factor sign-in reset করা, sign in থাকা device-এর তালিকা, আর passkey), শেষ হয়েছে আর আসবে পরের release-এ।
-এরপর reseller আর white-label।
+two-factor sign-in reset করা, sign in থাকা device-এর তালিকা, আর passkey), শেষ হয়েছে আর আসবে পরের release-এ, এর
+দ্বিতীয় অংশটাও তাই: customer suspend করা, website আর অন্য জিনিসের মালিক বদলানো, package-এ bandwidth limit, আর ব্যর্থ
+cron job-এর alert। এরপর reseller আর white-label।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -177,6 +178,18 @@ host-গুলোর মতো করে বানানো backup দিয়�
   - Passkey, আর নিরাপত্তা পাতায় active session-এর তালিকা, যেখান থেকে একটা একটা করে শেষ করা যায়
   - Recovery code আর session একটা local panel-এ browser দিয়ে চালিয়ে দেখা হয়েছে; passkey এখন পর্যন্ত শুধু
     automated test-এ, একটা virtual authenticator দিয়ে, আসল device দিয়ে এখনো নয়
+- [Customer](/guides/admin/customers/) <Badge text="শেষ" variant="success" />:
+  - [একজন customer-কে suspend করা](/guides/admin/customers/#suspend-a-customer), এমন একটা কারণ-সহ যা শুধু admin-রা
+    দেখেন: sign in বন্ধ (password, passkey বা API token), তাঁর website আর app-এর address-এ একটা "suspended" page
+    (503), app থামানো, cron job বিরতিতে, SFTP আর FTP বন্ধ, mailbox-এ sign in বন্ধ কিন্তু mail আসতে থাকে। কিছুই মোছা
+    হয় না, আর suspend তুলে দিলে সব আগের মতো হয়
+  - Website, database, app, email domain আর DNS zone-এর [মালিক বদলানো](/guides/admin/customers/#change-the-owner),
+    অন্য customer বা admin-দের কাছে, আগে নতুন মালিকের package মিলিয়ে। Server-এ কিছুই সরে না
+  - Package-এ calendar মাস ধরে [bandwidth limit](/guides/admin/customers/#how-bandwidth-is-counted), 90% আর 100%-এ
+    alert-সহ, আর package বললে পরের মাস বা বড় package পর্যন্ত website-এ একটা "bandwidth used up" page (503)
+  - [ব্যর্থ cron job-এর alert](/guides/websites/cron/#failure-alerts), প্রতি 5 মিনিটে check, আবার একটা run সফল না
+    হওয়া পর্যন্ত একবারই
+  - Suspend, bandwidth-এ বন্ধ করা আর cron alert VM-এ চালিয়ে দেখা হয়েছে; মালিক বদলানো এখন পর্যন্ত শুধু automated test-এ
 
 বাকি আছে:
 
@@ -200,9 +213,7 @@ host-গুলোর মতো করে বানানো backup দিয়�
 
 - একটা database browser, আর database import ও export
 - আলাদা আলাদা file restore করা, আর একটা backup download করা
-- Customer suspend করা, package-এ bandwidth-এর সীমা, ব্যর্থ cron job-এর alert
 - Cloudflare বা built-in DNS দিয়ে wildcard certificate (DNS-01)
-- একটা website, database বা app অন্য মালিকের কাছে সরানো
 - Cloudflare API আর বাইরের mail delivery আসলভাবে চেষ্টা করে দেখা
 
 ## পরে: phase 5, game server

@@ -98,7 +98,10 @@ Traffic is counted from the web server's log **every 15 minutes**, so the newest
 in the charts up to 15 minutes later. The request log shows them right away.
 </Aside>
 
-Customers also see their **Traffic this month** next to their package usage.
+Customers also see their **Traffic this month** next to their package usage. From the next
+release it is called **Bandwidth this month**, and a package can
+[limit it](/guides/admin/customers/#how-bandwidth-is-counted): the bandwidth of a customer's
+websites and apps together, per calendar month (UTC).
 
 ## What is kept, and for how long
 
@@ -124,7 +127,8 @@ deleted from the panel. The request log files in `/var/log/caddy/` are not remov
 
 ## Limits and what is not there yet
 
-- Bandwidth is shown, but packages cannot limit it yet.
+- Packages can limit bandwidth only from the next release; see
+  [How bandwidth is counted](/guides/admin/customers/#how-bandwidth-is-counted).
 - Logs cannot be downloaded from the **Logs** card; use the file manager for the PHP log.
 - The request log on the server is readable by administrators with the
   [server terminal](/guides/apps/terminal/).

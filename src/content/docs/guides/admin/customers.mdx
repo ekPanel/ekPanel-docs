@@ -1,6 +1,6 @@
 ---
 title: Customers and packages
-description: Give people their own accounts on your panel, with limits on websites, databases, apps, disk space, memory and CPU that are really enforced.
+description: Give people their own accounts on your panel, with limits on websites, databases, apps, disk space, bandwidth, memory and CPU that are really enforced; suspend them, and give their things to someone else.
 sidebar:
   order: 1
 ---
@@ -43,6 +43,8 @@ disk space, and how much memory and CPU for all their processes together.
 | **Disk space (GB)** | Website files, app folders and volumes, databases and mail together | Empty: unlimited |
 | **Memory (MB)** | Memory for **all** the customer's PHP and app processes together, at least 64 MB | Empty: no limit |
 | **CPU (cores)** | CPU for all of them together, for example `0.5` or `2`, at least 5% of a core | Empty: no limit |
+| <Badge text="next release" variant="note" /> **Bandwidth per month (GB)** | What the customer's websites and apps send in a calendar month (UTC), at least 1 GB. See [How bandwidth is counted](#how-bandwidth-is-counted) | Empty: no limit |
+| <Badge text="next release" variant="note" /> **Stop websites and apps when it is used up, until the next month** | Whether websites and app addresses stop answering once the bandwidth is used up. Without it, the customer and the administrators are only told | Off. Always off without a bandwidth limit |
 | **PHP versions** | Which PHP versions their websites may use | "None ticked means every version." |
 | **Servers** | Where the customer may create things | "None ticked means every server." |
 | **Allowed Docker images** | Which images their apps and catalogue services may use. One per line: a name such as `nginx` (any tag), or a prefix ending in `/` such as `ghcr.io/acme/` | "Empty means any image." |
@@ -57,7 +59,9 @@ run single images and the reviewed services of the [catalogue](/guides/apps/cata
 
 Edit a package and save it. New memory and CPU limits reach the customers' servers at once,
 **without restarting** anything. If you lower a count, what customers already have stays; they
-just cannot add more.
+just cannot add more. A new bandwidth limit is checked at once too: websites stopped for
+bandwidth start again if the new limit is above what was used this month, and are stopped if
+it is below.
 
 A package that still has customers cannot be deleted: "move its customers to another package
 first".
@@ -80,7 +84,9 @@ first".
 The customer's panel language starts as yours at the moment you create them; they can change it.
 
 The customers list shows each customer's package and use, such as "2 of 3" websites and their disk
-space.
+space. From the next release it also shows **Bandwidth this month**, and badges for customers who
+are [suspended](#suspend-a-customer) or whose websites are stopped because their bandwidth is used
+up ("Bandwidth used up: websites stopped").
 
 ### Reset a password or two-factor sign-in
 
@@ -122,7 +128,9 @@ them and counts toward their package, exactly as if they had made it.
 
 A customer signs in at the same address as you. They see:
 
-- **Dashboard** with "Your package: …", their use of each limit, and their traffic this month.
+- **Dashboard** with "Your package: …", their use of each limit, and "Traffic this month: …".
+  From the next release that line is **Bandwidth this month**, with a meter when the package has
+  a bandwidth limit (otherwise "… used, no limit") and a note on how it is counted.
 - **Websites**, **Databases**, **Apps**, **Email** and **DNS**: only what they own. Mail domains
   must be domains of their own websites; hosted DNS zones must be domains of their own websites or
   apps. They can connect their own Cloudflare account.
@@ -189,6 +197,49 @@ measurements. **SFTP and FTP uploads are not stopped** by the disk limit, and a 
 website or app can keep writing. Only the panel's own actions are refused.
 </Aside>
 
+## How bandwidth is counted
+
+<Badge text="next release" variant="note" />
+
+A package can limit how much data a customer's websites and apps send each month, with
+**Bandwidth per month (GB)**.
+
+- **What counts:** what the web server sends for the customer's websites and app addresses, as
+  in the **Bandwidth** of the [traffic charts](/guides/websites/logs-traffic/#traffic). Email,
+  SFTP and FTP, and what apps download, do not count.
+- **The month** is a calendar month in UTC. It starts again at 00:00 UTC on the 1st (06:00 in
+  Bangladesh).
+- **When it is checked:** the panel collects traffic from every server every 15 minutes and
+  compares each customer's month with their package right after. It also checks at once when you
+  change a package, a customer's package, or move websites or apps between customers with
+  [Change owner](#change-the-owner) (both the old and the new owner are checked).
+- **Who owns the traffic:** this month's traffic goes with a website or app. If you give a
+  website to another customer, what it sent this month counts for the new owner.
+
+The customer and the administrators get a [notification](/guides/admin/notifications/) at 90%
+("Bandwidth almost used up") and at 100% ("Bandwidth used up"). Each is sent once a month.
+
+What happens at 100% depends on the package:
+
+- **Without** "Stop websites and apps when it is used up, until the next month": nothing stops.
+  The customer can go over the limit; it is only a warning.
+- **With** it: the notification is "Bandwidth used up: websites stopped", and the customer's
+  websites and app addresses answer every request with a short page, "Bandwidth used up", and
+  HTTP status 503. Apps keep running, and SFTP, FTP, cron jobs, databases and email keep
+  working. The customers list marks them "Bandwidth used up: websites stopped".
+
+The websites start again by themselves at the first check of the next month (within 15 minutes
+of 00:00 UTC on the 1st), or at once when you give the customer a larger package, raise the
+package's limit above what they used, or untick the stop setting.
+
+<Aside type="caution">
+Because traffic is collected every 15 minutes, a customer can go over the limit by what their
+websites send in up to 15 minutes before they are stopped.
+</Aside>
+
+In the project's test VM, a website that had served 1.1 GB with a 1 GB package switched to the
+"Bandwidth used up" page; raising the package to 2 GB brought it back within 15 seconds.
+
 ## Sign in as a customer
 
 To see exactly what a customer sees, or to fix something for them:
@@ -213,10 +264,123 @@ To see exactly what a customer sees, or to fix something for them:
   marked **An administrator**, and can sign it out there.
 - Terminals, including app shells, are not available while signed in as a customer.
 
+## Suspend a customer
+
+<Badge text="next release" variant="note" />
+
+Suspending stops a customer's account without deleting anything, for example when a bill is
+not paid or a website is being abused. Unsuspending puts everything back as it was.
+
+<Steps>
+
+1. On the customers list, click **Suspend** next to the customer.
+
+2. Optionally enter a **Reason**, up to 500 characters: "For the administrators and the audit
+   log; the customer does not see it."
+
+3. Click **Suspend**.
+
+</Steps>
+
+The customer's card then shows "Suspended since …" and, if you gave one, "Reason: …". To end it,
+click **Unsuspend**.
+
+While a customer is suspended:
+
+- **They cannot sign in**, with their password, a passkey or an API token. They see "This account
+  is suspended. Please contact your hosting provider." (`account_suspended`). Their open
+  sessions end at once.
+- **Their websites and app addresses** answer every request with a short page in English,
+  "Website suspended": "This website is suspended. If it is yours, please contact your hosting
+  provider." The status is 503 with `Retry-After: 3600`, which tells search engines the outage
+  is temporary.
+- **Their apps are stopped.**
+- **Their cron jobs are paused** on the server. In the panel each job keeps its own **On** or
+  **Paused** setting, which applies again when you unsuspend.
+- **SFTP and FTP are off** for their websites.
+- **Their mailboxes cannot sign in** (mail apps and webmail): the mail server gets a random
+  password that nobody knows. **Mail still arrives** and waits in the mailboxes.
+- **Nothing is deleted:** files, databases and mail stay.
+
+You can still use [Sign in as](#sign-in-as-a-customer) to look at or fix a suspended customer's
+things.
+
+The audit log records "Customer suspended" (with the reason) and "Customer unsuspended" under your
+name. With the API: `POST /api/v1/customers/{id}/suspend` with `{"reason": "…"}`, and
+`POST /api/v1/customers/{id}/unsuspend` (a token needs the `customers` scope).
+
+In the project's test VM, suspending a customer gave their website the 503 page, stopped their
+app's container, turned off their cron job's timer and refused their mailbox's IMAP sign-in,
+while a message sent to the mailbox still arrived. Unsuspending brought all of it back.
+
+## Change the owner
+
+<Badge text="next release" variant="note" />
+
+You can give websites, databases, apps, email domains and DNS zones to another customer, or to
+the administrators: when a client hands a website to someone else, when you take over a
+customer's things, or before you [delete a customer](#delete-a-customer). Nothing moves on the
+server.
+
+<Steps>
+
+1. On the customers list, click **Change owner…**: in the page header, or on a customer's card
+   to start with that customer.
+
+2. Choose **From**: a customer, or **Administrators (no package)**.
+
+3. Choose **To**: another customer (shown with their package), or **Administrators (no
+   package)**.
+
+4. Tick what to give, under **Websites**, **Databases**, **Apps**, **Email domains** and
+   **DNS zones**. DNS zones are the zones on ekPanel's own [name servers](/guides/dns/name-servers/).
+
+5. Click **Give … items**. The panel answers, for example, "3 items now belong to …".
+
+</Steps>
+
+Before anything changes, the panel checks:
+
+- **The new owner's package**: how many websites, databases, apps, cron jobs (those of the
+  websites and apps), email domains and mailboxes (those of the email domains) they may have,
+  their disk space, and the servers they may use. If anything does not fit, nothing changes.
+  The message names what does not fit, such as "The new owner's package does not allow that many
+  websites." Giving things to the administrators is never limited.
+- **Moves:** a website, database or app that is being copied or switched to
+  [another server](/guides/websites/move/) cannot change owner: "… is being moved to another
+  server. Wait until that has finished." Once the move has switched, it can, even while its old
+  copy waits to be removed.
+
+What the new owner already has is left out; if that is everything, the panel says "Choose
+something the new owner does not have yet."
+
+What changes:
+
+- **Only the owner.** Files, data, Linux accounts, addresses, passwords and logins stay as they
+  are. The website's PHP, the app's containers and their cron jobs now run in the new owner's
+  [slice](#how-memory-and-cpu-limits-are-enforced), with the new owner's memory and CPU limits (or
+  none, for the administrators).
+- **Cron jobs, backups and this month's traffic go with a website or app.** An email domain
+  takes its mailboxes and forwarders along. A database does not follow its website: tick it
+  too.
+- **DNS records follow the owner of the zone.** A customer's zone holds the records ekPanel adds
+  for that customer's own websites, apps and email only; an administrators' zone holds
+  anyone's. So give a website and its zone together. The name servers are updated afterwards.
+
+The audit log records "Owner changed" with the names of everything given. With the API:
+`POST /api/v1/owner-changes` with `{"to": "<customer ID, or empty for the administrators>",
+"sites": [...], "databases": [...], "apps": [...], "mail_domains": [...], "zones": [...]}`, IDs
+only, up to 1,000 at a time (a token needs the `customers` scope).
+
+In a test VM, a website (with its cron job), an app and an email domain were given to another
+customer, and the package's app limit refused a third app.
+
 ## Only administrators can
 
 - Create, change and delete packages and customers, reset customers' passwords (and, from the
   next release, their two-factor sign-in), and sign in as them.
+- From the next release: suspend and unsuspend customers, and change the owner of websites,
+  databases, apps, email domains and DNS zones.
 - Add and remove servers, see their metrics and services, and open a root
   [terminal](/guides/apps/terminal/).
 - Set up [backups](/guides/data/backups/), the firewall, server security, email servers and the
@@ -237,22 +401,30 @@ each old copy from its own page afterwards. See [Move a customer](/guides/admin/
 ## Delete a customer
 
 A customer who still owns something cannot be deleted: "They still have … websites, … databases and
-… apps. Delete or move them first." Delete those first, then click the delete button on the
-customers list.
+… apps. Delete or move them first." Delete those first, or (from the next release) give them to
+another customer or to the administrators with [Change owner](#change-the-owner). Then click the
+delete button on the customers list.
+
+To stop a customer for a while without losing anything, [suspend](#suspend-a-customer) them
+instead.
 
 ## Limits and what is not there yet
 
-- **Suspending** a customer (stopping their sites without deleting them): not yet.
-- **Moving** a website, database or app to another owner: not yet.
-- **Bandwidth limits** in packages: not yet. Traffic is already measured and shown.
 - **Email to new customers** with their sign-in details: not yet; send the password yourself.
 - **Resellers** (who sell your packages to their own customers) and **sub-users**: not yet.
 - Real filesystem quotas: not yet; disk space is measured as described above.
+- The "Website suspended" and "Bandwidth used up" pages are in English only, because the server
+  does not know the visitor's language. They cannot be changed yet.
+- Bandwidth counts only what the web server sends; a customer can go over by up to 15 minutes of
+  traffic before their websites stop.
+- Change owner covers DNS zones on ekPanel's own name servers, not Cloudflare zones (customers
+  connect their own Cloudflare account).
 
 See the [roadmap](/project/roadmap/).
 
 ## Related
 
 - [Move a customer](/guides/admin/move-customer/): Move everything a customer has on one server to another.
-- [Notifications](/guides/admin/notifications/): Customers get alerts about their own websites, apps and disk space.
+- [Notifications](/guides/admin/notifications/): Customers get alerts about their own websites, apps, disk space and bandwidth.
+- [Logs and traffic](/guides/websites/logs-traffic/): The traffic that bandwidth limits count.
 - [Docker apps](/guides/apps/docker-apps/): What customers can and cannot run.

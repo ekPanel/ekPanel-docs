@@ -15,9 +15,10 @@ outside service, the list says so.
 Everything on this page is in v0.1.0, the first release, except
 [API and command line](#api-and-command-line), moving websites, apps, databases and
 customers to another server, rebuilding a website from a backup, and importing from cPanel,
-website archives and Coolify (under [Many servers](#many-servers)), and recovery codes,
-passkeys and the list of signed-in devices (under [Security](#security)), which come with the
-next release. You can
+website archives and Coolify (under [Many servers](#many-servers)), recovery codes,
+passkeys and the list of signed-in devices (under [Security](#security)), and suspending
+customers, changing owners, bandwidth limits and alerts for failed cron jobs, which come with
+the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -81,6 +82,8 @@ next release. You can
 - Jobs for websites (run as the site's account) and for apps (run inside a container).
 - Presets or any cron expression, in your time zone, with the next five runs shown.
 - Time limits, last result and output, "run now" and pause.
+- <Badge text="next release" variant="note" /> An alert when a job fails
+  ([Failure alerts](/guides/websites/cron/#failure-alerts)), once until it works again.
 
 ## Logs and traffic
 
@@ -237,6 +240,15 @@ has not been tried yet.
 - "Sign in as" a customer for one hour, recorded in the audit log.
 - <Badge text="next release" variant="note" /> [Move everything a customer has](/guides/admin/move-customer/)
   on one server to another in one go.
+- <Badge text="next release" variant="note" /> [Suspend a customer](/guides/admin/customers/#suspend-a-customer):
+  they cannot sign in, their websites show a "suspended" page, apps and cron jobs stop, and
+  nothing is deleted.
+- <Badge text="next release" variant="note" /> [Change the owner](/guides/admin/customers/#change-the-owner)
+  of websites, databases, apps, email domains and DNS zones, checked against the new owner's
+  package.
+- <Badge text="next release" variant="note" /> [Bandwidth limits](/guides/admin/customers/#how-bandwidth-is-counted)
+  per month in packages, with alerts at 90% and 100%, and if the package says so, websites stopped
+  until the next month.
 
 ## Notifications
 
@@ -245,7 +257,8 @@ has not been tried yet.
 - In the panel (a bell with an unread count) and by email, Telegram, Discord, Slack or signed
   webhooks.
 - Events such as a server offline, a full disk, a failed backup, a website or app that fails
-  to apply, a package near its disk limit, failed tasks and sign-in from a new address.
+  to apply, a package near its disk limit, failed tasks and sign-in from a new address. From
+  the next release also failed cron jobs and bandwidth.
 - Messages are written in each recipient's language.
 
 ## Many servers
@@ -329,6 +342,5 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |
 
 Smaller things also still missing: a database browser and import/export, restoring a single
-file or downloading a backup, suspending a customer, bandwidth limits, alerts for failed cron
-jobs, wildcard certificates (DNS-01), and moving an item to another owner. Game servers come
-after that, in phase 5.
+file or downloading a backup, and wildcard certificates (DNS-01). Game servers come after that,
+in phase 5.

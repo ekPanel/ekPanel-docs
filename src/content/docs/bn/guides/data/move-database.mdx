@@ -147,7 +147,8 @@ ekctl api POST moves/<move id>/cleanup
 - কপি শুরু হওয়ার পরে পুরোনো কপিতে যা বদলায়, তা নতুনটায় যায় না।
 - শুরু করার আগে panel নতুন server-এর খালি disk জায়গা check করে না।
 - মোট ১১ ঘণ্টার বেশি লাগলে সরানো থামিয়ে দেওয়া হয় আর ব্যর্থ হয়।
-- একটা database অন্য মালিকের কাছে সরানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))। তার server চলে গেলে, একটা
+- একটা database অন্য মালিককে দেওয়া move নয়: পরের release থেকে [মালিক বদলান](/guides/admin/customers/#change-the-owner)
+  ব্যবহার করুন। Database copy বা switch হওয়ার সময় এটা হয় না। তার server চলে গেলে, একটা
   database শুধু একটা website-এর সাথেই অন্য জায়গায় আবার বানানো যায়; দেখুন [Backup থেকে আবার বানান](/guides/websites/rebuild/)।
 - Panel-এর automated test দিয়ে check করা; এখনো দুটো server দিয়ে, বা PostgreSQL দিয়ে চালিয়ে দেখা হয়নি।
 

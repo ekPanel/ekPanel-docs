@@ -125,7 +125,7 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 | `mail` | Email domain, mailbox আর forwarder | `/mail` |
 | `backups` | Backup storage, backup আর restore | `/backups` |
 | `servers` | Server, তাদের service, firewall, security, mail server আর PHP extension | `/servers` |
-| `customers` | Customer আর package, আর একজন customer-এর এক server-এর সবকিছু সরানো | `/customers`, `/packages` |
+| `customers` | Customer আর package, একজন customer-এর এক server-এর সবকিছু সরানো, আর (পরের release থেকে) customer suspend করা ও মালিক বদলানো | `/customers`, `/packages`, `/owner-changes` |
 | `settings` | Notification setting, update, notification আর audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
 নিয়মগুলো:
@@ -186,6 +186,7 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 | 403 | `forbidden` | আপনার role এটা করতে পারে না। |
 | 403 | `token_scope` | Token-এর scope নেই। Message-এ বলা থাকে কোন scope হলে চলত। |
 | 403 | `token_not_allowed` | API token দিয়ে এটা কখনো করা যায় না; web UI ব্যবহার করুন। |
+| 403 | `account_suspended` | <Badge text="পরের release" variant="note" /> Customer-কে [suspend](/guides/admin/customers/#suspend-a-customer) করা আছে। একজন admin suspend তুলে না দেওয়া পর্যন্ত sign-in আর customer-এর token নেওয়া হয় না। |
 | 403 | `cross_site` | Request অন্য site থেকে এসেছে। |
 | 404 | `not_found` | এটা নেই, **অথবা এটা আপনার নয়**। বেশিরভাগ অংশের নিজের code আছে, যেমন `site_not_found` বা `task_not_found`। |
 | 409 | `too_many_tokens` | আপনার আগেই 50টা token আছে; আগে একটা revoke করুন। |
@@ -443,6 +444,8 @@ certificate বিশ্বাস করে।
 | App সরানো | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [App সরান](/guides/apps/move/#with-the-api-or-ekctl)। |
 | Database সরানো | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`। দেখুন [Database সরান](/guides/data/move-database/#with-the-api-or-ekctl)। |
 | Customer সরানো | `POST /customers/{id}/move`। দেখুন [Customer সরান](/guides/admin/move-customer/#with-the-api-or-ekctl)। |
+| Customer suspend করা | <Badge text="পরের release" variant="note" /> `POST /customers/{id}/suspend`, `{"reason": "…"}`-সহ (সর্বোচ্চ 500 অক্ষর, খালিও হতে পারে), `POST /customers/{id}/unsuspend`। দেখুন [Customer suspend করুন](/guides/admin/customers/#suspend-a-customer)। |
+| মালিক বদলানো | <Badge text="পরের release" variant="note" /> `POST /owner-changes`, `{"to": "…", "sites": [], "databases": [], "apps": [], "mail_domains": [], "zones": []}`-সহ (scope `customers`; `to` খালি হলে admin-রা পান)। দেখুন [মালিক বদলান](/guides/admin/customers/#change-the-owner)। |
 | cPanel থেকে ইমপোর্ট | `POST /imports/inspect`, `POST /imports` (scope `sites`)। দেখুন [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/#with-the-api)। |
 | ওয়েবসাইট আর্কাইভ ইমপোর্ট | `GET /imports/files?server_id=…` (server-এর import folder-এর file), `POST /imports/site/inspect`, `POST /imports/site` (scope `sites`)। দেখুন [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/#with-the-api)। |
 | Coolify থেকে ইমপোর্ট | `POST /imports/coolify/inspect` (Coolify-এর application, service আর database পড়ে), `POST /imports/coolify` (scope `sites`)। দেখুন [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/#with-the-api)। |

@@ -71,7 +71,7 @@ token look at everything you can see but change nothing.
 | **Email** | `mail` | Manage email domains, mailboxes and forwarders. |
 | **Backups** | `backups` | Manage backup storage, run backups and restore. Administrators only. |
 | **Servers** | `servers` | Manage servers, their services, firewall and security. Administrators only. |
-| **Customers** | `customers` | Manage customers and packages. Administrators only. |
+| **Customers** | `customers` | Manage customers and packages; from the next release also suspend customers and change owners. Administrators only. |
 | **Settings** | `settings` | Panel settings, updates, notifications and the audit log. For a customer: their own notifications and notification channels. |
 
 Each area's own scope also lets the token read that area, so a token with only **Websites**
@@ -178,6 +178,9 @@ Customers have the same **API tokens** page under **Your account**, with seven s
 - is the customer's own. An administrator who uses **Sign in as** on a customer cannot see or
   make the customer's tokens; the page says "These settings belong to the customer. Go back to
   your own account to change yours."
+- <Badge text="next release" variant="note" /> stops working while the customer is
+  [suspended](/guides/admin/customers/#suspend-a-customer): every request is refused with
+  `403 account_suspended`. It works again when they are unsuspended.
 
 So a customer can deploy their own website from GitHub Actions, or use ekctl, without asking
 you for anything.

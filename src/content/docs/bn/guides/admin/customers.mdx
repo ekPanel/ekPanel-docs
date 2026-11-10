@@ -1,6 +1,6 @@
 ---
 title: Customer আর package
-description: মানুষদের আপনার panel-এ তাঁদের নিজস্ব account দিন, website, database, app, disk space, memory আর CPU-র এমন limit-সহ, যা সত্যিই মানানো হয়।
+description: মানুষদের আপনার panel-এ তাঁদের নিজস্ব account দিন, website, database, app, disk space, bandwidth, memory আর CPU-র এমন limit-সহ, যা সত্যিই মানানো হয়; তাঁদের suspend করুন, আর তাঁদের জিনিস অন্য কাউকে দিন।
 sidebar:
   order: 1
 ---
@@ -43,6 +43,8 @@ Package হলো একটা plan, যেমন "Starter" বা "Business": �
 | **ডিস্ক (GB)** | Website file, app folder ও volume, database আর mail সব মিলিয়ে | খালি: সীমাহীন |
 | **মেমরি (MB)** | Customer-এর **সব** PHP আর app process মিলিয়ে memory, কমপক্ষে 64 MB | খালি: কোনো limit নেই |
 | **CPU (কোর)** | এগুলো সব মিলিয়ে CPU, যেমন `0.5` বা `2`, কমপক্ষে একটা core-এর 5% | খালি: কোনো limit নেই |
+| <Badge text="পরের release" variant="note" /> **মাসিক ব্যান্ডউইথ (GB)** | Customer-এর website আর app এক calendar মাসে (UTC) যতটা data পাঠায়, কমপক্ষে 1 GB। দেখুন [Bandwidth কীভাবে গোনা হয়](#how-bandwidth-is-counted) | খালি: কোনো limit নেই |
+| <Badge text="পরের release" variant="note" /> **শেষ হলে পরের মাস পর্যন্ত ওয়েবসাইট আর অ্যাপ বন্ধ রাখুন** | Bandwidth শেষ হলে website আর app-এর address উত্তর দেওয়া বন্ধ করবে কিনা। এটা ছাড়া customer আর admin-দের শুধু জানানো হয় | বন্ধ। Bandwidth limit না থাকলে সবসময় বন্ধ |
 | **PHP ভার্সন** | তাঁদের website কোন কোন PHP version ব্যবহার করতে পারবে | "কিছু টিক না দিলে সব ভার্সন।" |
 | **সার্ভার** | Customer কোথায় কিছু বানাতে পারবেন | "কিছু টিক না দিলে সব সার্ভার।" |
 | **অনুমোদিত Docker ইমেজ** | তাঁদের app আর catalogue service কোন কোন image ব্যবহার করতে পারবে। প্রতি লাইনে একটা: `nginx`-এর মতো একটা নাম (যেকোনো tag), অথবা `/` দিয়ে শেষ হওয়া একটা prefix, যেমন `ghcr.io/acme/` | "খালি মানে যেকোনো ইমেজ।" |
@@ -57,7 +59,8 @@ Customer-রা কখনো নিজের Compose file চালাতে প
 
 একটা package edit করে save করুন। নতুন memory আর CPU limit সাথে সাথে customer-দের server-এ পৌঁছে যায়,
 কিছু **restart না করেই**। কোনো সংখ্যা কমালে customer-দের যা আগে থেকে আছে তা থেকে যায়; তাঁরা শুধু
-আর যোগ করতে পারেন না।
+আর যোগ করতে পারেন না। নতুন bandwidth limit-ও সাথে সাথে check হয়: bandwidth-এর জন্য বন্ধ website-গুলো আবার
+চালু হয়, যদি নতুন limit এই মাসের ব্যবহারের চেয়ে বেশি হয়, আর কম হলে বন্ধ হয়।
 
 যে package-এ এখনো customer আছে, সেটা মোছা যায় না: "আগে এর গ্রাহকদের অন্য প্যাকেজে সরান।"
 
@@ -80,7 +83,9 @@ Customer-এর panel-এর ভাষা শুরুতে হয় আপন
 তিনি এটা বদলাতে পারেন।
 
 Customer তালিকায় প্রত্যেক customer-এর package আর ব্যবহার দেখায়, যেমন website-এর "3-এর মধ্যে 2" আর
-তাঁর disk space।
+তাঁর disk space। পরের release থেকে এখানে **এই মাসের ব্যান্ডউইথ**-ও দেখায়, আর badge দেখায় সেই customer-দের পাশে,
+যাঁরা [suspend করা](#suspend-a-customer) আছেন বা যাঁদের bandwidth শেষ হওয়ায় website বন্ধ ("ব্যান্ডউইথ শেষ: ওয়েবসাইট
+বন্ধ")।
 
 ### Password বা two-factor sign-in reset করুন
 
@@ -120,8 +125,9 @@ Website, database বা app যোগ করার সময় **কার জ
 
 একজন customer আপনার মতোই একই address-এ sign in করেন। তিনি দেখেন:
 
-- **ড্যাশবোর্ড** (Dashboard), যেখানে "আপনার প্যাকেজ: …", প্রতিটা limit-এর কতটা ব্যবহার হয়েছে, আর এই
-  মাসের traffic।
+- **ড্যাশবোর্ড** (Dashboard), যেখানে "আপনার প্যাকেজ: …", প্রতিটা limit-এর কতটা ব্যবহার হয়েছে, আর "এই মাসের
+  ট্রাফিক: …"। পরের release থেকে এই লাইনটা হয় **এই মাসের ব্যান্ডউইথ** (Bandwidth this month), package-এ bandwidth
+  limit থাকলে একটা meter-সহ (না থাকলে "… ব্যবহৃত, কোনো সীমা নেই"), আর কীভাবে গোনা হয় তার একটা note-সহ।
 - **ওয়েবসাইট**, **ডাটাবেস**, **অ্যাপ**, **ইমেইল** আর **DNS**: শুধু যা তাঁর নিজের। Mail domain হতে
   হবে তাঁর নিজের website-এর domain; hosted DNS zone হতে হবে তাঁর নিজের website বা app-এর domain। তিনি
   নিজের Cloudflare account connect করতে পারেন।
@@ -184,6 +190,46 @@ Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আ�
 নিজের কাজগুলোই নেওয়া হয় না।
 </Aside>
 
+## Bandwidth কীভাবে গোনা হয়
+
+<Badge text="পরের release" variant="note" />
+
+একটা package **মাসিক ব্যান্ডউইথ (GB)** দিয়ে সীমিত করতে পারে, একজন customer-এর website আর app প্রতি মাসে কতটা
+data পাঠাতে পারবে।
+
+- **কী গোনা হয়:** Customer-এর website আর app-এর address-এর জন্য web server যা পাঠায়, ঠিক যেমন
+  [traffic chart](/guides/websites/logs-traffic/#traffic)-এর **Bandwidth**। Email, SFTP আর FTP, আর app যা download
+  করে, তা গোনা হয় না।
+- **মাস** মানে UTC-তে একটা calendar মাস। এটা আবার শুরু হয় 1 তারিখ 00:00 UTC-তে (বাংলাদেশে সকাল 6টায়)।
+- **কখন check হয়:** Panel প্রতি 15 মিনিটে প্রতিটা server থেকে traffic আনে, আর ঠিক তারপরই প্রত্যেক customer-এর
+  মাসের ব্যবহার তাঁর package-এর সাথে মেলায়। এছাড়া সাথে সাথে check হয় যখন আপনি একটা package বদলান, একজন
+  customer-এর package বদলান, বা [মালিক বদলান](#change-the-owner) দিয়ে customer-দের মধ্যে website বা app সরান (পুরোনো আর নতুন দুই মালিকই check হন)।
+- **Traffic কার:** এই মাসের traffic website বা app-এর সাথে যায়। একটা website অন্য customer-কে দিলে, এই মাসে সেটা
+  যা পাঠিয়েছে তা নতুন মালিকের হিসাবে গোনা হয়।
+
+Customer আর admin-রা একটা [notification](/guides/admin/notifications/) পান 90%-এ ("ব্যান্ডউইথ প্রায় শেষ") আর
+100%-এ ("ব্যান্ডউইথ শেষ")। প্রতিটা মাসে একবার পাঠানো হয়।
+
+100%-এ কী হয় তা package-এর ওপর নির্ভর করে:
+
+- "শেষ হলে পরের মাস পর্যন্ত ওয়েবসাইট আর অ্যাপ বন্ধ রাখুন" **ছাড়া**: কিছুই বন্ধ হয় না। Customer limit পেরিয়ে
+  যেতে পারেন; এটা শুধু একটা সতর্কবার্তা।
+- এটা **সহ**: notification হয় "ব্যান্ডউইথ শেষ: ওয়েবসাইট বন্ধ", আর customer-এর website আর app-এর address প্রতিটা
+  request-এর উত্তরে একটা ছোট page দেখায়, "Bandwidth used up", HTTP status 503-সহ। App চলতে থাকে, আর SFTP, FTP,
+  cron job, database আর email কাজ করতে থাকে। Customer তালিকায় তাঁদের পাশে লেখা থাকে "ব্যান্ডউইথ শেষ: ওয়েবসাইট বন্ধ"।
+
+পরের মাসের প্রথম check-এ (1 তারিখ 00:00 UTC-র 15 মিনিটের মধ্যে) website-গুলো নিজে থেকেই আবার চালু হয়, অথবা সাথে
+সাথে, যখন আপনি customer-কে বড় package দেন, package-এর limit তাঁর ব্যবহারের চেয়ে বেশি করেন, বা বন্ধ রাখার
+setting-টার টিক তুলে দেন।
+
+<Aside type="caution">
+Traffic প্রতি 15 মিনিটে আনা হয় বলে, website বন্ধ হওয়ার আগে একজন customer সর্বোচ্চ 15 মিনিটের traffic পরিমাণ limit
+পেরিয়ে যেতে পারেন।
+</Aside>
+
+Project-এর test VM-এ, 1 GB-এর package-এ 1.1 GB পাঠানো একটা website "Bandwidth used up" page-এ চলে গেছে; package
+2 GB করার পর 15 সেকেন্ডের মধ্যে সেটা ফিরে এসেছে।
+
 ## Customer হিসেবে sign in করুন
 
 একজন customer ঠিক কী দেখেন তা দেখতে, বা তাঁর জন্য কিছু ঠিক করে দিতে:
@@ -208,10 +254,113 @@ Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আ�
   **একজন অ্যাডমিন** (An administrator) চিহ্ন-সহ দেখেন, আর সেখান থেকে sign out করাতে পারেন।
 - Customer হিসেবে sign in করা অবস্থায় terminal, app shell-সহ, পাওয়া যায় না।
 
+## একজন customer-কে suspend করুন
+
+<Badge text="পরের release" variant="note" />
+
+Suspend করলে কিছু না মুছেই একজন customer-এর account থেমে যায়, যেমন bill না দিলে বা কোনো website-এর অপব্যবহার
+হলে। Suspend তুলে দিলে সবকিছু আগের মতো হয়ে যায়।
+
+<Steps>
+
+1. Customer তালিকায় customer-এর পাশে **সাসপেন্ড** (Suspend)-এ click করুন।
+
+2. চাইলে একটা **কারণ** (Reason) লিখুন, সর্বোচ্চ 500 অক্ষর: "অ্যাডমিন আর অডিট লগের জন্য; গ্রাহক এটা দেখেন না।"
+
+3. **সাসপেন্ড**-এ click করুন।
+
+</Steps>
+
+এরপর customer-এর card-এ দেখায় "… থেকে সাসপেন্ডেড", আর কারণ দিয়ে থাকলে "কারণ: …"। শেষ করতে **সাসপেন্ড তুলুন**
+(Unsuspend)-এ click করুন।
+
+একজন customer suspend থাকা অবস্থায়:
+
+- **তিনি sign in করতে পারেন না**, password, passkey বা API token কোনোটা দিয়েই। তিনি দেখেন "এই অ্যাকাউন্ট সাসপেন্ড
+  করা আছে। আপনার হোস্টিং প্রোভাইডারের সাথে যোগাযোগ করুন।" (`account_suspended`)। তাঁর খোলা session-গুলো সাথে
+  সাথে শেষ হয়ে যায়।
+- **তাঁর website আর app-এর address** প্রতিটা request-এর উত্তরে ইংরেজিতে একটা ছোট page দেখায়, "Website suspended":
+  "This website is suspended. If it is yours, please contact your hosting provider." Status হয় 503,
+  `Retry-After: 3600`-সহ, যা search engine-কে বলে যে বন্ধ থাকাটা সাময়িক।
+- **তাঁর app থামানো হয়।**
+- **তাঁর cron job server-এ বিরতিতে যায়।** Panel-এ প্রতিটা job নিজের **চালু** (On) বা **বন্ধ রাখা** (Paused) setting
+  রাখে, যা suspend তুলে দিলে আবার খাটে।
+- তাঁর website-এর **SFTP আর FTP বন্ধ** থাকে।
+- **তাঁর mailbox-এ sign in করা যায় না** (mail app আর webmail): mail server একটা random password পায়, যা কেউ জানে না।
+  **Mail তবুও আসে** আর mailbox-এ অপেক্ষা করে।
+- **কিছুই মোছা হয় না:** file, database আর mail থেকে যায়।
+
+Suspend করা customer-এর জিনিস দেখতে বা ঠিক করতে আপনি তখনও [তাঁর হয়ে ঢুকুন](#sign-in-as-a-customer) ব্যবহার
+করতে পারেন।
+
+Audit log আপনার নামে "গ্রাহক সাসপেন্ড" (কারণ-সহ) আর "গ্রাহকের সাসপেন্ড তোলা হয়েছে" লেখে। API দিয়ে:
+`POST /api/v1/customers/{id}/suspend`, `{"reason": "…"}`-সহ, আর `POST /api/v1/customers/{id}/unsuspend`
+(token-এর `customers` scope লাগে)।
+
+Project-এর test VM-এ একজন customer-কে suspend করলে তাঁর website-এ 503 page এসেছে, তাঁর app-এর container থেমেছে,
+তাঁর cron job-এর timer বন্ধ হয়েছে আর তাঁর mailbox-এর IMAP sign-in নেওয়া হয়নি, অথচ mailbox-এ পাঠানো একটা message
+ঠিকই পৌঁছেছে। Suspend তুলে দেওয়ার পর সব ফিরে এসেছে।
+
+## মালিক বদলান
+
+<Badge text="পরের release" variant="note" />
+
+আপনি website, database, app, email domain আর DNS zone অন্য একজন customer-কে, বা admin-দের দিতে পারেন: যখন একজন
+client তাঁর website অন্য কারও হাতে দেন, যখন আপনি একজন customer-এর জিনিস নিজে নিয়ে নেন, বা
+[একজন customer মোছার](#delete-a-customer) আগে। Server-এ কিছুই সরে না।
+
+<Steps>
+
+1. Customer তালিকায় **মালিক বদলান…** (Change owner…)-এ click করুন: page-এর ওপরে, বা একজন customer-এর card-এ, তাঁকে
+   দিয়ে শুরু করতে।
+
+2. **যাঁর কাছ থেকে** (From) বেছে নিন: একজন customer, বা **অ্যাডমিনদের (কোনো প্যাকেজ নয়)**।
+
+3. **যাঁকে দেবেন** (To) বেছে নিন: অন্য একজন customer (তাঁর package-সহ দেখায়), বা **অ্যাডমিনদের (কোনো প্যাকেজ নয়)**।
+
+4. কী দেবেন টিক দিন: **ওয়েবসাইট**, **ডাটাবেস**, **অ্যাপ**, **ইমেইল ডোমেইন** আর **DNS জোন**-এর নিচে। DNS জোন মানে
+   ekPanel-এর নিজের [name server](/guides/dns/name-servers/)-এর zone।
+
+5. **…টি দিন**-এ click করুন। Panel উত্তর দেয়, যেমন "3টি এখন …-এর।"
+
+</Steps>
+
+কিছু বদলানোর আগে panel check করে:
+
+- **নতুন মালিকের package**: তিনি কয়টা website, database, app, cron job (website আর app-গুলোর), email domain আর
+  mailbox (email domain-গুলোর) রাখতে পারবেন, তাঁর disk space, আর কোন কোন server তিনি ব্যবহার করতে পারবেন। কোনো কিছু
+  না আঁটলে কিছুই বদলায় না। Message-এ বলা থাকে কী আঁটছে না, যেমন "নতুন মালিকের প্যাকেজে এতগুলো ওয়েবসাইট রাখা
+  যায় না।" Admin-দের দিলে কোনো limit নেই।
+- **সরানো:** যে website, database বা app [অন্য server-এ](/guides/websites/move/) copy বা switch হচ্ছে, তার মালিক বদলানো
+  যায় না: "… অন্য সার্ভারে সরানো হচ্ছে। সেটা শেষ হওয়া পর্যন্ত অপেক্ষা করুন।" Move switch হয়ে গেলে বদলানো যায়, পুরোনো
+  কপি মোছার অপেক্ষায় থাকলেও।
+
+নতুন মালিকের যা আগে থেকেই আছে তা বাদ যায়; সবকিছুই যদি তেমন হয়, panel বলে "এমন কিছু বেছে নিন যা নতুন মালিকের এখনো
+নেই।"
+
+যা বদলায়:
+
+- **শুধু মালিক।** File, data, Linux account, address, password আর login যেমন আছে তেমনই থাকে। Website-এর PHP, app-এর
+  container আর তাদের cron job এখন নতুন মালিকের [slice](#how-memory-and-cpu-limits-are-enforced)-এ চলে, নতুন মালিকের
+  memory আর CPU limit-সহ (admin-দের দিলে কোনো limit নেই)।
+- **Cron job, backup আর এই মাসের traffic website বা app-এর সাথে যায়।** একটা email domain তার mailbox আর forwarder
+  সাথে নেয়। Database তার website-এর পেছনে যায় না: সেটাও টিক দিন।
+- **DNS record zone-এর মালিককে অনুসরণ করে।** একজন customer-এর zone-এ ekPanel শুধু সেই customer-এর নিজের website, app
+  আর email-এর record রাখে; admin-দের zone-এ যে কারও। তাই একটা website আর তার zone একসাথে দিন। এরপর name server
+  update হয়।
+
+Audit log "মালিক বদলেছে" লেখে, দেওয়া সবকিছুর নাম-সহ। API দিয়ে: `POST /api/v1/owner-changes`,
+`{"to": "<customer ID, বা admin-দের জন্য খালি>", "sites": [...], "databases": [...], "apps": [...], "mail_domains": [...], "zones": [...]}`-সহ,
+শুধু ID, একবারে সর্বোচ্চ 1,000টা (token-এর `customers` scope লাগে)।
+
+একটা test VM-এ একটা website (তার cron job সহ), একটা app আর একটা email domain অন্য customer-কে দেওয়া হয়েছে, আর package-এর app limit তৃতীয় app ফিরিয়ে দিয়েছে।
+
 ## যা শুধু admin-রা পারেন
 
 - Package আর customer তৈরি, বদল আর মুছে ফেলা, customer-দের password (আর পরের release থেকে তাঁদের two-factor
   sign-in) reset করা, আর তাঁদের হয়ে sign in করা।
+- পরের release থেকে: customer suspend করা আর suspend তুলে দেওয়া, আর website, database, app, email domain ও DNS
+  zone-এর মালিক বদলানো।
 - Server যোগ করা আর সরানো, তাদের metric আর service দেখা, আর একটা root
   [terminal](/guides/apps/terminal/) খোলা।
 - [Backup](/guides/data/backups/), firewall, server security, email server আর built-in name server সেট
@@ -232,22 +381,28 @@ Disk limit দিয়ে **SFTP আর FTP upload থামে না**, আ�
 ## একজন customer মুছে ফেলুন
 
 যে customer-এর নামে এখনো কিছু আছে, তাঁকে মোছা যায় না: "তাঁর এখনো …টি ওয়েবসাইট, …টি ডেটাবেস আর …টি
-অ্যাপ আছে। আগে সেগুলো মুছুন বা সরান।" আগে সেগুলো মুছুন, তারপর customer তালিকায় delete button-এ click
-করুন।
+অ্যাপ আছে। আগে সেগুলো মুছুন বা সরান।" আগে সেগুলো মুছুন, অথবা (পরের release থেকে) [মালিক বদলান](#change-the-owner)
+দিয়ে অন্য customer বা admin-দের দিয়ে দিন। তারপর customer তালিকায় delete button-এ click করুন।
+
+কিছু না হারিয়ে একজন customer-কে কিছুদিনের জন্য থামাতে চাইলে বরং তাঁকে [suspend করুন](#suspend-a-customer)।
 
 ## Limit আর যা এখনো নেই
 
-- একজন customer-কে **suspend** করা (মুছে না ফেলে তাঁর site বন্ধ রাখা): এখনো নেই।
-- একটা website, database বা app অন্য মালিকের কাছে **সরানো**: এখনো নেই।
-- Package-এ **bandwidth limit**: এখনো নেই। Traffic অবশ্য আগে থেকেই মাপা হয় আর দেখানো হয়।
 - নতুন customer-দের sign-in তথ্যসহ **email**: এখনো নেই; password নিজে পাঠান।
 - **Reseller** (যাঁরা আপনার package নিজের customer-দের কাছে বিক্রি করেন) আর **sub-user**: এখনো নেই।
 - সত্যিকারের filesystem quota: এখনো নেই; disk space ওপরে যেভাবে বলা হয়েছে সেভাবে মাপা হয়।
+- "Website suspended" আর "Bandwidth used up" page শুধু ইংরেজিতে, কারণ server visitor-এর ভাষা জানে না। এগুলো এখনো
+  বদলানো যায় না।
+- Bandwidth-এ শুধু web server যা পাঠায় তা গোনা হয়; website বন্ধ হওয়ার আগে একজন customer সর্বোচ্চ 15 মিনিটের traffic
+  পরিমাণ limit পেরিয়ে যেতে পারেন।
+- মালিক বদলানোয় ekPanel-এর নিজের name server-এর DNS zone আসে, Cloudflare zone নয় (customer-রা নিজের Cloudflare account
+  connect করেন)।
 
 দেখুন [roadmap](/project/roadmap/)।
 
 ## সম্পর্কিত
 
 - [Customer সরান](/guides/admin/move-customer/): একজন customer-এর এক server-এর সবকিছু অন্য server-এ সরান।
-- [Notification](/guides/admin/notifications/): Customer-রা তাঁদের নিজের website, app আর disk space নিয়ে alert পান।
+- [Notification](/guides/admin/notifications/): Customer-রা তাঁদের নিজের website, app, disk space আর bandwidth নিয়ে alert পান।
+- [Log আর traffic](/guides/websites/logs-traffic/): Bandwidth limit যে traffic গোনে।
 - [Docker app](/guides/apps/docker-apps/): Customer-রা কী চালাতে পারেন আর কী পারেন না।

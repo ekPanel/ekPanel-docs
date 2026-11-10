@@ -70,7 +70,7 @@ revoke করে নতুন একটা বানান। Token যার �
 | **ইমেইল** (Email) | `mail` | Email domain, mailbox আর forwarder manage করা। |
 | **ব্যাকআপ** (Backups) | `backups` | Backup storage manage করা, backup চালানো আর restore করা। শুধু administrator। |
 | **সার্ভার** (Servers) | `servers` | Server, তাদের service, firewall আর security manage করা। শুধু administrator। |
-| **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা। শুধু administrator। |
+| **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা; পরের release থেকে customer suspend করা আর মালিক বদলানোও। শুধু administrator। |
 | **সেটিংস** (Settings) | `settings` | Panel-এর setting, update, notification আর audit log। Customer-এর জন্য: তাঁর নিজের notification আর notification channel। |
 
 প্রতিটা অংশের নিজের scope দিয়ে token সেই অংশটা পড়তেও পারে, তাই শুধু **ওয়েবসাইট**-ওয়ালা token website-এর
@@ -172,6 +172,8 @@ Customer-দেরও **আপনার অ্যাকাউন্ট**-এর 
 - customer-এর নিজের। কোনো administrator customer-এর ওপর **তাঁর হয়ে ঢুকুন** (Sign in as) ব্যবহার করলে customer-এর
   token দেখতে বা বানাতে পারেন না; page বলে "এই সেটিংগুলো গ্রাহকের নিজের। আপনার নিজেরটা বদলাতে নিজের অ্যাকাউন্টে
   ফিরুন।"
+- <Badge text="পরের release" variant="note" /> customer [suspend](/guides/admin/customers/#suspend-a-customer) থাকা
+  অবস্থায় কাজ করে না: প্রতিটা request `403 account_suspended` দিয়ে ফিরিয়ে দেওয়া হয়। Suspend তুলে দিলে আবার কাজ করে।
 
 তাই একজন customer আপনার কাছে কিছু না চেয়েই GitHub Actions থেকে নিজের website deploy করতে বা ekctl ব্যবহার করতে
 পারেন।

@@ -104,7 +104,7 @@ sent back to the browser. When you edit a channel, leave them empty to keep the 
 ## Events
 
 Administrators can choose from every event; customers from those about their own websites, apps,
-databases, disk space and account.
+databases, cron jobs, disk space, bandwidth and account.
 
 | Event (in the panel) | When it is sent | Who gets it |
 | --- | --- | --- |
@@ -123,6 +123,10 @@ databases, disk space and account.
 | **Malware found** | A malware scan found new suspicious files (up to five are named) | Administrators and the website's owner |
 | **Disk space almost used up** | A customer uses 90% of their package's disk space | Administrators and that customer |
 | **Disk space used up** | A customer uses all of it | Administrators and that customer |
+| **Bandwidth almost used up** | <Badge text="next release" variant="note" /> A customer's websites and apps have sent 90% of their package's [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted) this month. Sent once a month | Administrators and that customer |
+| **Bandwidth used up** | <Badge text="next release" variant="note" /> They have sent all of it. The package lets them go over, so the websites keep working | Administrators and that customer |
+| **Bandwidth used up, websites stopped** | <Badge text="next release" variant="note" /> They have sent all of it, and the package stops their websites and app addresses until the next month | Administrators and that customer |
+| **Cron job failed** | <Badge text="next release" variant="note" /> The last run of a [cron job](/guides/websites/cron/#failure-alerts) failed: an error exit code, its time limit, stopped by a signal, or out of memory. Checked every 5 minutes; sent once, and again only after a run in between succeeded | Administrators and the job's owner |
 | **Task failed** | A task (an image update, a restore, a WordPress install …) failed for good, after its last attempt. Scheduled and manual backups, and setting up websites, apps and databases, send their own alerts instead | Administrators, and the customer who started it |
 | **Sign-in from a new address** | Someone signed in to your account from an address not used in the last 90 days (not on the very first sign-in) | Only you |
 | **Sign-in with a recovery code** | <Badge text="next release" variant="note" /> Someone signed in to your account with a two-factor [recovery code](/guides/security/accounts/#recovery-codes). Says from which address, and how many codes are left | Only you |
@@ -134,7 +138,7 @@ Alerts go to **every** administrator. A customer receives only the alerts marked
 "customer" above, and only about their own things.
 
 Each alert has a severity: **info** (back online), **warning** or **critical** (server offline, failed
-backup, website, app, database or email problem, malware, disk space used up).
+backup, website, app, database or email problem, malware, disk space or bandwidth used up).
 
 ## Languages
 
@@ -202,13 +206,14 @@ actually connected to, so redirects and DNS tricks do not get around it. Adminis
 - In the project's test VM, a webhook channel was tested end to end (a signed test message, and
   "offline" three minutes after the agent was stopped, then "back online"). Email, Telegram,
   Discord and Slack depend on those services; use **Send a test** to check yours.
-- Not there yet: alerts for failed **cron jobs** (the panel does not watch job results yet), alerts
-  for **successful** deploys, and email to new customers with their sign-in details. See the
-  [roadmap](/project/roadmap/).
+- Not there yet: alerts for **successful** deploys, and email to new customers with their sign-in
+  details. See the [roadmap](/project/roadmap/). (Alerts for failed cron jobs come with the next
+  release.)
 - An administrator acting as a customer ("Sign in as") cannot change the customer's channels.
 
 ## Related
 
 - [Servers](/guides/admin/servers/): What counts as offline, and the disk warning.
 - [Backups](/guides/data/backups/): Backups that fail send alerts.
-- [Customers and packages](/guides/admin/customers/): Disk space alerts for customers.
+- [Customers and packages](/guides/admin/customers/): Disk space and bandwidth alerts for customers.
+- [Cron jobs](/guides/websites/cron/): When a failed job sends an alert.

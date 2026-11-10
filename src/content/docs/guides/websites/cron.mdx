@@ -1,11 +1,11 @@
 ---
 title: Cron jobs
-description: Run a command on a schedule for a website or an app, with presets or any cron expression, in your time zone, with a time limit, logs and run now.
+description: Run a command on a schedule for a website or an app, with presets or any cron expression, in your time zone, with a time limit, logs, run now and an alert when it fails.
 sidebar:
   order: 7
 ---
 
-import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard, Badge } from '@astrojs/starlight/components';
 
 A cron job runs a command on a schedule: a backup script every night, WordPress's or Laravel's
 scheduler every minute, a report every Monday. In ekPanel a job belongs to a **website** or to an
@@ -185,6 +185,11 @@ In the list of jobs:
 - **Edit job** changes everything except where it runs.
 - **Delete job** removes it from the server.
 
+<Badge text="next release" variant="note" /> While an administrator has
+[suspended](/guides/admin/customers/#suspend-a-customer) a customer, all their jobs are paused
+on the server. Each job keeps its own **On** or **Paused** setting, which applies again when the
+customer is unsuspended.
+
 ## Status and output
 
 Each job shows its next run (**Next …**) and, under **Last run and output**:
@@ -196,9 +201,38 @@ Each job shows its next run (**Next …**) and, under **Last run and output**:
 
 Write a job's output to a file, as in the script example above, if you need to keep it longer.
 
-<Aside type="caution">
-ekPanel does not send notifications when a cron job fails yet. Check important jobs now and then.
-</Aside>
+## Failure alerts
+
+<Badge text="next release" variant="note" />
+
+When a job fails, ekPanel sends a **Cron job failed** [notification](/guides/admin/notifications/)
+to the job's owner and to the administrators, such as: "The last run of nightly backup
+(example.com) failed: exit code 3." The reason is one of:
+
+- `exit code …`: the command ended with an error;
+- `time limit reached`: it ran longer than its **Time limit**;
+- `killed`: it was stopped by a signal;
+- `out of memory`: the kernel stopped it, for example at the package's memory limit.
+
+How it works:
+
+- Every **5 minutes** the panel reads the last finished run of every job that is **On**, with
+  one `systemctl show` call per server.
+- A failure is reported **once**. While the job keeps failing, no more alerts come. After a run
+  succeeds, the next failure is reported again.
+- Only the last run counts at each check. A job that fails and then succeeds between two checks
+  is not reported.
+- Paused jobs are not watched. A job that is running at the moment, or is on a server that is
+  offline, is looked at in a later check.
+- Right after an update to the release with these alerts, a failure that is older than one hour
+  is not reported.
+
+The alert links to the website or app. To get it by email, Telegram or another channel, tick
+**Cron job failed** under **Events** in the channel (or tick no event at all, which means every
+event).
+
+In the project's test VM, a job that ended with exit code 3 sent one "Cron job failed"
+notification.
 
 ## Package limit
 

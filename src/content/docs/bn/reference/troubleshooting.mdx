@@ -220,6 +220,18 @@ SSL mode **Full (strict)** করুন (DNS page-এ এর জন্য এক
 sudo journalctl -u caddy --since "30 min ago" | grep -i -E "error|challenge"
 ```
 
+## একটা website "Website suspended" বা "Bandwidth used up" দেখাচ্ছে
+
+পরের release থেকে এই ছোট page-গুলো (HTTP status 503-সহ) আসে ekPanel থেকে, website থেকে নয়:
+
+- **"Website suspended"**: একজন admin website-এর মালিককে [suspend](/guides/admin/customers/#suspend-a-customer) করেছেন।
+  Customer তালিকায় দেখায় "… থেকে সাসপেন্ডেড"। সব ফিরিয়ে আনতে **সাসপেন্ড তুলুন** (Unsuspend)-এ click করুন।
+- **"Bandwidth used up"**: মালিকের package মাসিক [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted) শেষ
+  হলে website বন্ধ করে দেয়। Customer তালিকায় দেখায় "ব্যান্ডউইথ শেষ: ওয়েবসাইট বন্ধ"। পরের মাসে (UTC) এটা নিজে থেকেই
+  শেষ হয়, অথবা বড় package দিলে সাথে সাথে।
+
+Customer-এর app-এর address-এও একই page দেখায়।
+
 ## Name server চালু হচ্ছে না (port 53)
 
 PowerDNS server-এর নিজের address-গুলোর port 53-এ listen করে (loopback আর network card-এর address,

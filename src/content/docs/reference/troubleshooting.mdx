@@ -220,6 +220,21 @@ what went wrong:
 sudo journalctl -u caddy --since "30 min ago" | grep -i -E "error|challenge"
 ```
 
+## A website shows "Website suspended" or "Bandwidth used up"
+
+From the next release, these short pages (with HTTP status 503) come from ekPanel itself, not
+from the website:
+
+- **"Website suspended"**: an administrator has
+  [suspended](/guides/admin/customers/#suspend-a-customer) the website's owner. The customers
+  list shows "Suspended since …". Click **Unsuspend** to bring everything back.
+- **"Bandwidth used up"**: the owner's package stops websites once its monthly
+  [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted) is used up. The customers list
+  shows "Bandwidth used up: websites stopped". It ends by itself in the next month (UTC), or at
+  once with a larger package.
+
+The same pages show on the addresses of the customer's apps.
+
 ## The name server will not start (port 53)
 
 PowerDNS listens on port 53 of the server's own addresses (loopback and the network cards'

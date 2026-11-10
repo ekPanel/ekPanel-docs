@@ -94,7 +94,10 @@ Traffic গোনা হয় web server-এর log থেকে **প্রত
 পারে। Request log সেগুলো সাথে সাথেই দেখায়।
 </Aside>
 
-Customer-রা তাঁদের package-এর ব্যবহারের পাশে **এই মাসের ট্রাফিক** (Traffic this month)-ও দেখেন।
+Customer-রা তাঁদের package-এর ব্যবহারের পাশে **এই মাসের ট্রাফিক** (Traffic this month)-ও দেখেন। পরের release থেকে
+এর নাম **এই মাসের ব্যান্ডউইথ** (Bandwidth this month), আর একটা package এটা
+[সীমিত করতে](/guides/admin/customers/#how-bandwidth-is-counted) পারে: একজন customer-এর সব website আর app মিলিয়ে
+bandwidth, প্রতি calendar মাসে (UTC)।
 
 ## কী রাখা হয়, আর কতদিন
 
@@ -120,7 +123,8 @@ PHP error log site-এর folder-এ থাকে, তাই এটা customer-
 
 ## সীমা আর যা এখনো নেই
 
-- Bandwidth দেখানো হয়, কিন্তু package এখনো এটা সীমিত করতে পারে না।
+- Package bandwidth সীমিত করতে পারে শুধু পরের release থেকে; দেখুন
+  [Bandwidth কীভাবে গোনা হয়](/guides/admin/customers/#how-bandwidth-is-counted)।
 - **লগ** card থেকে log download করা যায় না; PHP log-এর জন্য file manager ব্যবহার করুন।
 - Server-এর request log administrator-রা [server terminal](/guides/apps/terminal/) দিয়ে পড়তে পারেন।
 

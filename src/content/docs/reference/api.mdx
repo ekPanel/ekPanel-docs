@@ -127,7 +127,7 @@ segment of the path: `/sites/{id}/files` belongs to `sites`.
 | `mail` | Email domains, mailboxes and forwarders | `/mail` |
 | `backups` | Backup storage, backups and restores | `/backups` |
 | `servers` | Servers, their services, firewall, security, mail server and PHP extensions | `/servers` |
-| `customers` | Customers and packages, and moving everything a customer has on a server | `/customers`, `/packages` |
+| `customers` | Customers and packages, moving everything a customer has on a server, and (from the next release) suspending customers and changing owners | `/customers`, `/packages`, `/owner-changes` |
 | `settings` | Notification settings, updates, notifications and the audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
 The rules:
@@ -190,6 +190,7 @@ Common codes:
 | 403 | `forbidden` | Your role may not do this. |
 | 403 | `token_scope` | The token lacks the scope. The message names the scopes that would allow it. |
 | 403 | `token_not_allowed` | API tokens can never do this; use the web UI. |
+| 403 | `account_suspended` | <Badge text="next release" variant="note" /> The customer is [suspended](/guides/admin/customers/#suspend-a-customer). Sign-ins and the customer's tokens are refused until an administrator unsuspends them. |
 | 403 | `cross_site` | The request came from another site. |
 | 404 | `not_found` | It does not exist, **or it is not yours**. Most areas have their own code, such as `site_not_found` or `task_not_found`. |
 | 409 | `too_many_tokens` | You already have 50 tokens; revoke one first. |
@@ -455,6 +456,8 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Moving apps | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move an app](/guides/apps/move/#with-the-api-or-ekctl). |
 | Moving databases | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a database](/guides/data/move-database/#with-the-api-or-ekctl). |
 | Moving customers | `POST /customers/{id}/move`. See [Move a customer](/guides/admin/move-customer/#with-the-api-or-ekctl). |
+| Suspending customers | <Badge text="next release" variant="note" /> `POST /customers/{id}/suspend` with `{"reason": "…"}` (up to 500 characters, may be empty), `POST /customers/{id}/unsuspend`. See [Suspend a customer](/guides/admin/customers/#suspend-a-customer). |
+| Changing owners | <Badge text="next release" variant="note" /> `POST /owner-changes` with `{"to": "…", "sites": [], "databases": [], "apps": [], "mail_domains": [], "zones": []}` (scope `customers`; an empty `to` gives them to the administrators). See [Change the owner](/guides/admin/customers/#change-the-owner). |
 | Importing from cPanel | `POST /imports/inspect`, `POST /imports` (scope `sites`). See [Import from cPanel](/guides/admin/import-cpanel/#with-the-api). |
 | Importing a website archive | `GET /imports/files?server_id=…` (the files in a server's import folder), `POST /imports/site/inspect`, `POST /imports/site` (scope `sites`). See [Import a website archive](/guides/admin/import-website/#with-the-api). |
 | Importing from Coolify | `POST /imports/coolify/inspect` (read Coolify's applications, services and databases), `POST /imports/coolify` (scope `sites`). See [Import from Coolify](/guides/admin/import-coolify/#with-the-api). |

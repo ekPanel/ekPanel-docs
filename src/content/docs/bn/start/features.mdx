@@ -13,7 +13,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Aside type="note">
 এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
-server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), আর recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে) ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে), আর customer suspend করা, মালিক বদলানো, bandwidth limit ও ব্যর্থ cron job-এর alert ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -78,6 +78,8 @@ server-এ সরানো, backup থেকে website আবার বান�
 - Website-এর জন্য job (site-এর account হিসেবে চলে) আর app-এর জন্য job (container-এর ভেতরে চলে)।
 - Preset বা যেকোনো cron expression, আপনার time zone-এ, সাথে পরের পাঁচবার কখন চলবে তা দেখানো হয়।
 - সময়সীমা, শেষ ফলাফল আর output, **এখনই চালান** (Run now) আর pause।
+- <Badge text="পরের release" variant="note" /> Job fail করলে একটা alert
+  ([Fail করলে alert](/guides/websites/cron/#failure-alerts)), আবার ঠিকমতো না চলা পর্যন্ত একবারই।
 
 ## Log আর traffic
 
@@ -235,6 +237,12 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   log-এ লেখা থাকে।
 - <Badge text="পরের release" variant="note" /> একজন customer-এর এক server-এর
   [সবকিছু একবারে অন্য server-এ সরান](/guides/admin/move-customer/)।
+- <Badge text="পরের release" variant="note" /> [একজন customer-কে suspend করুন](/guides/admin/customers/#suspend-a-customer):
+  তিনি sign in করতে পারেন না, তাঁর website-এ একটা "suspended" page দেখায়, app আর cron job থামে, আর কিছুই মোছা হয় না।
+- <Badge text="পরের release" variant="note" /> Website, database, app, email domain আর DNS zone-এর
+  [মালিক বদলান](/guides/admin/customers/#change-the-owner), নতুন মালিকের package মিলিয়ে।
+- <Badge text="পরের release" variant="note" /> Package-এ মাসিক [bandwidth limit](/guides/admin/customers/#how-bandwidth-is-counted),
+  90% আর 100%-এ alert-সহ, আর package বললে পরের মাস পর্যন্ত website বন্ধ।
 
 ## Notification
 
@@ -243,7 +251,8 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - Panel-এর ভেতরে (না-পড়া সংখ্যাসহ একটা ঘণ্টা) আর email, Telegram, Discord, Slack বা signed
   webhook-এ।
 - যেমন: কোনো server offline, disk ভরে যাওয়া, backup ব্যর্থ হওয়া, কোনো website বা app apply না
-  হওয়া, কোনো package-এর disk limit প্রায় শেষ, ব্যর্থ task, আর নতুন address থেকে sign-in।
+  হওয়া, কোনো package-এর disk limit প্রায় শেষ, ব্যর্থ task, আর নতুন address থেকে sign-in। পরের release থেকে
+  ব্যর্থ cron job আর bandwidth-ও।
 - প্রতিটা message প্রাপকের নিজের ভাষায় লেখা হয়।
 
 ## অনেক server
@@ -317,5 +326,4 @@ release-এ।
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
 
 আরও কিছু ছোট জিনিসও এখনো নেই: database browser আর import/export, একটা single file restore করা বা
-backup download করা, customer suspend করা, bandwidth limit, ব্যর্থ cron job-এর alert, wildcard
-certificate (DNS-01), আর কোনো জিনিস অন্য মালিকের কাছে সরানো। এরপর phase 5-এ আসবে game server।
+backup download করা, আর wildcard certificate (DNS-01)। এরপর phase 5-এ আসবে game server।

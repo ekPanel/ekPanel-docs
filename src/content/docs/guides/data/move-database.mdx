@@ -159,8 +159,9 @@ ekctl api POST moves/<move id>/cleanup
 - Changes made to the old copy after the copy starts are not carried over.
 - The panel does not check free disk space on the new server before it starts.
 - A move that takes longer than 11 hours in all is stopped and fails.
-- Moving a database to another owner: not yet (see the [roadmap](/project/roadmap/)). When
-  its server is gone, a database can only be rebuilt elsewhere together with a website; see
+- Giving a database to another owner is not a move: from the next release, use
+  [Change owner](/guides/admin/customers/#change-the-owner). It is refused while the database is
+  being copied or switched. When its server is gone, a database can only be rebuilt elsewhere together with a website; see
   [Rebuild from a backup](/guides/websites/rebuild/).
 - Checked with the panel's automated tests; not yet tried with two servers, or with
   PostgreSQL.
