@@ -12,6 +12,10 @@ in to the same panel and sees only what they own, within the limits of their **p
 package is a plan, such as "Starter" or "Business": how many websites, databases and apps, how much
 disk space, and how much memory and CPU for all their processes together.
 
+<Badge text="next release" variant="note" /> Customers can also belong to a
+[reseller](/guides/admin/resellers/), who sells hosting on your servers to their own customers,
+with their own packages, within limits you give them.
+
 ## Before you start
 
 - You are signed in as an **administrator**. Customers and packages are under **Administration**
@@ -55,6 +59,10 @@ disk space, and how much memory and CPU for all their processes together.
 Customers can never run their own Compose files: "Customers cannot use Compose files." They can
 run single images and the reviewed services of the [catalogue](/guides/apps/catalog/).
 
+<Badge text="next release" variant="note" /> Resellers make packages of their own. The packages
+table then has a **Whose** column: **Yours**, or the reseller's name. See
+[A reseller's packages](/guides/admin/resellers/#a-resellers-packages).
+
 ### Changing a package
 
 Edit a package and save it. New memory and CPU limits reach the customers' servers at once,
@@ -83,10 +91,18 @@ first".
 
 The customer's panel language starts as yours at the moment you create them; they can change it.
 
+<Badge text="next release" variant="note" /> When you have [resellers](/guides/admin/resellers/),
+the form also has **Reseller**: **None (your own customer)**, or a reseller. "A reseller's
+customer uses one of that reseller's packages and counts against the reseller's limits." To move
+an existing customer to a reseller, to another reseller, or back to yourself, click **Edit** on
+the customer and change **Reseller** and **Package**; the new reseller's limits are checked
+first with everything the customer has.
+
 The customers list shows each customer's package and use, such as "2 of 3" websites and their disk
 space. From the next release it also shows **Bandwidth this month**, and badges for customers who
 are [suspended](#suspend-a-customer) or whose websites are stopped because their bandwidth is used
-up ("Bandwidth used up: websites stopped").
+up ("Bandwidth used up: websites stopped"). A reseller's customer shows "via …" with the reseller's
+name, and **Show** lists **All customers**, **Your own customers**, or one reseller's.
 
 ### Reset a password or two-factor sign-in
 
@@ -305,6 +321,11 @@ While a customer is suspended:
 You can still use [Sign in as](#sign-in-as-a-customer) to look at or fix a suspended customer's
 things.
 
+A [reseller](/guides/admin/resellers/) can suspend and unsuspend their own customers too, but
+cannot lift a suspension an administrator made: "An administrator suspended this customer, so
+only an administrator can lift it." Suspending a reseller suspends all their customers with them;
+see [Suspend a reseller](/guides/admin/resellers/#suspend-a-reseller).
+
 The audit log records "Customer suspended" (with the reason) and "Customer unsuspended" under your
 name. With the API: `POST /api/v1/customers/{id}/suspend` with `{"reason": "…"}`, and
 `POST /api/v1/customers/{id}/unsuspend` (a token needs the `customers` scope).
@@ -381,6 +402,8 @@ customer, and the package's app limit refused a third app.
   next release, their two-factor sign-in), and sign in as them.
 - From the next release: suspend and unsuspend customers, and change the owner of websites,
   databases, apps, email domains and DNS zones.
+- From the next release: add and manage [resellers](/guides/admin/resellers/). A reseller can do
+  the two points above too, but only for their own customers and packages.
 - Add and remove servers, see their metrics and services, and open a root
   [terminal](/guides/apps/terminal/).
 - Set up [backups](/guides/data/backups/), the firewall, server security, email servers and the
@@ -411,7 +434,8 @@ instead.
 ## Limits and what is not there yet
 
 - **Email to new customers** with their sign-in details: not yet; send the password yourself.
-- **Resellers** (who sell your packages to their own customers) and **sub-users**: not yet.
+- **Sub-users** and **white-label** branding: not yet. [Resellers](/guides/admin/resellers/), who
+  sell hosting to their own customers, come with the next release.
 - Real filesystem quotas: not yet; disk space is measured as described above.
 - The "Website suspended" and "Bandwidth used up" pages are in English only, because the server
   does not know the visitor's language. They cannot be changed yet.
@@ -424,6 +448,7 @@ See the [roadmap](/project/roadmap/).
 
 ## Related
 
+- [Resellers](/guides/admin/resellers/): Let someone sell hosting to their own customers, within limits you set.
 - [Move a customer](/guides/admin/move-customer/): Move everything a customer has on one server to another.
 - [Notifications](/guides/admin/notifications/): Customers get alerts about their own websites, apps, disk space and bandwidth.
 - [Logs and traffic](/guides/websites/logs-traffic/): The traffic that bandwidth limits count.

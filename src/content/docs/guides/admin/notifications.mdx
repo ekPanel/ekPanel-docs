@@ -2,7 +2,7 @@
 title: Notifications
 description: Get alerts about offline servers, failed backups, broken websites and more, in the panel and by email, Telegram, Discord, Slack or a signed webhook.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
@@ -12,8 +12,9 @@ website could not be set up, a disk is filling up. Every alert appears under the
 top of the panel. You can also have alerts sent to **channels**: email, Telegram, Discord, Slack or
 your own webhook.
 
-Every user sets up their own channels: administrators and customers alike. Customers only receive
-alerts about their own things.
+Every user sets up their own channels: administrators, customers and (from the next release)
+resellers alike. Customers only receive alerts about their own things; resellers about their
+customers' things.
 
 ## The bell
 
@@ -103,8 +104,8 @@ sent back to the browser. When you edit a channel, leave them empty to keep the 
 
 ## Events
 
-Administrators can choose from every event; customers from those about their own websites, apps,
-databases, cron jobs, disk space, bandwidth and account.
+Administrators can choose from every event; customers and resellers from those about websites,
+apps, databases, cron jobs, disk space, bandwidth and their account.
 
 | Event (in the panel) | When it is sent | Who gets it |
 | --- | --- | --- |
@@ -136,6 +137,13 @@ databases, cron jobs, disk space, bandwidth and account.
 
 Alerts go to **every** administrator. A customer receives only the alerts marked "owner" or
 "customer" above, and only about their own things.
+
+<Badge text="next release" variant="note" /> A [reseller](/guides/admin/resellers/) receives every
+alert their customers receive, about those customers' things, as well as the customer. They also get
+**Bandwidth almost used up**, **Bandwidth used up** and **Bandwidth used up, websites stopped** for
+the bandwidth of all their customers together, which go to the administrators too (see
+[Bandwidth](/guides/admin/resellers/#bandwidth)), and the alerts marked "Only you" about their own
+account.
 
 Each alert has a severity: **info** (back online), **warning** or **critical** (server offline, failed
 backup, website, app, database or email problem, malware, disk space or bandwidth used up).
@@ -216,4 +224,5 @@ actually connected to, so redirects and DNS tricks do not get around it. Adminis
 - [Servers](/guides/admin/servers/): What counts as offline, and the disk warning.
 - [Backups](/guides/data/backups/): Backups that fail send alerts.
 - [Customers and packages](/guides/admin/customers/): Disk space and bandwidth alerts for customers.
+- [Resellers](/guides/admin/resellers/): Alerts about a reseller's customers and their bandwidth.
 - [Cron jobs](/guides/websites/cron/): When a failed job sends an alert.

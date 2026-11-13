@@ -127,7 +127,7 @@ segment of the path: `/sites/{id}/files` belongs to `sites`.
 | `mail` | Email domains, mailboxes and forwarders | `/mail` |
 | `backups` | Backup storage, backups and restores | `/backups` |
 | `servers` | Servers, their services, firewall, security, mail server and PHP extensions | `/servers` |
-| `customers` | Customers and packages, moving everything a customer has on a server, and (from the next release) suspending customers and changing owners | `/customers`, `/packages`, `/owner-changes` |
+| `customers` | Customers and packages, moving everything a customer has on a server, and (from the next release) suspending customers, changing owners and managing resellers | `/customers`, `/packages`, `/owner-changes`, `/resellers` |
 | `settings` | Notification settings, updates, notifications and the audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
 
 The rules:
@@ -144,7 +144,8 @@ The rules:
   sent, so a client may send its token on every request.
 - A scope never adds rights. A customer's token with `sites` still sees only that customer's
   websites, and an administrator endpoint answers `403 forbidden` for it.
-- Customers can choose only `read`, `sites`, `databases`, `apps`, `dns` and `mail`.
+- Customers can choose only `read`, `sites`, `databases`, `apps`, `dns`, `mail` and `settings`.
+  From the next release, resellers can choose those and `customers`.
 
 <Aside type="caution">
 `read` is broad: it sees everything its owner sees, including the audit log (for an
@@ -190,7 +191,7 @@ Common codes:
 | 403 | `forbidden` | Your role may not do this. |
 | 403 | `token_scope` | The token lacks the scope. The message names the scopes that would allow it. |
 | 403 | `token_not_allowed` | API tokens can never do this; use the web UI. |
-| 403 | `account_suspended` | <Badge text="next release" variant="note" /> The customer is [suspended](/guides/admin/customers/#suspend-a-customer). Sign-ins and the customer's tokens are refused until an administrator unsuspends them. |
+| 403 | `account_suspended` | <Badge text="next release" variant="note" /> The customer is [suspended](/guides/admin/customers/#suspend-a-customer), or the reseller is, or the customer's [reseller](/guides/admin/resellers/#suspend-a-reseller) is. Sign-ins and their tokens are refused until they are unsuspended. |
 | 403 | `cross_site` | The request came from another site. |
 | 404 | `not_found` | It does not exist, **or it is not yours**. Most areas have their own code, such as `site_not_found` or `task_not_found`. |
 | 409 | `too_many_tokens` | You already have 50 tokens; revoke one first. |
@@ -212,10 +213,10 @@ details: `"via_token": "deploy script"`, `"token_id": "…"`.
 | --- | --- |
 | **Administrator** (`admin`) | Everything. |
 | **Customer** (`customer`) | Their own websites, databases, apps, DNS zones, email, cron jobs and notifications, within their package's limits. They see the servers they may use, but cannot manage servers, backups, packages or other customers. |
-| **Reseller** (`reseller`) | <Badge text="not yet" variant="caution" /> The role exists in the database, but no endpoint accepts it yet. Resellers come in phase 4e. |
+| **Reseller** (`reseller`) | <Badge text="next release" variant="note" /> Their own customers and packages, and everything their customers own (websites, databases, apps, DNS zones, email, cron jobs), within the reseller's limits. They see the servers they may use, but cannot manage servers, backups, imports, updates or resellers, read the audit log, or connect a Cloudflare account for a customer (`403 not_for_resellers`). See [Resellers](/guides/admin/resellers/). |
 
 Customers never see what is not theirs: asking for someone else's website gives `404`, the same
-as a website that does not exist. An administrator who uses **Sign in as** on a customer acts
+as a website that does not exist. A reseller sees only their customers' things in the same way. An administrator who uses **Sign in as** on a customer acts
 with the customer's rights for one hour, is recorded as themselves in the audit log, and cannot
 change the customer's password or two-factor settings, or make tokens for them.
 
@@ -420,7 +421,7 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | `GET /auth/passkeys`, `POST /auth/passkeys/options`, `POST /auth/passkeys`, `DELETE /auth/passkeys/{id}` | <Badge text="next release" variant="note" /> Passkeys: list, start adding one (with `{"password": "…"}`), finish adding it with the browser's answer, remove. |
 | `/tokens`, `/tokens/{id}` | Your API tokens: list, create, revoke (browser session only). |
 
-### Administrators and customers
+### Administrators, resellers and customers
 
 | Group | Endpoints start with |
 | --- | --- |
@@ -436,12 +437,26 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Cron jobs | `/cron` |
 | Servers and tasks (read) | `GET /servers`, `GET /tasks`, `GET /tasks/{id}` |
 
+A reseller must name one of their customers when they create something (`owner_id`), or gets
+`400 customer_required`.
+
+### Administrators and resellers
+
+A reseller reaches only their own customers and packages here, and can give things only to one of
+their own customers.
+
+| Group | Endpoints start with |
+| --- | --- |
+| Customers and packages | `/customers`, `/packages`. For administrators, `GET /customers?reseller_id=…` lists one reseller's customers, and `reseller_id` in a customer's body chooses their reseller (empty for your own) |
+| Resetting a customer's two-factor sign-in | <Badge text="next release" variant="note" /> `POST /customers/{id}/2fa/reset` (browser session only, not while signed in as someone). |
+| Suspending customers | <Badge text="next release" variant="note" /> `POST /customers/{id}/suspend` with `{"reason": "…"}` (up to 500 characters, may be empty), `POST /customers/{id}/unsuspend`. A reseller cannot unsuspend a customer an administrator suspended (`403 suspended_by_admin`). See [Suspend a customer](/guides/admin/customers/#suspend-a-customer). |
+| Changing owners | <Badge text="next release" variant="note" /> `POST /owner-changes` with `{"to": "…", "sites": [], "databases": [], "apps": [], "mail_domains": [], "zones": []}` (scope `customers`; an empty `to` gives them to the administrators, which resellers cannot do). See [Change the owner](/guides/admin/customers/#change-the-owner). |
+
 ### Administrators only
 
 | Group | Endpoints start with |
 | --- | --- |
-| Customers and packages | `/customers`, `/packages` |
-| Resetting a customer's two-factor sign-in | <Badge text="next release" variant="note" /> `POST /customers/{id}/2fa/reset` (browser session only, not while signed in as a customer). |
+| Resellers | <Badge text="next release" variant="note" /> `GET`, `POST /resellers`; `GET`, `PUT`, `DELETE /resellers/{id}`; `POST /resellers/{id}/password`, `/2fa/reset`, `/impersonate`, `/suspend` (with `{"reason": "…"}`) and `/unsuspend` (scope `customers`; `2fa/reset` and `impersonate` need a browser session). See [Resellers](/guides/admin/resellers/#api-tokens-and-the-api). |
 | Servers | `/servers` (add, delete, connection command, addresses, live statistics, metrics, services, terminal, PHP extensions, usage, traffic) |
 | Server security | `/servers/{id}/security/...` (CrowdSec, bans, alerts, automatic updates, countries, malware) |
 | Firewall | `/servers/{id}/firewall` |
@@ -456,8 +471,6 @@ All paths are below `/api/v1`. The full list, with methods and scopes, is the
 | Moving apps | `POST /apps/{id}/move`, `GET /apps/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move an app](/guides/apps/move/#with-the-api-or-ekctl). |
 | Moving databases | `POST /databases/{id}/move`, `GET /databases/{id}/moves`, `POST /moves/{id}/cleanup`. See [Move a database](/guides/data/move-database/#with-the-api-or-ekctl). |
 | Moving customers | `POST /customers/{id}/move`. See [Move a customer](/guides/admin/move-customer/#with-the-api-or-ekctl). |
-| Suspending customers | <Badge text="next release" variant="note" /> `POST /customers/{id}/suspend` with `{"reason": "…"}` (up to 500 characters, may be empty), `POST /customers/{id}/unsuspend`. See [Suspend a customer](/guides/admin/customers/#suspend-a-customer). |
-| Changing owners | <Badge text="next release" variant="note" /> `POST /owner-changes` with `{"to": "…", "sites": [], "databases": [], "apps": [], "mail_domains": [], "zones": []}` (scope `customers`; an empty `to` gives them to the administrators). See [Change the owner](/guides/admin/customers/#change-the-owner). |
 | Importing from cPanel | `POST /imports/inspect`, `POST /imports` (scope `sites`). See [Import from cPanel](/guides/admin/import-cpanel/#with-the-api). |
 | Importing a website archive | `GET /imports/files?server_id=…` (the files in a server's import folder), `POST /imports/site/inspect`, `POST /imports/site` (scope `sites`). See [Import a website archive](/guides/admin/import-website/#with-the-api). |
 | Importing from Coolify | `POST /imports/coolify/inspect` (read Coolify's applications, services and databases), `POST /imports/coolify` (scope `sites`). See [Import from Coolify](/guides/admin/import-coolify/#with-the-api). |

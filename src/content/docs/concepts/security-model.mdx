@@ -80,7 +80,10 @@ delete it explicitly.
 ## Customers and limits
 
 Customers sign in to the same panel. Ownership is checked in one place for every request,
-and anything a customer does not own answers "not found", as if it did not exist.
+and anything a customer does not own answers "not found", as if it did not exist. From the next
+release, a [reseller](/guides/admin/resellers/) is checked in the same place: they see their
+customers' things and nothing else, and their customers stay within the reseller's limits as
+well as their own packages.
 
 Each customer gets a **systemd slice** (a cgroup) with their package's memory and CPU
 limits. All their PHP runs under a PHP-FPM process of their own inside it, and all their

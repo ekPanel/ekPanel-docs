@@ -17,7 +17,7 @@ host থেকে একটা একটা করে website, তার file-�
 দিয়ে। 4e শুরু হয়েছে: এর প্রথম অংশ, account-এর নিরাপত্তা (two-factor sign-in-এর recovery code, কারও
 two-factor sign-in reset করা, sign in থাকা device-এর তালিকা, আর passkey), শেষ হয়েছে আর আসবে পরের release-এ, এর
 দ্বিতীয় অংশটাও তাই: customer suspend করা, website আর অন্য জিনিসের মালিক বদলানো, package-এ bandwidth limit, আর ব্যর্থ
-cron job-এর alert। এরপর reseller আর white-label।
+cron job-এর alert, আর এর তৃতীয় অংশ: reseller। এরপর white-label আর sub-user।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -189,13 +189,23 @@ host-গুলোর মতো করে বানানো backup দিয়�
     alert-সহ, আর package বললে পরের মাস বা বড় package পর্যন্ত website-এ একটা "bandwidth used up" page (503)
   - [ব্যর্থ cron job-এর alert](/guides/websites/cron/#failure-alerts), প্রতি 5 মিনিটে check, আবার একটা run সফল না
     হওয়া পর্যন্ত একবারই
-  - Suspend, bandwidth-এ বন্ধ করা আর cron alert VM-এ চালিয়ে দেখা হয়েছে; মালিক বদলানো এখন পর্যন্ত শুধু automated test-এ
+  - Suspend, bandwidth-এ বন্ধ করা, cron alert আর মালিক বদলানো VM-এ চালিয়ে দেখা হয়েছে
+- [Reseller](/guides/admin/resellers/) (4e-3) <Badge text="শেষ" variant="success" />:
+  - নিজস্ব package আর customer-সহ reseller, administrator-এর দেওয়া সীমার মধ্যে: সব customer মিলিয়ে মোট (customer-দের
+    যা আছে তা গুনে, তাই একজন reseller নিজের যা আছে তার বেশি বিক্রি করতে পারেন), একটা package সর্বোচ্চ কতটা দিতে পারে,
+    আর তাঁর package কোন PHP version, image, server আর feature দিতে পারবে
+  - একজন reseller শুধু তাঁর customer আর তাঁদের জিনিস দেখেন আর সামলান; server, backup, security, import, update বা
+    audit log নয়
+  - একজন reseller-কে suspend করলে তাঁর সব customer suspend হন; admin-এর করা suspend reseller তুলতে পারেন না
+  - সব customer মিলিয়ে একটা bandwidth মোট, alert আর চাইলে বন্ধ করা-সহ; reseller-রা তাঁদের customer-দের alert-ও পান
+  - Admin-রা reseller ধরে customer দেখেন, একজন customer-কে অন্য reseller-এর কাছে সরান, আর reseller হিসেবে ঢোকেন
+  - VM-এ চালিয়ে দেখা হয়েছে: website-এর মোট, suspend করা আর তোলা, bandwidth-এ বন্ধ করা, reseller-এর customer-দের মধ্যে
+    মালিক বদল, আর reseller মোছা
 
 বাকি আছে:
 
-- নিজস্ব package আর customer-সহ reseller, administrator-এর দেওয়া সীমার মধ্যে
-- White-label: নাম, logo, রং আর panel-এর domain
-- বাছাই করা permission-সহ sub-user
+- White-label (4e-4): নাম, logo, রং আর panel-এর domain
+- বাছাই করা permission-সহ sub-user (4e-5)
 
 ### 4f. Security center
 

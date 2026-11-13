@@ -10,7 +10,7 @@ import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/comp
 API token হলো একটা key, যা দিয়ে কোনো script, CI job বা [ekctl](/reference/cli/) command-line tool আপনার হয়ে
 panel-এর [API](/reference/api/) ব্যবহার করতে পারে। প্রতিটা token শুধু আপনার অনুমতি দেওয়া কাজটুকু (এর
 **scope**) করতে পারে, এর মেয়াদ শেষ হতে পারে, আর আলাদা করে revoke করা যায়, তাই কোনো script-এ আপনার password
-রাখতে হয় না। Administrator আর customer দুজনেরই token আছে।
+রাখতে হয় না। Administrator আর customer-দের token আছে, আর পরের release থেকে reseller-দেরও।
 
 <Aside type="caution" title="v0.1.0-এর পরে নতুন">
 API token আছে main repository-র `dev` branch-এ, আর আসবে **পরের release-এ**। v0.1.0-এর panel-এ এখনো **API
@@ -70,7 +70,7 @@ revoke করে নতুন একটা বানান। Token যার �
 | **ইমেইল** (Email) | `mail` | Email domain, mailbox আর forwarder manage করা। |
 | **ব্যাকআপ** (Backups) | `backups` | Backup storage manage করা, backup চালানো আর restore করা। শুধু administrator। |
 | **সার্ভার** (Servers) | `servers` | Server, তাদের service, firewall আর security manage করা। শুধু administrator। |
-| **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা; পরের release থেকে customer suspend করা আর মালিক বদলানোও। শুধু administrator। |
+| **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা; পরের release থেকে customer suspend করা আর মালিক বদলানোও, আর (administrator-দের জন্য) reseller সামলানো। Administrator, আর পরের release থেকে নিজের customer-দের জন্য reseller। |
 | **সেটিংস** (Settings) | `settings` | Panel-এর setting, update, notification আর audit log। Customer-এর জন্য: তাঁর নিজের notification আর notification channel। |
 
 প্রতিটা অংশের নিজের scope দিয়ে token সেই অংশটা পড়তেও পারে, তাই শুধু **ওয়েবসাইট**-ওয়ালা token website-এর
@@ -177,6 +177,20 @@ Customer-দেরও **আপনার অ্যাকাউন্ট**-এর 
 
 তাই একজন customer আপনার কাছে কিছু না চেয়েই GitHub Actions থেকে নিজের website deploy করতে বা ekctl ব্যবহার করতে
 পারেন।
+
+## Reseller-দের token
+
+<Badge text="পরের release" variant="note" /> [Reseller](/guides/admin/resellers/)-দেরও একই **API টোকেন** (API tokens)
+page আছে, আটটা scope-সহ: **পড়া**, **ওয়েবসাইট**, **ডেটাবেস**, **অ্যাপ**, **DNS**, **ইমেইল**, **গ্রাহক** আর **সেটিংস**।
+একজন reseller-এর token:
+
+- reseller হিসেবেই কাজ করে: শুধু তাঁর customer আর তাঁদের জিনিস দেখে আর বদলায়, reseller-এর আর package-এর সীমার মধ্যে;
+- **গ্রাহক** scope দিয়ে reseller-এর নিজের customer আর package সামলায়, তাঁদের suspend করে, আর তাঁদের মধ্যে মালিক বদলায়
+  (`/customers`, `/packages`, `/owner-changes`)। Customer-এর হয়ে ঢোকা আর তাঁর two-factor sign-in reset করার জন্য তবুও
+  browser লাগে;
+- scope যা-ই হোক, কখনো administrator page-এ (যেমন server, backup বা reseller) পৌঁছাতে পারে না;
+- reseller [suspend](/guides/admin/resellers/#suspend-a-reseller) থাকা অবস্থায় কাজ করে না। Suspend করা reseller-এর
+  customer-দের token-ও তখন কাজ করে না।
 
 ## কীভাবে কাজ করে
 

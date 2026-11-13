@@ -17,8 +17,8 @@ Everything on this page is in v0.1.0, the first release, except
 customers to another server, rebuilding a website from a backup, and importing from cPanel,
 website archives and Coolify (under [Many servers](#many-servers)), recovery codes,
 passkeys and the list of signed-in devices (under [Security](#security)), and suspending
-customers, changing owners, bandwidth limits and alerts for failed cron jobs, which come with
-the next release. You can
+customers, changing owners, bandwidth limits, alerts for failed cron jobs and resellers, which
+come with the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -249,6 +249,11 @@ has not been tried yet.
 - <Badge text="next release" variant="note" /> [Bandwidth limits](/guides/admin/customers/#how-bandwidth-is-counted)
   per month in packages, with alerts at 90% and 100%, and if the package says so, websites stopped
   until the next month.
+- <Badge text="next release" variant="note" /> [Resellers](/guides/admin/resellers/): they sell
+  hosting to their own customers, with their own packages, within totals you set for all their
+  customers together (counted on what the customers have), a largest package, and the servers,
+  PHP versions and images they may offer. Suspending a reseller suspends all their customers; a
+  reseller's bandwidth can be limited and stopped like a customer's.
 
 ## Notifications
 
@@ -258,7 +263,7 @@ has not been tried yet.
   webhooks.
 - Events such as a server offline, a full disk, a failed backup, a website or app that fails
   to apply, a package near its disk limit, failed tasks and sign-in from a new address. From
-  the next release also failed cron jobs and bandwidth.
+  the next release also failed cron jobs and bandwidth, and resellers get their customers' alerts.
 - Messages are written in each recipient's language.
 
 ## Many servers
@@ -314,7 +319,7 @@ has not been tried yet.
 <Badge text="next release" variant="note" /> These are in the main repository's `dev` branch
 and come with the release after v0.1.0.
 
-- **API tokens** for scripts, for administrators and customers: scopes per area (read,
+- **API tokens** for scripts, for administrators, resellers and customers: scopes per area (read,
   websites, databases, apps, DNS, email, backups, servers, customers, settings), an expiry,
   shown once, revocable, last use shown, and named in the audit log. Tokens can never change
   account security or open a terminal.
@@ -337,7 +342,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| Resellers | Resellers with their own customers, white-label (name, logo, colours, domain), sub-users |
+| White-label and sub-users | White-label for resellers (name, logo, colours, domain), and sub-users with chosen permissions. Resellers themselves come with the next release |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |
 

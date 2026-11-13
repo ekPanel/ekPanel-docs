@@ -12,6 +12,9 @@ import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 Package হলো একটা plan, যেমন "Starter" বা "Business": কয়টা website, database আর app, কতটা disk space,
 আর তাঁর সব process মিলিয়ে কতটা memory আর CPU।
 
+<Badge text="পরের release" variant="note" /> Customer কোনো [reseller](/guides/admin/resellers/)-এরও হতে পারেন:
+reseller আপনার server-এ নিজের customer-দের কাছে hosting বিক্রি করেন, নিজের package দিয়ে, আপনার দেওয়া limit-এর মধ্যে।
+
 ## শুরু করার আগে
 
 - আপনি **admin** হিসেবে sign in করা আছেন। Customer আর package মেনুতে **অ্যাডমিন** (Administration)-এর
@@ -55,6 +58,9 @@ Package হলো একটা plan, যেমন "Starter" বা "Business": �
 Customer-রা কখনো নিজের Compose file চালাতে পারেন না: "গ্রাহক Compose ফাইল ব্যবহার করতে পারেন না।" তাঁরা
 একক image আর [catalogue](/guides/apps/catalog/)-এর যাচাই করা service চালাতে পারেন।
 
+<Badge text="পরের release" variant="note" /> Reseller-রা নিজেদের package বানান। তখন package table-এ একটা **কার**
+(Whose) column থাকে: **আপনার**, বা reseller-এর নাম। দেখুন [Reseller-এর package](/guides/admin/resellers/#a-resellers-packages)।
+
 ### Package বদলানো
 
 একটা package edit করে save করুন। নতুন memory আর CPU limit সাথে সাথে customer-দের server-এ পৌঁছে যায়,
@@ -82,10 +88,17 @@ Customer-রা কখনো নিজের Compose file চালাতে প
 Customer-এর panel-এর ভাষা শুরুতে হয় আপনার ভাষা, তাঁকে তৈরি করার মুহূর্তে আপনি যেটা ব্যবহার করছিলেন;
 তিনি এটা বদলাতে পারেন।
 
+<Badge text="পরের release" variant="note" /> আপনার [reseller](/guides/admin/resellers/) থাকলে form-এ **রিসেলার**
+(Reseller)-ও থাকে: **কেউ নয় (আপনার নিজের গ্রাহক)**, বা একজন reseller। "রিসেলারের গ্রাহক সেই রিসেলারের কোনো প্যাকেজ
+পান, আর তাঁর সবকিছু রিসেলারের সীমার মধ্যে গোনা হয়।" আগে থেকে থাকা একজন customer-কে কোনো reseller-এর কাছে, অন্য
+reseller-এর কাছে, বা আবার নিজের কাছে সরাতে customer-এর **সম্পাদনা** (Edit)-এ click করে **রিসেলার** আর **প্যাকেজ**
+বদলান; customer-এর যা আছে সব নিয়ে আগে নতুন reseller-এর limit check হয়।
+
 Customer তালিকায় প্রত্যেক customer-এর package আর ব্যবহার দেখায়, যেমন website-এর "3-এর মধ্যে 2" আর
 তাঁর disk space। পরের release থেকে এখানে **এই মাসের ব্যান্ডউইথ**-ও দেখায়, আর badge দেখায় সেই customer-দের পাশে,
 যাঁরা [suspend করা](#suspend-a-customer) আছেন বা যাঁদের bandwidth শেষ হওয়ায় website বন্ধ ("ব্যান্ডউইথ শেষ: ওয়েবসাইট
-বন্ধ")।
+বন্ধ")। Reseller-এর customer-এর পাশে reseller-এর নামসহ "…-এর মাধ্যমে" লেখা থাকে, আর **দেখান** (Show) দিয়ে **সব গ্রাহক**,
+**আপনার নিজের গ্রাহক**, বা একজন reseller-এর customer দেখা যায়।
 
 ### Password বা two-factor sign-in reset করুন
 
@@ -293,6 +306,11 @@ Suspend করলে কিছু না মুছেই একজন customer-�
 Suspend করা customer-এর জিনিস দেখতে বা ঠিক করতে আপনি তখনও [তাঁর হয়ে ঢুকুন](#sign-in-as-a-customer) ব্যবহার
 করতে পারেন।
 
+একজন [reseller](/guides/admin/resellers/)-ও নিজের customer-দের suspend করতে আর suspend তুলতে পারেন, কিন্তু admin-এর
+করা suspend তুলতে পারেন না: "একজন অ্যাডমিন এই গ্রাহককে সাসপেন্ড করেছেন, তাই শুধু অ্যাডমিনই সেটা তুলতে পারবেন।"
+একজন reseller-কে suspend করলে তাঁর সব customer-ও suspend হয়ে যান; দেখুন
+[Reseller-কে suspend করুন](/guides/admin/resellers/#suspend-a-reseller)।
+
 Audit log আপনার নামে "গ্রাহক সাসপেন্ড" (কারণ-সহ) আর "গ্রাহকের সাসপেন্ড তোলা হয়েছে" লেখে। API দিয়ে:
 `POST /api/v1/customers/{id}/suspend`, `{"reason": "…"}`-সহ, আর `POST /api/v1/customers/{id}/unsuspend`
 (token-এর `customers` scope লাগে)।
@@ -361,6 +379,8 @@ Audit log "মালিক বদলেছে" লেখে, দেওয়া 
   sign-in) reset করা, আর তাঁদের হয়ে sign in করা।
 - পরের release থেকে: customer suspend করা আর suspend তুলে দেওয়া, আর website, database, app, email domain ও DNS
   zone-এর মালিক বদলানো।
+- পরের release থেকে: [reseller](/guides/admin/resellers/) যোগ করা আর সামলানো। একজন reseller-ও ওপরের দুটো কাজ করতে
+  পারেন, তবে শুধু নিজের customer আর package-এর বেলায়।
 - Server যোগ করা আর সরানো, তাদের metric আর service দেখা, আর একটা root
   [terminal](/guides/apps/terminal/) খোলা।
 - [Backup](/guides/data/backups/), firewall, server security, email server আর built-in name server সেট
@@ -389,7 +409,8 @@ Audit log "মালিক বদলেছে" লেখে, দেওয়া 
 ## Limit আর যা এখনো নেই
 
 - নতুন customer-দের sign-in তথ্যসহ **email**: এখনো নেই; password নিজে পাঠান।
-- **Reseller** (যাঁরা আপনার package নিজের customer-দের কাছে বিক্রি করেন) আর **sub-user**: এখনো নেই।
+- **Sub-user** আর **white-label** branding: এখনো নেই। [Reseller](/guides/admin/resellers/), যাঁরা নিজের customer-দের
+  কাছে hosting বিক্রি করেন, আসছে পরের release-এ।
 - সত্যিকারের filesystem quota: এখনো নেই; disk space ওপরে যেভাবে বলা হয়েছে সেভাবে মাপা হয়।
 - "Website suspended" আর "Bandwidth used up" page শুধু ইংরেজিতে, কারণ server visitor-এর ভাষা জানে না। এগুলো এখনো
   বদলানো যায় না।
@@ -402,6 +423,7 @@ Audit log "মালিক বদলেছে" লেখে, দেওয়া 
 
 ## সম্পর্কিত
 
+- [Reseller](/guides/admin/resellers/): আপনার ঠিক করা limit-এর মধ্যে কাউকে নিজের customer-দের কাছে hosting বিক্রি করতে দিন।
 - [Customer সরান](/guides/admin/move-customer/): একজন customer-এর এক server-এর সবকিছু অন্য server-এ সরান।
 - [Notification](/guides/admin/notifications/): Customer-রা তাঁদের নিজের website, app, disk space আর bandwidth নিয়ে alert পান।
 - [Log আর traffic](/guides/websites/logs-traffic/): Bandwidth limit যে traffic গোনে।

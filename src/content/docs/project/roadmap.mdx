@@ -21,7 +21,7 @@ its API. 4e has started: its first part, account security (recovery codes for tw
 sign-in, resetting someone's two-factor sign-in, a list of signed-in devices, and passkeys), is
 done and comes with the next release, and so is its second part: suspending customers, changing
 the owner of websites and other things, bandwidth limits in packages, and alerts for failed cron
-jobs. Resellers and white-label come next. The full plan, with every decision and test, is
+jobs, and its third part: resellers. White-label and sub-users come next. The full plan, with every decision and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -209,14 +209,27 @@ Done in the `dev` branch; it comes with the **next release**:
     page (503) on the websites until the next month or a larger package
   - [Alerts for failed cron jobs](/guides/websites/cron/#failure-alerts), checked every 5
     minutes, once until a run succeeds again
-  - Suspending, the bandwidth stop and the cron alert were tried in the VM; changing the owner
-    so far only in the automated tests
+  - Suspending, the bandwidth stop, the cron alert and changing the owner were tried in the VM
+- [Resellers](/guides/admin/resellers/) (4e-3) <Badge text="done" variant="success" />:
+  - Resellers with their own packages and customers, within limits an administrator gives them:
+    totals for all their customers (counted on what the customers have, so a reseller may sell
+    more than they have), the most one package may give, and the PHP versions, images, servers
+    and features their packages may offer
+  - A reseller sees and manages only their customers and their customers' things; not servers,
+    backups, security, imports, updates or the audit log
+  - Suspending a reseller suspends all their customers; a reseller cannot lift a suspension an
+    administrator made
+  - A bandwidth total for all their customers, with alerts and an optional stop; resellers also
+    get their customers' alerts
+  - Administrators filter customers by reseller, move a customer to another reseller, and sign
+    in as a reseller
+  - Tried in the VM: the website total, suspending and unsuspending, the bandwidth stop, an owner
+    change between a reseller's customers, and deleting a reseller
 
 Still to come:
 
-- Resellers with their own packages and customers, within limits an administrator gives them
-- White-label: name, logo, colours and the panel's domain
-- Sub-users with chosen permissions
+- White-label (4e-4): name, logo, colours and the panel's domain
+- Sub-users (4e-5) with chosen permissions
 
 ### 4f. Security center
 

@@ -101,7 +101,13 @@ in the charts up to 15 minutes later. The request log shows them right away.
 Customers also see their **Traffic this month** next to their package usage. From the next
 release it is called **Bandwidth this month**, and a package can
 [limit it](/guides/admin/customers/#how-bandwidth-is-counted): the bandwidth of a customer's
-websites and apps together, per calendar month (UTC).
+websites and apps together, per calendar month (UTC). A [reseller's](/guides/admin/resellers/#bandwidth)
+limits can cap all their customers' bandwidth together.
+
+An administrator does not have to wait for the next quarter hour: `POST /api/v1/servers/{id}/traffic`
+(scope `servers`), or `ekctl api POST servers/<id>/traffic`, collects a server's traffic at once.
+From the next release this also checks the bandwidth limits of packages and resellers at once,
+as the collection every 15 minutes does.
 
 ## What is kept, and for how long
 

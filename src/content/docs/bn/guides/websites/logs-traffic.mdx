@@ -97,7 +97,12 @@ Traffic গোনা হয় web server-এর log থেকে **প্রত
 Customer-রা তাঁদের package-এর ব্যবহারের পাশে **এই মাসের ট্রাফিক** (Traffic this month)-ও দেখেন। পরের release থেকে
 এর নাম **এই মাসের ব্যান্ডউইথ** (Bandwidth this month), আর একটা package এটা
 [সীমিত করতে](/guides/admin/customers/#how-bandwidth-is-counted) পারে: একজন customer-এর সব website আর app মিলিয়ে
-bandwidth, প্রতি calendar মাসে (UTC)।
+bandwidth, প্রতি calendar মাসে (UTC)। একজন [reseller-এর](/guides/admin/resellers/#bandwidth) limit তাঁর সব customer-এর
+bandwidth একসাথে সীমিত করতে পারে।
+
+Admin-কে পরের ১৫ মিনিটের অপেক্ষা করতে হয় না: `POST /api/v1/servers/{id}/traffic` (scope `servers`), বা
+`ekctl api POST servers/<id>/traffic`, একটা server-এর traffic সাথে সাথে নিয়ে আসে। পরের release থেকে এটা package আর
+reseller-এর bandwidth limit-ও সাথে সাথে check করে, প্রতি ১৫ মিনিটের collection যেমন করে।
 
 ## কী রাখা হয়, আর কতদিন
 

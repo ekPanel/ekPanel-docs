@@ -2,7 +2,7 @@
 title: Notification
 description: Offline server, fail করা backup, নষ্ট website আর আরও অনেক কিছুর alert পান, panel-এ আর email, Telegram, Discord, Slack বা signed webhook-এ।
 sidebar:
-  order: 4
+  order: 5
 ---
 
 import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
@@ -12,8 +12,8 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 নিচে দেখা যায়। চাইলে alert-গুলো **channel**-এও পাঠাতে পারেন: email, Telegram, Discord, Slack বা আপনার
 নিজের webhook।
 
-প্রত্যেক user নিজের channel নিজে সেট করেন: admin আর customer দুজনেই। Customer-রা শুধু তাঁদের নিজের
-জিনিস নিয়ে alert পান।
+প্রত্যেক user নিজের channel নিজে সেট করেন: admin, customer আর (পরের release থেকে) reseller সবাই। Customer-রা
+শুধু তাঁদের নিজের জিনিস নিয়ে alert পান; reseller-রা তাঁদের customer-দের জিনিস নিয়ে।
 
 ## ঘণ্টা
 
@@ -106,8 +106,8 @@ Bot token, webhook address আর signing key হলো secret: এগুলো 
 
 ## ঘটনা
 
-Admin-রা প্রতিটা ঘটনা থেকে বেছে নিতে পারেন; customer-রা তাঁদের নিজের website, app, database, cron job, disk
-space, bandwidth আর account নিয়ে ঘটনাগুলো থেকে।
+Admin-রা প্রতিটা ঘটনা থেকে বেছে নিতে পারেন; customer আর reseller-রা website, app, database, cron job, disk
+space, bandwidth আর নিজের account নিয়ে ঘটনাগুলো থেকে।
 
 | ঘটনা (panel-এ) | কখন পাঠানো হয় | কে পান |
 | --- | --- | --- |
@@ -139,6 +139,11 @@ space, bandwidth আর account নিয়ে ঘটনাগুলো থে�
 
 Alert যায় **প্রত্যেক** admin-এর কাছে। একজন customer শুধু ওপরে "মালিক" বা "customer" চিহ্নিত alert-গুলো
 পান, আর শুধু তাঁর নিজের জিনিস নিয়ে।
+
+<Badge text="পরের release" variant="note" /> একজন [reseller](/guides/admin/resellers/) তাঁর customer-দের সব alert
+পান, সেই customer-দের জিনিস নিয়ে, customer-এর পাশাপাশি। এছাড়া তাঁর সব customer মিলিয়ে bandwidth-এর জন্য তিনি
+**ব্যান্ডউইথ প্রায় শেষ**, **ব্যান্ডউইথ শেষ** আর **ব্যান্ডউইথ শেষ, ওয়েবসাইট বন্ধ** পান, যা admin-দের কাছেও যায় (দেখুন
+[Bandwidth](/guides/admin/resellers/#bandwidth)), আর নিজের account নিয়ে "শুধু আপনি" চিহ্নিত alert-গুলো।
 
 প্রতিটা alert-এর একটা severity আছে: **info** (আবার online), **warning** বা **critical** (server offline,
 fail করা backup, website, app, database বা email-এ সমস্যা, malware, disk space বা bandwidth শেষ)।
@@ -218,4 +223,5 @@ def valid(body: bytes, header: str, key: str) -> bool:
 - [Server](/guides/admin/servers/): কখন offline ধরা হয়, আর disk-এর সতর্কবার্তা।
 - [Backup](/guides/data/backups/): Fail করা backup alert পাঠায়।
 - [Customer আর package](/guides/admin/customers/): Customer-দের জন্য disk space আর bandwidth-এর alert।
+- [Reseller](/guides/admin/resellers/): একজন reseller-এর customer আর তাঁদের bandwidth নিয়ে alert।
 - [Cron job](/guides/websites/cron/): কখন fail করা job alert পাঠায়।

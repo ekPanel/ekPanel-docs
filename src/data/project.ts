@@ -14,7 +14,8 @@ export const project = {
 	 * 4b (tokens, OpenAPI, ekctl) is done on dev for the next release; the Terraform provider
 	 * comes later. 4c (moving between servers, and rebuilding a website from a backup) is done
 	 * on dev too, and so is 4d (importers: cPanel, website archives, Coolify). Work goes on with
-	 * 4e (resellers and white-label). */
+	 * 4e (resellers and white-label): 4e-1 to 4e-3 (account security, customers, resellers) are
+	 * done on dev; white-label (4e-4) and sub-users (4e-5) come next. */
 	currentPhase: '4e',
 	links: {
 		org: 'https://github.com/ekPanel',

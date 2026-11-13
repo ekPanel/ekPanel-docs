@@ -10,7 +10,7 @@ import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/comp
 An API token is a key that lets a script, a CI job or the [ekctl](/reference/cli/) command-line
 tool use the panel's [API](/reference/api/) as you. Each token can do only what you allow (its
 **scopes**), can expire, and can be revoked on its own, so you never have to put your password
-into a script. Administrators and customers both have tokens.
+into a script. Administrators and customers have tokens, and from the next release resellers too.
 
 <Aside type="caution" title="New after v0.1.0">
 API tokens are in the main repository's `dev` branch and come with the **next release**. A
@@ -71,7 +71,7 @@ token look at everything you can see but change nothing.
 | **Email** | `mail` | Manage email domains, mailboxes and forwarders. |
 | **Backups** | `backups` | Manage backup storage, run backups and restore. Administrators only. |
 | **Servers** | `servers` | Manage servers, their services, firewall and security. Administrators only. |
-| **Customers** | `customers` | Manage customers and packages; from the next release also suspend customers and change owners. Administrators only. |
+| **Customers** | `customers` | Manage customers and packages; from the next release also suspend customers and change owners, and (for administrators) manage resellers. Administrators, and from the next release resellers for their own customers. |
 | **Settings** | `settings` | Panel settings, updates, notifications and the audit log. For a customer: their own notifications and notification channels. |
 
 Each area's own scope also lets the token read that area, so a token with only **Websites**
@@ -184,6 +184,22 @@ Customers have the same **API tokens** page under **Your account**, with seven s
 
 So a customer can deploy their own website from GitHub Actions, or use ekctl, without asking
 you for anything.
+
+## Tokens for resellers
+
+<Badge text="next release" variant="note" /> [Resellers](/guides/admin/resellers/) have the same
+**API tokens** page, with eight scopes: **Read**, **Websites**, **Databases**, **Apps**, **DNS**,
+**Email**, **Customers** and **Settings**. A reseller's token:
+
+- acts as the reseller: it sees and changes only their customers and their customers' things,
+  within the reseller's and the packages' limits;
+- with **Customers**, manages the reseller's own customers and packages, suspends them, and
+  changes owners between them (`/customers`, `/packages`, `/owner-changes`). Signing in as a
+  customer and resetting their two-factor sign-in still need the browser;
+- can never reach administrator pages, such as servers, backups or resellers, whatever its
+  scopes;
+- stops working while the reseller is [suspended](/guides/admin/resellers/#suspend-a-reseller).
+  A suspended reseller's customers' tokens stop working too.
 
 ## How it works
 

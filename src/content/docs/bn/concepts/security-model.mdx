@@ -79,7 +79,9 @@ customer হয়ে কাজ করছেন তখন এটা খোলা
 ## Customer আর limit
 
 Customer-রা একই panel-এ sign in করেন। প্রতিটা request-এর জন্য মালিকানা একটা জায়গাতেই check করা হয়,
-আর customer-এর মালিকানায় নেই এমন যেকোনো কিছু "not found" উত্তর দেয়, যেন সেটার অস্তিত্বই নেই।
+আর customer-এর মালিকানায় নেই এমন যেকোনো কিছু "not found" উত্তর দেয়, যেন সেটার অস্তিত্বই নেই। পরের release থেকে
+একজন [reseller](/guides/admin/resellers/)-ও একই জায়গায় check হন: তিনি তাঁর customer-দের জিনিস দেখেন, আর কিছু না, আর
+তাঁর customer-রা নিজের package-এর পাশাপাশি reseller-এর limit-এর মধ্যেও থাকেন।
 
 প্রতিটা customer পান একটা **systemd slice** (একটা cgroup), তাদের package-এর memory আর CPU limit-সহ।
 তাদের সব PHP এর ভেতরে নিজস্ব একটা PHP-FPM process-এর অধীনে চলে, আর তাদের সব container আর build-ও
