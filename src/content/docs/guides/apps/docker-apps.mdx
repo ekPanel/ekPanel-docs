@@ -275,8 +275,9 @@ for Git apps, all its [previews](/guides/apps/git-deploys/#pull-request-previews
 
 ## Limits and what is not there yet
 
-- An app runs on one server. Moving an app to another server, or to another owner, is not there
-  yet (see the [roadmap](/project/roadmap/)).
+- An app runs on one server. You can [move it to another server](/guides/apps/move/), and from
+  the next release an administrator can give it to another owner with
+  [Change owner](/guides/admin/customers/#change-the-owner).
 - [Backups](/guides/data/backups/) cover websites and databases, **not** app volumes. Back up
   important app data yourself for now.
 - An app gets one domain on one port. Apps that need several domains or ports need a Compose file
@@ -302,3 +303,4 @@ and use **Service for the domain** and **Port inside the container** instead, or
 - [Git deploys](/guides/apps/git-deploys/): Build and release your own code from a repository.
 - [Web terminal](/guides/apps/terminal/): A shell inside a running container.
 - [Cron jobs](/guides/websites/cron/): Run commands inside an app's container on a schedule.
+- [Move to another server](/guides/apps/move/): Move an app and its data to another server.

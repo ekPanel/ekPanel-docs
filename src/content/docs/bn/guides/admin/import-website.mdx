@@ -1,0 +1,370 @@
+---
+title: ওয়েবসাইট আর্কাইভ ইমপোর্ট
+description: যেকোনো host থেকে, বা aaPanel-এর backup থেকে, একটা website তার file-এর archive আর database dump-সহ নিয়ে আসুন। WordPress তার database password রেখে দেয়।
+sidebar:
+  order: 9
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+একটা website তার file-এর একটা archive (`.zip`, `.tar.gz` বা `.tar`) থেকে, database থাকলে তার dump-সহ, আপনার কোনো
+server-এ নিয়ে আসতে পারেন: shared hosting-এর একটা WordPress site, অন্য যেকোনো PHP বা static website, বা aaPanel-এর নিজের
+backup থেকে একটা website। Panel archive-এর ভেতরে website-টা খুঁজে বের করে, website আর তার database বানায়, file-গুলো
+কপি করে আর dump load করে। WordPress তার database password রেখে দেয়। Domain নতুন server-এ point না করা পর্যন্ত
+visitor-দের জন্য কিছুই বদলায় না।
+
+<Aside type="tip">
+একটা পুরো cPanel account (কয়েকটা website, email, cron job আর DNS zone) তার full backup থেকে আনতে হলে এর বদলে
+[cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) দেখুন। Coolify থেকে application আর service আনতে হলে দেখুন
+[Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/)।
+</Aside>
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এই পাতা দেখেন না; তবে আপনি কোনো customer-এর জন্য website ইমপোর্ট করতে পারেন।
+- **Server connected**: এটা [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায় **অনলাইন** (Online)
+  দেখায়। Website আর তার database এই server-এই থাকবে।
+- **Server-এ যথেষ্ট খালি disk জায়গা আছে**: archive আর dump, আর সাথে unpack করার পরে website-এর file আর database।
+  Server-এর পাতায় **ডিস্ক** (Disk) দেখুন; panel নিজে এটা check করে না।
+- **আপনি server-এ file কপি করতে পারেন**, SSH দিয়ে (`scp` বা FileZilla-র মতো কোনো SFTP program), `root` হিসেবে বা `sudo`
+  আছে এমন user হিসেবে।
+- **Website-এর database MySQL বা MariaDB।** PostgreSQL-এর dump ইমপোর্ট করা যায় না।
+- কোনো customer-এর জন্য ইমপোর্ট করলে, তাঁর [package](/guides/admin/customers/)-এ server-টা আর PHP version-টা থাকতে হবে,
+  আর আরও একটা website-এর জায়গা থাকতে হবে, database বানালে আরও একটা database-এরও।
+
+## Archive বানান
+
+আপনার লাগবে website-এর file-গুলো **একটা archive** হিসেবে, আর website database ব্যবহার করলে তার একটা **dump**: database-এর
+table আর row-সহ একটা `.sql` file, বা সেটাই compress করা `.sql.gz`। Panel `.zip`, `.tar.gz`, `.tgz` আর `.tar` archive নেয়।
+
+### aaPanel থেকে
+
+aaPanel-এর নিজের backup যেমন আছে তেমনই চলে; unpack বা নাম বদলাতে হয় না। aaPanel-এ website-এর (**Website** পাতায়) আর তার
+database-এর (**Databases** পাতায়) backup বানান। aaPanel এগুলো তার server-এ রাখে:
+
+| Backup | Folder | File-এর নাম |
+| --- | --- | --- |
+| Website | `/www/backup/site/` | `web_<domain>_<date>.tar.gz`, যেমন `web_example.com_20250101_120000.tar.gz` |
+| Database | `/www/backup/database/` | `db_<name>_<date>.sql.gz` |
+
+ekPanel website backup-এর file-এর নাম থেকে domain পড়ে, তাই aaPanel যে নাম দিয়েছে সেটাই রাখুন। aaPanel server থেকে দুটোই
+সরাসরি নতুন server-এ কপি করতে পারেন:
+
+```bash
+scp /www/backup/site/web_example.com_20250101_120000.tar.gz \
+    /www/backup/database/db_example_20250101_120000.sql.gz \
+    root@203.0.113.20:/srv/ekpanel/imports/
+```
+
+### অন্য যেকোনো host থেকে
+
+1. **File।** Website-এর folder (প্রায়ই `public_html`, `htdocs` বা `www`) একটা archive-এ ভরুন। Host-এর file manager-এ
+   folder-টা `.zip` হিসেবে compress করে download করুন। SSH দিয়ে:
+
+   ```bash
+   tar -czf example.com.tar.gz public_html
+   ```
+
+   Archive-এর নাম domain-এর নামে দিন, যেমন `example.com.zip` বা `example.com.tar.gz`, তাহলে panel domain-টা নিজেই বসিয়ে
+   দেয়।
+
+2. **Database।** phpMyAdmin-এ database-টা বেছে **Export** খুলুন, আর SQL format-এ save করুন। SSH দিয়ে:
+
+   ```bash
+   mysqldump -u DBUSER -p DBNAME | gzip > example.com.sql.gz
+   ```
+
+   `DBUSER` আর `DBNAME`-এর জায়গায় database-এর user আর নাম দিন (WordPress-এ এগুলো `wp-config.php`-এর `DB_USER` আর
+   `DB_NAME`)।
+
+Dump archive-এর ভেতরেও থাকতে পারে: panel archive-এর যেকোনো জায়গায় `.sql` আর `.sql.gz` file খুঁজে পায়।
+
+<Aside type="caution" title="একটাই database-এর dump বানান">
+শুধু ওই একটা database-এর dump বানান। `mysqldump --databases` দিয়ে বানানো dump-ও চলে: ekPanel তার `CREATE DATABASE`
+আর `USE` লাইন বাদ দেয়, তাই table-গুলো নতুন database-এ যায়। কয়েকটা database-এর dump (`--all-databases`) সবগুলোকে এই একটাতেই
+ঢোকাবে। অন্য format-এর dump (যেমন `.zip` বা `.bz2`) আগে unpack করে `.sql` বানিয়ে নিন।
+</Aside>
+
+## File server-এ রাখুন
+
+Server-এর agent শুধু একটা folder-এর file পড়ে: `/srv/ekpanel/imports/` (agent নিজেই folder-টা বানায়, শুধু root পড়তে
+পারে)। cPanel backup-এর জন্যও এই একই folder। আপনার computer থেকে archive, আর dump আলাদা file হলে সেটাও, সেখানে কপি করুন:
+
+```bash
+scp example.com.zip example.com.sql.gz root@203.0.113.20:/srv/ekpanel/imports/
+```
+
+`203.0.113.20`-এর জায়গায় server-এর address আর file-এর নামের জায়গায় আপনার file-এর নাম দিন। আপনি যে server বেছে নেন,
+**ইমপোর্ট** (Import) পাতা তার জন্য `scp` লাইনটা দেখায়, সাথে একটা copy button। File-এর নামে কোনো folder থাকতে পারবে না,
+আর নাম dot দিয়ে শুরু হতে পারবে না।
+
+<Aside type="caution">
+Archive আর dump-এ website-এর সব file আর সব data থাকে, আর WordPress archive-এর `wp-config.php`-এ থাকে তার database
+password। যতক্ষণ দরকার শুধু ততক্ষণই রাখুন, আর [ইমপোর্টের পরে মুছে ফেলুন](#after-the-import)।
+</Aside>
+
+## Archive পড়ুন
+
+<Steps>
+
+1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
+   যেতে পারেন।
+
+2. পাতায় তিনটা tab আছে: **cPanel ব্যাকআপ** (cPanel backup), **ওয়েবসাইট আর্কাইভ** (Website archive) আর **Coolify** (দেখুন
+   [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/))। **ওয়েবসাইট আর্কাইভ**-এ click করুন (".zip বা .tar.gz থেকে একটা
+   ওয়েবসাইট, ডেটাবেস ডাম্পসহ")।
+
+3. **সার্ভার** (Server)-এ সেই server বেছে নিন, যেখানে file কপি করেছেন।
+
+4. **আর্কাইভ ফাইলের নাম** (Archive file name)-এ শুধু archive-এর file-এর নাম লিখুন, folder ছাড়া: `example.com.zip`,
+   `/srv/ekpanel/imports/example.com.zip` না। Field-এর নিচে "ফোল্ডারে এখন আছে: …" folder-এর সর্বোচ্চ পাঁচটা archive-এর নাম
+   দেখায়, নতুনটা আগে, আর লেখার সময় field-টা এগুলো suggest করে। Dump এখানে দেখায় না: সেটা পরের ধাপে বেছে নেবেন।
+
+5. **আর্কাইভ পড়ুন** (Read archive)-এ click করুন। "ব্যাকআপ পড়া হচ্ছে। বড় হলে কয়েক মিনিট লাগতে পারে।"
+
+</Steps>
+
+এরপর panel দেখায় **২. কীভাবে সাজাবেন বেছে নিন** (2. Choose how to set it up), সাথে যা খুঁজে পেয়েছে:
+
+- **Website-এর ধরন**, একটা badge হিসেবে: website-এর folder-এ `wp-config.php` থাকলে **WordPress**, কোনো `.php` file থাকলে
+  **PHP**, নইলে **স্ট্যাটিক** (Static)।
+- **Website-এর file-এর সংখ্যা আর size**, যেমন "312টা ফাইল, 48.2 MB"।
+- **আর্কাইভের মধ্যে ওয়েবসাইটের ফোল্ডার** (Website folder in the archive), যেমন `backup/public_html/`, বা "একদম উপরে"
+  (the top)। Website-এর folder হলো `wp-config.php` আছে এমন সবচেয়ে কম গভীরের folder; সেটা না থাকলে `index.php`,
+  `index.html` বা `index.htm` আছে এমন সবচেয়ে কম গভীরের folder; সেটাও না থাকলে archive-এর সবকিছু যে একটা folder-এর ভেতরে
+  আছে সেটা, নইলে archive-এর একদম উপরের অংশ।
+
+## কীভাবে সাজাবেন বেছে নিন
+
+<Steps>
+
+1. **ডোমেইন** (Domain)-এ website-এর domain লিখুন। Panel বুঝতে পারলে এটা আগে থেকেই ভরা থাকে: aaPanel-এর file-এর নাম
+   (`web_<domain>_<date>.tar.gz`) থেকে, website-এর folder-এর নাম domain-এর মতো হলে সেখান থেকে, বা archive-এর নাম
+   (`example.com.zip`) থেকে। একটা ইমপোর্টে একটাই website হয়। Domain-টা panel-এ আগে থেকেই ব্যবহার হলে field-টা বলে "এখানে
+   অন্য ওয়েবসাইট বা অ্যাপ এই ডোমেইন ব্যবহার করছে।"
+
+2. **ওয়েবসাইটের ধরন** (Website type)-এ **PHP** বেছে নিন, তার PHP version-সহ (8.5, 8.4, 8.3, 8.2, 8.1 বা 7.4; শুরুতে
+   থাকে 8.4), বা শুধু HTML file-এর website হলে **স্ট্যাটিক** (Static)। WordPress আর অন্য PHP application-এর জন্য
+   **PHP** লাগে। দেখুন [Website-এর ধরন](/guides/websites/websites/#kinds-of-website)।
+
+3. **এর জন্য একটা ডেটাবেস বানান** (Make a database for it)-এ WordPress-এর জন্য tick দেওয়া থাকে, আর panel archive-এ বা
+   folder-এ কোনো dump পেলেও। Database ছাড়া website হলে tick তুলে দিন। এর নিচের লাইনটা বলে password-এর কী হবে:
+   - WordPress: "WordPress তার ডেটাবেস পাসওয়ার্ড রাখবে: ডেটাবেস সেই পাসওয়ার্ডেই বানানো হবে, আর wp-config.php-তে নিচের নাম,
+     ইউজার আর localhost বসবে।"
+   - যে WordPress-এর `wp-config.php`-এ password নেই: "wp-config.php-তে ডেটাবেস পাসওয়ার্ড নেই, তাই ডেটাবেস নতুন পাসওয়ার্ড
+     পাবে: সেটা wp-config.php-তে বসান।"
+   - অন্য যেকোনো website: "ডেটাবেস নতুন পাসওয়ার্ড পাবে, ইমপোর্ট শুরুর সময় একবারই দেখানো হবে: সেটা ওয়েবসাইটের সেটিংসে
+     বসান।"
+
+4. **ডেটাবেস ডাম্প** (Database dump)-এ কোন dump load হবে বেছে নিন: "আর্কাইভের ভেতরের _name_ (_size_)", import folder-এর
+   file-এর জন্য "পাশে রাখা _name_ (_size_)", বা **কোনোটা না (খালি ডেটাবেস)** (None (an empty database))। শুরুতে থাকে
+   archive-এর প্রথম dump, সেটা না থাকলে folder-এর সবচেয়ে নতুন dump। Folder-এর সব dump-ই দেখায়, শুধু এই website-এরটা না,
+   তাই ঠিকটা বেছেছেন কিনা দেখে নিন।
+
+5. **ডাটাবেসের নাম** (Database name) আর **ইউজার নাম** (User name) রাখুন বা বদলান। WordPress-এর জন্য শুরুতে থাকে
+   `wp-config.php`-এর `DB_NAME` আর `DB_USER`। খালি রাখলে (**স্বয়ংক্রিয়** (Automatic)) নাম domain থেকে বানানো হয়, যেমন
+   `example_3f9a`, আর user-ও একই নাম পায়। নামে ছোট হাতের অক্ষর, সংখ্যা আর `_` চলে, শুরু হয় অক্ষর দিয়ে, সর্বোচ্চ 32
+   অক্ষর। WordPress-এর নামে server-এ আগে থেকেই database বা user থাকলে panel বলে "এই সার্ভারে এই নামের ডেটাবেস বা ইউজার আগে
+   থেকেই আছে: অন্য নাম দিন; wp-config.php-তে সেটাই বসবে।"
+
+6. **কার জন্য** (For)-এ বেছে নিন website আর database-এর মালিক কে: **অ্যাডমিনদের (কোনো প্যাকেজ নয়)** (Administrators
+   (no package)) বা কোনো customer।
+
+7. WordPress হলে পড়ে নিন: "WordPress তার ঠিকানা ডেটাবেস থেকে নেয়: একই ডোমেইনে ইমপোর্ট করুন, নইলে পরে ঠিকানা বদলান
+   (Settings → General)।" তারপর **ইমপোর্ট করুন** (Import)-এ click করুন।
+
+</Steps>
+
+**ইমপোর্ট করুন**-এ click করলে panel সাথে সাথে website আর database বানিয়ে ফেলে, তারপর একটা task সেগুলো ভরে। চলার সময়
+পাতায় দেখায় **ইমপোর্ট হচ্ছে…** (Importing…), আর প্রতিটা পাতার নিচের task box-এ দেখায় "ওয়েবসাইট আর্কাইভ ইমপোর্ট"। পাতা ছেড়ে
+গেলেও ইমপোর্ট চলতে থাকে।
+
+Database নতুন password পেলে পাতা সেটা একবারই দেখায়: "ডেটাবেসের পাসওয়ার্ড, শুধু এখনই দেখানো হচ্ছে:", সাথে একটা copy
+button। পাতা ছাড়ার আগে কপি করে নিন। হারিয়ে ফেললে database-এর পাতায় নতুন একটা বানান (দেখুন
+[Password reset](/guides/data/databases/#reset-a-password))।
+
+## ইমপোর্টে কী হয়
+
+Task-টা server-এ website আর database set up করে (server-এ PHP version-টা না থাকলে আগে install করে), তারপর archive
+unpack করে website-এ রাখে আর dump database-এ load করে।
+
+### File
+
+- Website তার নিজের একটা Linux account পায়, domain থেকে বানানো নামে (যেকোনো নতুন website-এর মতো)। Website-এর folder-এর
+  file-গুলো যায় তার `public_html`-এ, আর সেখানে panel-এর placeholder পাতাটা মুছে যায়। File-গুলোর মালিক হয় website-এর account।
+- Archive-এ website-এর folder-এর বাইরের file বাদ পড়ে, আর report সেগুলো গোনে: "আর্কাইভে ওয়েবসাইটের ফোল্ডারের বাইরের _n_টা
+  ফাইল"।
+- **Archive-এর ভেতর থেকে যে dump বেছে নেন, সেটা database-এ load হয়, কখনো website-এ কপি হয় না**, website-এর folder-এ
+  থাকলেও, যেখান থেকে যে কেউ সেটা download করতে পারত।
+- Symbolic link থাকে, যদি website-এর home folder-এর ভেতরে point করে। যে link বাইরে point করে, বা absolute path ব্যবহার করে,
+  সেগুলো বাদ পড়ে আর গোনা হয় ("ওয়েবসাইটের বাইরে নির্দেশ করা লিংক"), pipe-এর মতো বিশেষ file-ও।
+- aaPanel প্রতিটা website-কে তার পুরোনো folder-এ আটকে রাখে website-এর `.user.ini`-এর একটা `open_basedir` লাইন দিয়ে (যেমন
+  `open_basedir=/www/wwwroot/example.com/`)। সেই path এখানে নেই, আর website বন্ধ করে দিত, তাই ইমপোর্ট website-এর একদম
+  উপরের `.user.ini` থেকে `open_basedir` লাইনগুলো মুছে দেয়, file-এর বাকিটা রাখে, আর report বলে ".user.ini-এর open_basedir
+  (এটা পুরোনো সার্ভারের ফোল্ডার দেখাত; এখানে PHP নিজেই ওয়েবসাইটকে সীমার মধ্যে রাখে)"।
+- Windows-এ বানানো `.zip` কোনো file permission রাখে না; এর file-গুলো পড়ার যোগ্য (`644`) হয়।
+- File-এর ভেতরের path **বদলায় না**, cPanel ইমপোর্টের মতো না। Website-এর code বা settings-এ পুরোনো folder-এর নাম থাকলে
+  (যেমন `/home/olduser/public_html` বা `/www/wwwroot/example.com`), সেটা বদলে নতুনটা দিন, `/home/<account>/public_html`।
+
+- Website-এর folder-এর database dump (`.sql`, `.sql.gz`) কখনো website-এ কপি হয় না, যেখানে যে কেউ download করতে পারত:
+  বেছে নেওয়াটা load হয়, বাকিগুলো বাদ যায় আর report-এ গোনা থাকে।
+
+### Database
+
+- Database-টা website-এর server-এই একটা MariaDB database, তার নিজের user আর একই মালিক-সহ।
+- Dump-টা `mysql` client দিয়ে `utf8mb4` হিসেবে load হয়। Table-গুলোর নাম একই থাকে, WordPress-এর table prefix-ও (যেমন `wp_`)।
+- **কোনোটা না (খালি ডেটাবেস)** বেছে নিলে database খালি অবস্থায় বানানো হয়।
+- **এর জন্য একটা ডেটাবেস বানান** থেকে tick তুলে দিলে আর archive-এ dump থাকলে, report প্রতিটার তালিকা দেয়: "ডেটাবেস ডাম্প
+  _name_: এর জন্য কোনো ডেটাবেস বানানো হয়নি"।
+
+### WordPress
+
+- **Password।** Server-এর agent `wp-config.php` থেকে `DB_PASSWORD` পড়ে তার MySQL password hash বানায়। শুধু hash-টা panel-এ
+  যায়; password নিজে কখনো server-এর বাইরে যায় না। Database সেই hash দিয়ে বানানো হয়, তাই WordPress-এর password একই থাকে।
+- **wp-config.php।** ইমপোর্ট `DB_NAME` আর `DB_USER` বদলে নতুন database-এর নাম আর user বসায়, আর `DB_HOST` বদলে
+  `'localhost'`। পুরোনো host আলাদা একটা server-এ database রাখলে (যেমন `mysql.oldhost.example`) এটা দরকার। `DB_PASSWORD`
+  আর table prefix আগের মতোই থাকে।
+- **অন্য নাম।** Database-এর নাম বা user বদলে থাকলে (যেমন server-এ সেগুলো আগে থেকেই ছিল বলে), `wp-config.php` আপনার বেছে
+  নেওয়া নামই পায়।
+- **Password নেই।** `wp-config.php`-এ `DB_PASSWORD` না থাকলে database নতুন password পায়, ইমপোর্ট শুরুর সময় একবারই দেখানো
+  হয়। সেটা `wp-config.php`-এর `DB_PASSWORD`-এ বসান।
+- **ঠিকানা।** WordPress তার ঠিকানা (`siteurl` আর `home`) database-এ রাখে। একই domain-এ website আগের মতোই চলে। অন্য
+  domain-এ হলে পরে WordPress-এর **Settings → General**-এ ঠিকানা বদলান, বা WP-CLI দিয়ে, যা post-এর ভেতরের link-ও বদলায়:
+
+  ```bash
+  wp search-replace 'https://old.example.com' 'https://example.com'
+  ```
+
+- **এর জন্য একটা ডেটাবেস বানান** থেকে tick তুলে দিলে `wp-config.php` যেমন ছিল তেমনই থাকে।
+
+### Database-সহ অন্য website
+
+Database নতুন password পায়, ইমপোর্ট শুরুর সময় একবারই দেখানো হয়। Database-এর নাম, user, সেই password আর host `localhost`
+website-এর configuration-এ বসান (যেমন Laravel-এ `.env`, Joomla-য় `configuration.php`)। দেখুন
+[Website বা app থেকে connect করুন](/guides/data/databases/#connect-from-your-website-or-app)।
+
+### Report
+
+Task শেষ হলে পাতায় দেখায় **ইমপোর্ট শেষ** (Import finished), সাথে **ওয়েবসাইট** (Websites), **ডেটাবেস** (Databases),
+**ফাইল** (Files; কপি হওয়া file-এর সংখ্যা আর size) আর **ক্রন জব** (Cron jobs; archive-এর জন্য সবসময় 0), তারপর **ইমপোর্ট
+হয়নি** (Not imported): website-এর folder-এর বাইরের file, website-এর বাইরে point করা link, `open_basedir` লাইন আর ব্যবহার না
+হওয়া dump।
+
+একটা test VM-এ অন্য host-এর একটা WordPress-ধাঁচের `.zip` (file-গুলো `backup/public_html`-এ, dump `backup/database.sql`-এ,
+আর `DB_HOST` আলাদা একটা database server-এ) পুরোনো password আর `localhost`-এ বসানো `DB_HOST` দিয়ে তার database-এর বাংলা
+লেখা ঠিকঠাক দেখিয়েছে, আর dump website-এ publish হয়নি। একটা aaPanel জোড়া (`web_aa.example.test_…tar.gz` আর
+`db_aa_…sql.gz`) file-এর নাম থেকে domain পেয়েছে, database-সহ একটা static website হয়েছে, আর database-এর নতুন password
+একবার দেখানো হয়েছে।
+
+## ইমপোর্টের পরে
+
+<Steps>
+
+1. **DNS বদলানোর আগে website check করুন।** শুধু আপনার computer-এ domain-টা নতুন server-এ point করুন, তার `hosts` file-এ
+   একটা লাইন যোগ করে (Linux আর macOS-এ `/etc/hosts`, Windows-এ `C:\Windows\System32\drivers\etc\hosts`):
+
+   ```text
+   203.0.113.20  example.com www.example.com
+   ```
+
+   Browser-এ website খুলে কয়েকটা পাতা, একটা login আর একটা form চালিয়ে দেখুন। Browser certificate নিয়ে সতর্ক করবে: DNS
+   server-এ point করলে তবেই server আসল certificate পায়। কাজ শেষে লাইনটা মুছে দিন।
+
+2. **Archive যা আনে না সেগুলো যোগ করুন**: website-এর পাতায় [extra domain](/guides/websites/websites/#domains-and-extra-domains)
+   (যেমন `www.example.com`), [cron job](/guides/websites/cron/), [email](/guides/dns/email/) আর redirect।
+
+3. **Domain server-এ point করুন।** আপনার DNS host-এ domain-এর, আর তার extra domain-গুলোর, `A` record (আর থাকলে `AAAA`)
+   বদলে server-এর address দিন। ekPanel-এর [built-in name server](/guides/dns/name-servers/#add-a-domain) ব্যবহার করলে
+   domain-টা সেখানে যোগ করুন আর registrar-এ name server set করুন। Domain সেখানে point করলে certificate নিজে থেকেই নেওয়া হয়।
+
+4. Server থেকে **archive আর dump মুছে ফেলুন**:
+
+   ```bash
+   sudo rm /srv/ekpanel/imports/example.com.zip /srv/ekpanel/imports/example.com.sql.gz
+   ```
+
+</Steps>
+
+<Aside type="caution" title="এখানে .htaccess file কোনো কাজ করে না">
+ekPanel-এর web server (Caddy) `.htaccess` file পড়ে না। WordPress-এর সুন্দর link-গুলো কাজ করতে থাকে, কিন্তু অন্য নিয়ম
+(redirect, বন্ধ করা folder, password protection, `php_value` লাইন) কাজ করে না। এর বদলে কী করবেন, দেখুন cPanel guide-এর
+[এখানে .htaccess file কোনো কাজ করে না](/guides/admin/import-cpanel/#after-the-import)।
+</Aside>
+
+## API দিয়ে
+
+`sites` scope-সহ admin-এর [API token](/guides/security/api-tokens/) দিয়ে ইমপোর্ট করা যায়। Customer-দের token দিয়ে যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `GET /api/v1/imports/files?server_id=…` | Server-এর import folder-এর যে file-গুলো ইমপোর্টে ব্যবহার করা যায়, নতুনটা আগে: `name`, `kind` (`.tar.gz`, `.tgz` আর `.tar`-এর জন্য `archive`, `zip`, বা `.sql` আর `.sql.gz`-এর জন্য `dump`), `bytes` আর `modified`। |
+| `POST /api/v1/imports/site/inspect` | Archive পড়ে। Body: `{"server_id": "…", "archive": "example.com.zip"}`। উত্তরে থাকে `root` (website-এর folder, একদম উপরে হলে `""`), `files`, `bytes`, `kind` (`wordpress`, `php` বা `static`), `domain` (বুঝতে পারলে), `wordpress` (`db_name`, `db_user`, `db_host`, `table_prefix`), `dumps` (প্রতিটার `name` আর `bytes`), `keeps_password`, `domain_taken`, `database_taken` আর `php_versions`। Password hash কখনো পাঠানো হয় না। |
+| `POST /api/v1/imports/site` | ইমপোর্ট করে। Body: `{"server_id", "archive", "domain", "kind": "php", "php_version": "8.4", "owner_id", "dump": "example.com.sql.gz", "database": {"name": "", "user": ""}}`। Import folder-এর dump-এর জন্য `dump`, বা `dumps` থেকে একটা নাম দিয়ে `dump_in_archive`, দুটো একসাথে না। `database`, `dump` বা `dump_in_archive` থাকলে database বানানো হয়; খালি নাম domain থেকে বানানো হয় (WordPress-এ `database` না দিলে `wp-config.php`-এর নাম নেওয়া হয়)। ঐচ্ছিক `aliases`-এ extra domain দেওয়া যায়। `202` দিয়ে উত্তর দেয়, সাথে `task` (একটা [task](/reference/api/#tasks-following-slow-work), যার `result`-এ report থাকে) আর, database নতুন password পেলে, `database_password`, যা শুধু এই উত্তরেই থাকে। |
+
+Admin-দের জন্য `owner_id` খালি রাখুন। [ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে:
+
+```bash
+ekctl api GET 'imports/files?server_id=<server id>'
+ekctl api POST imports/site/inspect --data '{"server_id":"<server id>","archive":"example.com.zip"}'
+ekctl api POST imports/site --data '{"server_id":"<server id>","archive":"example.com.zip","domain":"example.com","kind":"php","php_version":"8.4","owner_id":"","dump":"example.com.sql.gz","database":{"name":"","user":""}}'
+```
+
+## সীমা আর যা এখনো নেই
+
+- **একটা archive-এ একটাই website**, সর্বোচ্চ একটা database-সহ। কয়েকটা website-এর জন্য কয়েকটা archive ইমপোর্ট করুন।
+- Archive থেকে **extra domain, cron job, email, DNS zone বা certificate আসে না**। এগুলো panel-এ set up করুন; domain server-এ
+  point করলে certificate নেওয়া হয়।
+- **শুধু MySQL আর MariaDB-র dump** (`.sql`, `.sql.gz`) load হয়, MariaDB-তে। PostgreSQL-এর dump হয় না।
+- **Website-এর folder panel নিজে বেছে নেয়।** ভুলটা বেছে নিলে শুধু website-টা দিয়ে একটা archive বানান।
+- **Path বদলায় না**, file-এ বা database-এ। দেখুন [File](#files)।
+- **`.htaccess` file পড়া হয় না** (দেখুন [ইমপোর্টের পরে](#after-the-import))।
+- **Subdomain-এ চলা WordPress multisite**-এর প্রতিটা subdomain হাতে
+  [extra domain](/guides/websites/websites/#domains-and-extra-domains) হিসেবে যোগ করতে হয়; wildcard domain দেওয়া যায় না।
+- এসব host-এর মতো করে বানানো archive দিয়ে test VM-এ চালিয়ে দেখা হয়েছে, এখনো অনেক আসল archive দিয়ে না।
+- Coolify-এর app আসে [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/) দিয়ে।
+
+## সমস্যা সমাধান
+
+| Message | যা করবেন |
+| --- | --- |
+| "সার্ভারের /srv/ekpanel/imports ফোল্ডারের একটা .zip, .tar.gz বা .tar আর্কাইভ বেছে নিন।" | শুধু archive-এর file-এর নাম লিখুন, শেষে `.zip`, `.tar.gz`, `.tgz` বা `.tar`। Dump archive না: সেটা **ডেটাবেস ডাম্প**-এ বেছে নিন। |
+| "এই সার্ভারের /srv/ekpanel/imports ফোল্ডারে এই নামের কোনো ব্যাকআপ নেই। ফাইলের নাম আর সার্ভার আবার দেখুন।" | File-টা অন্য server-এ আছে বা নাম আলাদা। বেছে নেওয়া server-এ `sudo ls -l /srv/ekpanel/imports/` দিয়ে check করুন। |
+| "এই ফাইলটা cPanel-এর পুরো ব্যাকআপ নয়, বা নষ্ট হয়ে গেছে। cPanel-এ পুরো অ্যাকাউন্টের ব্যাকআপ বানিয়ে আবার কপি করুন।" | Website archive-এর জন্য এর মানে archive খালি বা পড়া যায় না: কপি অসম্পূর্ণ (size মূল file-এর সাথে মিলিয়ে দেখুন), বা file-টা আসলে `.zip` বা `.tar.gz` না। Archive আবার বানিয়ে আবার কপি করুন। |
+| "example.com-এর মতো একটা ডোমেইন নাম লিখুন।" | `https://` বা path ছাড়া domain লিখুন। |
+| "এখানে অন্য ওয়েবসাইট বা অ্যাপ আগে থেকেই ব্যবহার করছে: …" | Panel-এর অন্য কোনো website বা app domain-টা ব্যবহার করছে। অন্য domain দিন, বা আগে অন্যটা মুছুন। |
+| "একটা .sql বা .sql.gz ডেটাবেস ডাম্প বেছে নিন।" | `.sql` বা `.sql.gz`-এ শেষ হওয়া একটা dump বেছে নিন। API-তে `dump` বা `dump_in_archive` দিন, দুটো একসাথে না। |
+| "ডেটাবেসের নাম আর ইউজারে ছোট হাতের অক্ষর, সংখ্যা আর _ ব্যবহার করুন।" | নাম বদলান: ছোট হাতের অক্ষর, সংখ্যা আর `_`, শুরু অক্ষর দিয়ে, সর্বোচ্চ 32 অক্ষর। WordPress-এর নামে বড় হাতের অক্ষর বা dash থাকলে এখানে বদলাতে হবে; `wp-config.php` নতুন নামই পায়। |
+| "সার্ভারে আগে থেকেই … নামের ডেটাবেস বা ইউজার আছে।" | অন্য database নাম আর user দিন। WordPress-এ `wp-config.php` সেগুলোই পায়। |
+| "আপনার প্যাকেজে আর ওয়েবসাইট যোগ করা যাবে না।" (বা ডেটাবেস) | Customer-এর package-এর limit বাড়ান, বা **এর জন্য একটা ডেটাবেস বানান** থেকে tick তুলে দিন। |
+| "এই প্যাকেজ ওই সার্ভার ব্যবহার করতে পারে না।" | Customer-এর package-এ server-টা যোগ করুন, বা অন্য server বেছে নিন। |
+| "প্যাকেজে এই PHP ভার্সন নেই।" | Customer-এর package যে PHP version allow করে সেটা বেছে নিন। |
+| "সার্ভারের এজেন্ট যুক্ত নেই।" | Server offline। দেখুন [Server offline হলে](/guides/admin/servers/#when-a-server-goes-offline)। |
+
+**ইমপোর্ট ব্যর্থ হয়েছে।** পাতায় **ইমপোর্ট ব্যর্থ হয়েছে** (The import failed) আর কারণ দেখায়, যেমন dump load করার সময়ের
+কোনো error। এর জন্য panel যে website আর database বানিয়েছিল সেগুলো তালিকায় থেকে যায়: **ওয়েবসাইট** (Websites) আর **ডাটাবেস**
+(Databases)-এ সেগুলো মুছুন, কারণটা ঠিক করুন, তারপর archive আবার পড়ে ইমপোর্ট করুন।
+
+**WordPress "Error establishing a database connection" দেখায়।** **এর জন্য একটা ডেটাবেস বানান**-এ tick ছিল কিনা আর report-এ
+database-টা আছে কিনা দেখুন। `wp-config.php`-এ password না থাকলে নতুনটা `DB_PASSWORD`-এ বসান। হারিয়ে ফেললে database-এর
+পাতায় নতুন একটা বানান।
+
+**WordPress পুরোনো domain-এ নিয়ে যায়।** এটা তার ঠিকানা database-এ রাখে: সেটা বদলান (দেখুন [WordPress](#wordpress))।
+
+**Website ভুল file, বা panel-এর পাতা দেখায়।** Archive পড়ার সময় **আর্কাইভের মধ্যে ওয়েবসাইটের ফোল্ডার** দেখুন: panel হয়তো
+`index.php` বা `wp-config.php` আছে এমন অন্য একটা folder বেছে নিয়েছে। শুধু website-টা দিয়ে একটা archive বানান, ইমপোর্টের
+বানানো website-টা মুছুন, আর আবার ইমপোর্ট করুন।
+
+**ইমপোর্টের পরে database খালি।** Dump-এ হয়তো কয়েকটা database আছে (`--all-databases`), বা শুধু structure। শুধু ওই একটা
+database থেকে dump আবার বানান (দেখুন [Archive বানান](#make-the-archive))।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="cPanel থেকে ইমপোর্ট" href="/guides/admin/import-cpanel/" description="একটা পুরো cPanel account, তার full backup থেকে।" />
+	<LinkCard title="Website" href="/guides/websites/websites/" />
+	<LinkCard title="WordPress" href="/guides/websites/wordpress/" />
+	<LinkCard title="Database" href="/guides/data/databases/" description="Password, user আর connect করা।" />
+	<LinkCard title="File" href="/guides/websites/files/" />
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+	<LinkCard title="REST API" href="/reference/api/" />
+</CardGrid>

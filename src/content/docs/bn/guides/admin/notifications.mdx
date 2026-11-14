@@ -2,18 +2,18 @@
 title: Notification
 description: Offline server, fail করা backup, নষ্ট website আর আরও অনেক কিছুর alert পান, panel-এ আর email, Telegram, Discord, Slack বা signed webhook-এ।
 sidebar:
-  order: 3
+  order: 6
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 কোনো কিছুতে নজর দেওয়া দরকার হলে ekPanel আপনাকে জানায়: একটা server offline হয়ে গেছে, একটা backup fail
 করেছে, একটা website সেট করা যায়নি, একটা disk ভরে আসছে। প্রতিটা alert panel-এর ওপরে **ঘণ্টা**-র (bell)
 নিচে দেখা যায়। চাইলে alert-গুলো **channel**-এও পাঠাতে পারেন: email, Telegram, Discord, Slack বা আপনার
 নিজের webhook।
 
-প্রত্যেক user নিজের channel নিজে সেট করেন: admin আর customer দুজনেই। Customer-রা শুধু তাঁদের নিজের
-জিনিস নিয়ে alert পান।
+প্রত্যেক user নিজের channel নিজে সেট করেন: admin, customer আর (পরের release থেকে) reseller সবাই। Customer-রা
+শুধু তাঁদের নিজের জিনিস নিয়ে alert পান; reseller-রা তাঁদের customer-দের জিনিস নিয়ে।
 
 ## ঘণ্টা
 
@@ -51,6 +51,11 @@ address-ও এখানেই সেট হয়, যাতে message-এর 
 transactional mail service। Password panel-এর database-এ encrypt করা থাকে, আর পরে কখনো দেখানো হয় না
 ("আগেরটা রাখতে খালি রাখুন।")। Panel অন্য machine-এ unencrypted connection দিয়ে password পাঠাতে রাজি হয়
 না।
+
+<Badge text="পরের release" variant="note" /> [Branding](/guides/admin/branding/) থাকলে প্রত্যেক প্রাপকের message-এ
+থাকে তিনি যে panel দেখেন তার নাম, যেমন "কেউ … থেকে আপনার Host BD অ্যাকাউন্টে ঢুকেছেন।" আর "Host BD-এ খুলুন: …"।
+তাঁর link-এ থাকে তাঁর brand-এর domain (reseller-এর, নয়তো panel-এর), যদি থাকে; না থাকলে **প্যানেলের ঠিকানা**।
+ekPanel নিজেকে নিয়ে message, যেমন **ekPanel-এর নতুন ভার্সন**, ekPanel নামই রাখে।
 
 ## একটা channel যোগ করুন
 
@@ -106,8 +111,8 @@ Bot token, webhook address আর signing key হলো secret: এগুলো 
 
 ## ঘটনা
 
-Admin-রা প্রতিটা ঘটনা থেকে বেছে নিতে পারেন; customer-রা তাঁদের নিজের website, app, database, disk space
-আর account নিয়ে ঘটনাগুলো থেকে।
+Admin-রা প্রতিটা ঘটনা থেকে বেছে নিতে পারেন; customer আর reseller-রা website, app, database, cron job, disk
+space, bandwidth আর নিজের account নিয়ে ঘটনাগুলো থেকে।
 
 | ঘটনা (panel-এ) | কখন পাঠানো হয় | কে পান |
 | --- | --- | --- |
@@ -126,8 +131,13 @@ Admin-রা প্রতিটা ঘটনা থেকে বেছে নি
 | **Malware পাওয়া গেছে** | একটা malware scan নতুন সন্দেহজনক file পেয়েছে (সর্বোচ্চ পাঁচটার নাম দেওয়া হয়) | Admin আর website-এর মালিক |
 | **ডিস্কের জায়গা প্রায় শেষ** | একজন customer তাঁর package-এর disk space-এর 90% ব্যবহার করছেন | Admin আর ওই customer |
 | **ডিস্কের জায়গা শেষ** | একজন customer পুরোটাই ব্যবহার করছেন | Admin আর ওই customer |
+| **ব্যান্ডউইথ প্রায় শেষ** | <Badge text="পরের release" variant="note" /> একজন customer-এর website আর app এই মাসে তাঁর package-এর [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted)-এর 90% পাঠিয়েছে। মাসে একবার পাঠানো হয় | Admin আর ওই customer |
+| **ব্যান্ডউইথ শেষ** | <Badge text="পরের release" variant="note" /> পুরোটাই পাঠিয়েছে। Package limit পেরোতে দেয়, তাই website চলতে থাকে | Admin আর ওই customer |
+| **ব্যান্ডউইথ শেষ, ওয়েবসাইট বন্ধ** | <Badge text="পরের release" variant="note" /> পুরোটাই পাঠিয়েছে, আর package পরের মাস পর্যন্ত তাঁর website আর app-এর address বন্ধ রাখে | Admin আর ওই customer |
+| **ক্রন জব ব্যর্থ** | <Badge text="পরের release" variant="note" /> একটা [cron job](/guides/websites/cron/#failure-alerts)-এর শেষ রান ব্যর্থ হয়েছে: error exit code, time limit, signal দিয়ে থামানো, বা memory শেষ। প্রতি 5 মিনিটে check হয়; একবার পাঠানো হয়, আর আবার শুধু মাঝে একবার ঠিকমতো চলার পরে | Admin আর job-এর মালিক |
 | **কাজ ব্যর্থ** | একটা task (image update, restore, WordPress install …) শেষ চেষ্টার পর পাকাপাকিভাবে fail করেছে। Schedule করা আর হাতে চালানো backup, আর website, app ও database সেট করা, এর বদলে নিজেদের alert পাঠায় | Admin, আর যে customer এটা শুরু করেছেন |
 | **নতুন ঠিকানা থেকে সাইন-ইন** | কেউ আপনার account-এ এমন address থেকে sign in করেছে, যা গত 90 দিনে ব্যবহার হয়নি (একদম প্রথম sign-in-এ নয়) | শুধু আপনি |
+| **রিকভারি কোড দিয়ে সাইন-ইন** | <Badge text="পরের release" variant="note" /> কেউ two-factor-এর একটা [recovery code](/guides/security/accounts/#recovery-codes) দিয়ে আপনার account-এ sign in করেছে। কোন address থেকে, আর কয়টা code বাকি, তা বলে | শুধু আপনি |
 | **ekPanel-এর নতুন ভার্সন** | Panel একটা নতুন [release](/guides/admin/updates/) পেয়েছে। প্রতিটা version-এ একবার পাঠানো হয় | Admin |
 | **ekPanel আপডেট হয়েছে** | একটা [update](/start/upgrade/) শেষ হয়েছে, কয়টা server-এ সমস্যা হয়েছে সহ | Admin |
 | **ekPanel আপডেট ব্যর্থ** | একটা update install করা যায়নি; panel তার বর্তমান version-এই থাকে | Admin |
@@ -135,8 +145,13 @@ Admin-রা প্রতিটা ঘটনা থেকে বেছে নি
 Alert যায় **প্রত্যেক** admin-এর কাছে। একজন customer শুধু ওপরে "মালিক" বা "customer" চিহ্নিত alert-গুলো
 পান, আর শুধু তাঁর নিজের জিনিস নিয়ে।
 
+<Badge text="পরের release" variant="note" /> একজন [reseller](/guides/admin/resellers/) তাঁর customer-দের সব alert
+পান, সেই customer-দের জিনিস নিয়ে, customer-এর পাশাপাশি। এছাড়া তাঁর সব customer মিলিয়ে bandwidth-এর জন্য তিনি
+**ব্যান্ডউইথ প্রায় শেষ**, **ব্যান্ডউইথ শেষ** আর **ব্যান্ডউইথ শেষ, ওয়েবসাইট বন্ধ** পান, যা admin-দের কাছেও যায় (দেখুন
+[Bandwidth](/guides/admin/resellers/#bandwidth)), আর নিজের account নিয়ে "শুধু আপনি" চিহ্নিত alert-গুলো।
+
 প্রতিটা alert-এর একটা severity আছে: **info** (আবার online), **warning** বা **critical** (server offline,
-fail করা backup, website, app, database বা email-এ সমস্যা, malware, disk space শেষ)।
+fail করা backup, website, app, database বা email-এ সমস্যা, malware, disk space বা bandwidth শেষ)।
 
 ## ভাষা
 
@@ -178,6 +193,8 @@ ekPanel একটা JSON body-সহ `POST` পাঠায়:
 | `X-Ekpanel-Event` | Event-এর নাম, যেমন `backup_failed` |
 | `X-Ekpanel-Signature` | `sha256=` আর body-র HMAC-SHA256, channel-এর signing key দিয়ে বানানো |
 
+পরের release থেকে `params`-এ `brand`-ও থাকে: প্রাপক panel-এর যে নাম দেখেন।
+
 Webhook channel যোগ করলে ekPanel একটা signing key বানায় আর একবার দেখায় ("সই করার কী, শুধু এই একবারই
 দেখানো হচ্ছে"); অথবা 16 থেকে 200 character-এর নিজের একটা দিন। কোনো request-এ ভরসা করার আগে signature
 check করুন, যেমন Python-এ:
@@ -204,12 +221,15 @@ def valid(body: bytes, header: str, key: str) -> bool:
 - Project-এর test VM-এ একটা webhook channel শুরু থেকে শেষ পর্যন্ত পরীক্ষা করা হয়েছে (একটা signed test
   message, আর agent থামানোর তিন মিনিট পর "offline", তারপর "back online")। Email, Telegram, Discord আর
   Slack ওই service-গুলোর ওপর নির্ভর করে; আপনারটা check করতে **পরীক্ষামূলক বার্তা পাঠান** ব্যবহার করুন।
-- এখনো নেই: fail করা **cron job**-এর alert (panel এখনো job-এর ফলাফল দেখে না), **সফল** deploy-এর alert,
-  আর নতুন customer-দের sign-in তথ্যসহ email। দেখুন [roadmap](/project/roadmap/)।
+- এখনো নেই: **সফল** deploy-এর alert, আর নতুন customer-দের sign-in তথ্যসহ email। দেখুন [roadmap](/project/roadmap/)।
+  (Fail করা cron job-এর alert পরের release-এ আসছে।)
 - Customer হিসেবে কাজ করা একজন admin ("তাঁর হয়ে ঢুকুন") customer-এর channel বদলাতে পারেন না।
 
 ## সম্পর্কিত
 
 - [Server](/guides/admin/servers/): কখন offline ধরা হয়, আর disk-এর সতর্কবার্তা।
 - [Backup](/guides/data/backups/): Fail করা backup alert পাঠায়।
-- [Customer আর package](/guides/admin/customers/): Customer-দের জন্য disk space-এর alert।
+- [Customer আর package](/guides/admin/customers/): Customer-দের জন্য disk space আর bandwidth-এর alert।
+- [Reseller](/guides/admin/resellers/): একজন reseller-এর customer আর তাঁদের bandwidth নিয়ে alert।
+- [Branding](/guides/admin/branding/): Message-এ panel-এর নাম আর domain।
+- [Cron job](/guides/websites/cron/): কখন fail করা job alert পাঠায়।

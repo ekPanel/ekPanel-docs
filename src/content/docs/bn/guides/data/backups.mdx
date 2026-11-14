@@ -43,6 +43,12 @@ service-সহ), mailbox, আর panel-এর নিজের settings database�
 যা হারানো চলবে না, তার জন্য S3-compatible storage ব্যবহার করুন। একই server-এ দুই ধরনই যোগ করতে
 পারেন।
 
+<Aside type="tip" title="Server হারিয়ে গেলে">
+S3 storage-এর backup আর আপনার রেখে দেওয়া recovery key দিয়ে server-এর website-গুলো তাদের database সহ
+[অন্য server-এ আবার বানাতে](/guides/websites/rebuild/) পারেন। **এই সার্ভারে** (This server) রাখা backup দিয়ে
+তা হয় না: server-এর সাথে সেটাও হারিয়ে যায়।
+</Aside>
+
 ### S3-compatible provider
 
 S3 API বোঝে এমন যেকোনো storage-এ কাজ করার কথা, যেমন Amazon S3, Backblaze B2, Cloudflare R2, Wasabi বা
@@ -122,6 +128,9 @@ Server নতুন করে বানানোর পর (বা নতুন 
 </Steps>
 
 **এই সার্ভারে** রাখা backup panel থেকে আবার connect করা যায় না।
+
+নতুন server-এ storage connect হয়ে গেলে, এই backup থেকে সেখানে
+[হারানো server-এর website আবার বানাতে](/guides/websites/rebuild/) পারেন।
 
 ## Schedule আর retention
 
@@ -223,7 +232,8 @@ machine-এ আপনার লাগবে restic, S3 key আর আপনা�
 
 - Docker app, mailbox আর panel-এর নিজের database-এর backup হয় না।
 - একটা মাত্র file restore করা, বা panel থেকে backup download করা: এখনো নেই।
-- অন্য server-এ restore করা: এখনো নেই।
+- অন্য server-এ restore করা: শুধু পুরো একটা website (আপনার বেছে নেওয়া database সহ), তার সবচেয়ে নতুন S3 backup
+  থেকে, যখন তার server আর নেই। দেখুন [Backup থেকে আবার বানান](/guides/websites/rebuild/)।
 - একটা location একটা server-এর; প্রতিটা server-এর জন্য একটা করে যোগ করুন।
 
 দেখুন [roadmap](/project/roadmap/)।
@@ -231,4 +241,5 @@ machine-এ আপনার লাগবে restic, S3 key আর আপনা�
 ## সম্পর্কিত
 
 - [Database](/guides/data/databases/): Database তৈরি করুন আর password reset করুন।
+- [Backup থেকে আবার বানান](/guides/websites/rebuild/): হারানো server-এর website অন্য server-এ set up করুন।
 - [Notification](/guides/admin/notifications/): Fail করা backup-এর খবর পান।

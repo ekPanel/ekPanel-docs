@@ -138,6 +138,10 @@ servers and Docker images, and whether SFTP, FTP and Git apps are included.
 **Panel**: The central program (`ekpanel`) with the web UI, the API and the PostgreSQL database. It keeps
 the desired state and sends work to the agents. It runs on one server and can manage many.
 
+**Passkey**: A way to sign in with your fingerprint, face, device PIN or a security key instead of a password and
+code (the WebAuthn standard). It works only on the panel address it was added on. Comes with the next release. See
+[Account security](/guides/security/accounts/#passkeys).
+
 **PHP-FPM pool**: A group of PHP worker processes for one website, running as that website's Linux account.
 Each website has its own pool, so websites cannot read each other's files.
 
@@ -160,8 +164,12 @@ change, when an agent reconnects, and every 10 minutes.
 **Recovery key**: The password that encrypts your backups. It is shown once when you set up a backup location
 and stays only on the server. Without it, nobody can read the backups, including you.
 
-**Reseller**: A role planned for phase 4e: someone who sells hosting to their own customers within limits an
-administrator gives them. It is not usable yet.
+**Recovery code**: One of ten one-time codes the panel shows when you turn on two-factor sign-in. Each one signs
+you in once instead of the authenticator app's code. Not the same as a backup's recovery key. Comes with the next
+release. See [Account security](/guides/security/accounts/#recovery-codes).
+
+**Reseller**: Someone who sells hosting on your servers to their own customers, with their own packages, within
+limits an administrator gives them. Comes with the next release. See [Resellers](/guides/admin/resellers/).
 
 **Restic repository**: The place where backups are stored: a folder on the server or a bucket in S3-compatible
 storage. ekPanel uses restic, which encrypts and deduplicates: unchanged data is stored only
@@ -207,6 +215,11 @@ else; there is no operation that runs a shell command.
 **Website, site**: A domain served by Caddy from a folder on a server: static files, or PHP with a chosen version.
 Each website has its own Linux account, home folder and PHP pool. Not the same as an
 [app](#a).
+
+**White-label, brand**: Giving the panel your own name, color, logo and domain, so customers see your
+hosting business instead of ekPanel. The **brand** is that set: the panel's, set by an administrator, or
+a [reseller](#r)'s own, for them and their customers. Comes with the next release. In the panel it is
+**Branding**. See [Branding](/guides/admin/branding/).
 
 **WP-CLI**: WordPress's command line tool. ekPanel uses it, as the website's own account, to install and
 update WordPress.

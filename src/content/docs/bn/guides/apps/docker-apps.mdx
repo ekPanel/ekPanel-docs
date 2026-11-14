@@ -275,8 +275,8 @@ App মুছলে তার web server site, তার [cron job](/guides/webs
 
 ## Limit আর যা এখনো নেই
 
-- একটা app একটা server-এ চলে। App-কে অন্য server-এ, বা অন্য মালিকের কাছে সরানো এখনো নেই (দেখুন
-  [roadmap](/project/roadmap/))।
+- একটা app একটা server-এ চলে। App [অন্য server-এ সরাতে](/guides/apps/move/) পারেন, আর পরের release থেকে একজন admin
+  [মালিক বদলান](/guides/admin/customers/#change-the-owner) দিয়ে এটা অন্য মালিককে দিতে পারেন।
 - [Backup](/guides/data/backups/)-এ website আর database থাকে, app volume **থাকে না**। আপাতত app-এর
   জরুরি data নিজে backup করুন।
 - একটা app একটা port-এ একটা domain পায়। যেসব app-এর একাধিক domain বা port লাগে, সেগুলোর জন্য public
@@ -302,3 +302,4 @@ publish করুন। Visitor-দের সরাসরি ওই port-এ প
 - [Git deploy](/guides/apps/git-deploys/): Repository থেকে নিজের code build আর release করুন।
 - [Web terminal](/guides/apps/terminal/): চলমান container-এর ভেতরে একটা shell।
 - [Cron job](/guides/websites/cron/): নির্দিষ্ট সময়ে app-এর container-এর ভেতরে command চালান।
+- [অন্য server-এ সরান](/guides/apps/move/): একটা app আর তার data অন্য server-এ সরান।

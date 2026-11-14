@@ -2,18 +2,19 @@
 title: Notifications
 description: Get alerts about offline servers, failed backups, broken websites and more, in the panel and by email, Telegram, Discord, Slack or a signed webhook.
 sidebar:
-  order: 3
+  order: 6
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 ekPanel tells you when something needs attention: a server went offline, a backup failed, a
 website could not be set up, a disk is filling up. Every alert appears under the **bell** at the
 top of the panel. You can also have alerts sent to **channels**: email, Telegram, Discord, Slack or
 your own webhook.
 
-Every user sets up their own channels: administrators and customers alike. Customers only receive
-alerts about their own things.
+Every user sets up their own channels: administrators, customers and (from the next release)
+resellers alike. Customers only receive alerts about their own things; resellers about their
+customers' things.
 
 ## The bell
 
@@ -49,6 +50,12 @@ You can use any SMTP service: your own mail server, your provider's, or a transa
 service. The password is encrypted in the panel's database and never shown again ("Leave empty to
 keep the saved one"). The panel refuses to send a password over an unencrypted connection to
 another machine.
+
+<Badge text="next release" variant="note" /> With [branding](/guides/admin/branding/), each
+recipient's messages carry the name of the panel they see, such as "Someone signed in to your
+Host BD account from …" and "Open in Host BD: …". Their links use the domain of their brand
+(the reseller's, or else the panel's) when it has one, and the **Panel address** otherwise.
+Messages about ekPanel itself, such as **New ekPanel version**, keep the name ekPanel.
 
 ## Add a channel
 
@@ -103,8 +110,8 @@ sent back to the browser. When you edit a channel, leave them empty to keep the 
 
 ## Events
 
-Administrators can choose from every event; customers from those about their own websites, apps,
-databases, disk space and account.
+Administrators can choose from every event; customers and resellers from those about websites,
+apps, databases, cron jobs, disk space, bandwidth and their account.
 
 | Event (in the panel) | When it is sent | Who gets it |
 | --- | --- | --- |
@@ -123,8 +130,13 @@ databases, disk space and account.
 | **Malware found** | A malware scan found new suspicious files (up to five are named) | Administrators and the website's owner |
 | **Disk space almost used up** | A customer uses 90% of their package's disk space | Administrators and that customer |
 | **Disk space used up** | A customer uses all of it | Administrators and that customer |
+| **Bandwidth almost used up** | <Badge text="next release" variant="note" /> A customer's websites and apps have sent 90% of their package's [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted) this month. Sent once a month | Administrators and that customer |
+| **Bandwidth used up** | <Badge text="next release" variant="note" /> They have sent all of it. The package lets them go over, so the websites keep working | Administrators and that customer |
+| **Bandwidth used up, websites stopped** | <Badge text="next release" variant="note" /> They have sent all of it, and the package stops their websites and app addresses until the next month | Administrators and that customer |
+| **Cron job failed** | <Badge text="next release" variant="note" /> The last run of a [cron job](/guides/websites/cron/#failure-alerts) failed: an error exit code, its time limit, stopped by a signal, or out of memory. Checked every 5 minutes; sent once, and again only after a run in between succeeded | Administrators and the job's owner |
 | **Task failed** | A task (an image update, a restore, a WordPress install …) failed for good, after its last attempt. Scheduled and manual backups, and setting up websites, apps and databases, send their own alerts instead | Administrators, and the customer who started it |
 | **Sign-in from a new address** | Someone signed in to your account from an address not used in the last 90 days (not on the very first sign-in) | Only you |
+| **Sign-in with a recovery code** | <Badge text="next release" variant="note" /> Someone signed in to your account with a two-factor [recovery code](/guides/security/accounts/#recovery-codes). Says from which address, and how many codes are left | Only you |
 | **New ekPanel version** | The panel found a newer [release](/guides/admin/updates/). Sent once per version | Administrators |
 | **ekPanel updated** | An [update](/start/upgrade/) finished, with how many servers had a problem | Administrators |
 | **ekPanel update failed** | An update could not be installed; the panel keeps its current version | Administrators |
@@ -132,8 +144,15 @@ databases, disk space and account.
 Alerts go to **every** administrator. A customer receives only the alerts marked "owner" or
 "customer" above, and only about their own things.
 
+<Badge text="next release" variant="note" /> A [reseller](/guides/admin/resellers/) receives every
+alert their customers receive, about those customers' things, as well as the customer. They also get
+**Bandwidth almost used up**, **Bandwidth used up** and **Bandwidth used up, websites stopped** for
+the bandwidth of all their customers together, which go to the administrators too (see
+[Bandwidth](/guides/admin/resellers/#bandwidth)), and the alerts marked "Only you" about their own
+account.
+
 Each alert has a severity: **info** (back online), **warning** or **critical** (server offline, failed
-backup, website, app, database or email problem, malware, disk space used up).
+backup, website, app, database or email problem, malware, disk space or bandwidth used up).
 
 ## Languages
 
@@ -175,6 +194,8 @@ and these headers:
 | `X-Ekpanel-Event` | The event name, such as `backup_failed` |
 | `X-Ekpanel-Signature` | `sha256=` and the HMAC-SHA256 of the body, made with the channel's signing key |
 
+From the next release, `params` also has `brand`: the panel's name as the recipient sees it.
+
 When you add a webhook channel, ekPanel makes a signing key and shows it once ("The signing key,
 shown only this once"); or enter your own of 16 to 200 characters. Check the signature before you
 trust a request, for example in Python:
@@ -201,13 +222,16 @@ actually connected to, so redirects and DNS tricks do not get around it. Adminis
 - In the project's test VM, a webhook channel was tested end to end (a signed test message, and
   "offline" three minutes after the agent was stopped, then "back online"). Email, Telegram,
   Discord and Slack depend on those services; use **Send a test** to check yours.
-- Not there yet: alerts for failed **cron jobs** (the panel does not watch job results yet), alerts
-  for **successful** deploys, and email to new customers with their sign-in details. See the
-  [roadmap](/project/roadmap/).
+- Not there yet: alerts for **successful** deploys, and email to new customers with their sign-in
+  details. See the [roadmap](/project/roadmap/). (Alerts for failed cron jobs come with the next
+  release.)
 - An administrator acting as a customer ("Sign in as") cannot change the customer's channels.
 
 ## Related
 
 - [Servers](/guides/admin/servers/): What counts as offline, and the disk warning.
 - [Backups](/guides/data/backups/): Backups that fail send alerts.
-- [Customers and packages](/guides/admin/customers/): Disk space alerts for customers.
+- [Customers and packages](/guides/admin/customers/): Disk space and bandwidth alerts for customers.
+- [Resellers](/guides/admin/resellers/): Alerts about a reseller's customers and their bandwidth.
+- [Branding](/guides/admin/branding/): The panel's name and domain in messages.
+- [Cron jobs](/guides/websites/cron/): When a failed job sends an alert.

@@ -44,6 +44,12 @@ another way for now.
 Use S3-compatible storage for anything you cannot afford to lose. You can add both kinds to the
 same server.
 
+<Aside type="tip" title="If a server is lost">
+Backups in S3 storage, together with the recovery key you saved, let you
+[rebuild the server's websites on another server](/guides/websites/rebuild/), with their
+databases. A backup on **This server** cannot do that: it is lost with the server.
+</Aside>
+
 ### S3-compatible providers
 
 Any storage that speaks the S3 API should work, for example Amazon S3, Backblaze B2, Cloudflare
@@ -119,11 +125,14 @@ location again:
    **Recovery key**.
 
 3. Click **Connect**. The server checks that the key opens the repository. A wrong key is refused:
-   "the recovery key does not open these backups".
+   "That recovery key does not open the backups at this location."
 
 </Steps>
 
 Backups kept on **This server** cannot be connected again from the panel.
+
+Once the storage is connected on a new server, you can
+[rebuild a lost server's websites there](/guides/websites/rebuild/) from these backups.
 
 ## Schedules and retention
 
@@ -224,7 +233,8 @@ backups are not deleted**:
 
 - Docker apps, mailboxes and the panel's own database are not backed up.
 - Restoring a single file, or downloading a backup from the panel: not yet.
-- Restoring onto another server: not yet.
+- Restoring onto another server: only a whole website (with the databases you choose), from
+  its newest S3 backup, when its server is gone. See [Rebuild from a backup](/guides/websites/rebuild/).
 - A location belongs to one server; add one per server.
 
 See the [roadmap](/project/roadmap/).
@@ -232,4 +242,5 @@ See the [roadmap](/project/roadmap/).
 ## Related
 
 - [Databases](/guides/data/databases/): Create databases and reset passwords.
+- [Rebuild from a backup](/guides/websites/rebuild/): Set a lost server's websites up on another server.
 - [Notifications](/guides/admin/notifications/): Hear about failed backups.

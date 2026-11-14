@@ -1,6 +1,6 @@
 ---
 title: Account-এর নিরাপত্তা
-description: Two-factor sign-in, sign-in alert, একটা ভালো password আর অন্য device থেকে sign out করে আপনার panel account সুরক্ষিত রাখুন।
+description: Two-factor sign-in আর recovery code, passkey, sign-in alert, একটা ভালো password আর sign in থাকা device-এর তালিকা দিয়ে আপনার panel account সুরক্ষিত রাখুন।
 sidebar:
   order: 6
 ---
@@ -8,8 +8,15 @@ sidebar:
 import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
 
 আপনার ekPanel account root access-সহ server চালায়, তাই এটা ভালোভাবে সুরক্ষিত রাখা দরকার। এই পাতায় আছে two-factor
-sign-in, নতুন sign-in নিয়ে alert, password আর session। এখানকার সবকিছু menu-র **আপনার অ্যাকাউন্ট → নিরাপত্তা**
-(Your account → Security)-এ পাবেন, administrator আর customer দুজনের জন্যই।
+sign-in, recovery code, passkey, নতুন sign-in নিয়ে alert, password আর sign in থাকা device। এখানকার সবকিছু menu-র
+**আপনার অ্যাকাউন্ট → নিরাপত্তা** (Your account → Security)-এ পাবেন, administrator, customer আর (পরের release থেকে) reseller সবার জন্য।
+
+<Aside type="caution" title="v0.1.0-এর পরে নতুন">
+Recovery code, কারও two-factor sign-in reset করা, passkey আর sign in থাকা device-এর তালিকা main repository-র `dev`
+branch-এ আছে, আর আসবে **পরের release**-এ। নিচে এগুলোর পাশে <Badge text="পরের release" variant="note" /> লেখা আছে।
+v0.1.0-এর panel-এ two-factor sign-in আছে, কিন্তু recovery code নেই, আর আছে শুধু **অন্য সব ডিভাইস থেকে সাইন আউট**
+(Sign out all other devices)।
+</Aside>
 
 ## Two-factor sign-in
 
@@ -33,6 +40,10 @@ Authenticator, Aegis বা 1Password।
 
 4. App-এ দেখানো **৬ সংখ্যার কোড** (6-digit code) লিখে **নিশ্চিত করে চালু করুন** (Confirm and turn on) বেছে নিন।
 
+5. <Badge text="পরের release" variant="note" /> Panel দশটা **recovery code** দেখায়। **কপি** (Copy) বা
+   **ডাউনলোড** (Download) দিয়ে সেগুলো রেখে দিন (download করলে `ekpanel-recovery-codes.txt` নামের একটা file
+   আসে), তারপর **রেখে দিয়েছি** (I have saved them) বেছে নিন। দেখুন [Recovery code](#recovery-codes)।
+
 </Steps>
 
 Card-এ এখন <Badge text="চালু" variant="success" /> দেখায়। সঠিক code দিয়ে নিশ্চিত না করা পর্যন্ত কিছুই বদলায় না,
@@ -42,42 +53,192 @@ Card-এ এখন <Badge text="চালু" variant="success" /> দেখা�
 কোডটা লিখুন।" Code প্রতি ৩০ সেকেন্ডে বদলায়; ঘড়ি সামান্য এদিক-ওদিক হলে যাতে সমস্যা না হয়, তাই এখনকার code-এর ঠিক
 আগের বা পরের code-ও মেনে নেওয়া হয়।
 
-<Aside type="danger" title="ফিরে ঢোকার একটা উপায় রাখুন">
-ekPanel-এ **এখনো কোনো recovery code নেই**, আর অন্য কোনো administrator-এর জন্য কারও two-factor sign-in বন্ধ করার
-কোনো বাটনও নেই। ফোন হারালে access-ও হারাবেন।
+<Badge text="পরের release" variant="note" /> [Branding](/guides/admin/branding/) থাকলে sign-in পাতায় ekPanel-এর বদলে
+আপনি যে panel দেখেন তার নাম থাকে, আর two-factor sign-in চালু করলে authenticator app-এ account-এর নামও তাই হয়। আগে
+app-এ যোগ করা account সেখানে পুরোনো নামই রাখে; তার code কাজ করতে থাকে।
 
-- Setup করার সময় key-টা ("স্ক্যান করতে পারছেন না?"-এর নিচের লেখা) একটা password manager-এ রেখে দিন, অথবা এমন
-  authenticator app ব্যবহার করুন যেটা code-এর backup রাখে।
-- দ্বিতীয় একজন administrator-কে two-factor sign-in-সহ তাঁর নিজের account দিন, যাতে panel কখনো একটা ফোনের ওপর
-  নির্ভর না করে।
+### Recovery code
+
+<Badge text="পরের release" variant="note" /> Recovery code দিয়ে authenticator app ছাড়াই একবার sign in করা যায়,
+যেমন ফোন হারানোর পর। Two-factor sign-in চালু করলে panel এমন **দশটা** code বানায়, যেমন `k7mqx-3vh9p`, আর
+সেগুলো **শুধু ওই একবারই** দেখায়: "এই রিকভারি কোডগুলো ফোন থেকে দূরে, নিরাপদ কোথাও রাখুন। অথেন্টিকেটর অ্যাপ হারালে
+প্রতিটা একবার সাইন-ইন করাবে। এগুলো শুধু এখনই দেখানো হচ্ছে।"
+
+Code-গুলো একটা password manager-এ রাখুন বা print করে রাখুন, কিন্তু যে ফোনে authenticator app আছে সেখানে নয়।
+Panel প্রতিটা code-এর শুধু একটা SHA-256 hash রাখে, তাই পরে কেউ এগুলো আর পড়তে পারে না, administrator-ও না।
+
+**Recovery code দিয়ে sign in করতে** স্বাভাবিকভাবে email আর password দিন। পরের ধাপে field-টার নাম "অ্যাপের কোড,
+বা একটা রিকভারি কোড" (Code from the app, or a recovery code), নিচে লেখা "ফোন হারিয়েছেন? আপনার একটা রিকভারি
+কোড দিন।" সেখানে আপনার একটা code লিখে **যাচাই করুন** (Verify) বেছে নিন। বড় বা ছোট হাতের অক্ষর, space আর dash
+কোনো ব্যাপার না। প্রতিটা code চলে **একবারই**; আগে ব্যবহার হওয়া code ভুল code-এর মতোই ফিরিয়ে দেওয়া হয়।
+
+Recovery code ব্যবহার হলে:
+
+- আপনি একটা **রিকভারি কোড দিয়ে সাইন-ইন** (Sign-in with a recovery code) alert পান, কোন address থেকে এসেছে আর
+  কয়টা code বাকি আছে তা-সহ। এটা ঘণ্টার নিচে দেখা যায়, আর
+  [Notification](/guides/admin/notifications/)-এ বেছে নেওয়া channel-গুলোতে যায়। আপনি না হলে password বদলান, নতুন
+  recovery code বানান আর অন্য device থেকে sign out করুন।
+- Audit log-এ এটা "রিকভারি কোড দিয়ে সাইন-ইন" হিসেবে লেখা হয়, কয়টা code বাকি তা-সহ।
+
+**টু-ফ্যাক্টর অথেনটিকেশন** card দেখায় কয়টা code বাকি, যেমন "9টা কোড বাকি। প্রতিটা অ্যাপের কোডের বদলে একবার
+সাইন-ইন করায়।" **৩টা বা তার কম** বাকি থাকলে লাইনটা সতর্কতার রঙে দেখায়।
+
+**নতুন code বানাতে** **নতুন রিকভারি কোড বানান** (Make new recovery codes) বেছে নিন, password দিন ("নতুন কোড
+বানাতে পাসওয়ার্ড দিন (পুরোনোগুলো আর চলবে না)"), আর আবার **নতুন রিকভারি কোড বানান** বেছে নিন। দশটা নতুন code
+পাবেন, আগের মতোই একবার দেখানো হয়, আর **পুরোনো সবগুলো আর চলে না**, ব্যবহার হোক বা না হোক। অল্প কয়টা বাকি থাকলে, বা
+কেউ দেখে ফেলেছে মনে হলে এটা করুন।
+
+<Aside type="note">
+Recovery code শুধু sign-in পাতার জন্য। [Web terminal](/guides/apps/terminal/) খুলতে authenticator app-এর code লাগে;
+সেখানে recovery code চলে না।
 </Aside>
 
 ### বন্ধ করুন
 
 **টু-ফ্যাক্টর অথেনটিকেশন বন্ধ করুন** (Turn off two-factor authentication) বেছে নিন, আপনার password দিন, আর নিশ্চিত
-করুন। Sign-in-এর মতোই বারবার ভুল password দেওয়া সীমিত।
+করুন। Sign-in-এর মতোই বারবার ভুল password দেওয়া সীমিত। বন্ধ করলে আপনার recovery code-গুলোও মুছে যায়; পরে আবার চালু
+করলে দশটা নতুন code পাবেন।
+
+### ফোন হারালে
+
+<Badge text="পরের release" variant="note" /> Authenticator app ছাড়া ফিরে ঢোকার তিনটা উপায় আছে:
+
+- **একটা recovery code**, sign-in পাতায়, [ওপরে](#recovery-codes) যেমন বলা আছে। ঢোকার পর নতুন ফোন দিয়ে two-factor
+  sign-in বন্ধ করে আবার চালু করুন। এতে দশটা নতুন recovery code-ও পাবেন।
+- **একটা passkey**, যদি যোগ করে থাকেন: **পাসকি দিয়ে সাইন-ইন** (Sign in with a passkey) বেছে নিন। এতে code লাগে না।
+  দেখুন [Passkey](#passkeys)।
+- **কেউ আপনার জন্য reset করে দিলে।** তখন two-factor sign-in বন্ধ থাকে, আর আপনি শুধু password দিয়ে sign in করেন।
+  সাথে সাথে **আপনার অ্যাকাউন্ট → নিরাপত্তা**-তে আবার চালু করুন।
+
+কে reset করতে পারেন:
+
+- **Customer-এর** two-factor sign-in: যেকোনো administrator, customer তালিকায় **টু-ফ্যাক্টর রিসেট** (Reset
+  two-factor) দিয়ে। দেখুন [Customer](/guides/admin/customers/#reset-a-password-or-two-factor-sign-in)।
+- **Administrator-এর** নিজের, বা যে কারও: panel-এর server-এ root access আছে এমন কেউ, একটা command দিয়ে। Panel-এ এর
+  কোনো বাটন নেই, যাতে শুধু কোনো administrator-এর password হাতে পাওয়া কেউ এটা ব্যবহার করতে না পারে। যে server-এ
+  panel চলে, সেখানে লিখুন:
+
+  ```bash
+  sudo -u ekpanel ekpanel reset-2fa admin@example.com
+  ```
+
+  Account-এর email address দিন। Command-টা panel-এর settings নিজেই `/etc/ekpanel/panel.env` থেকে পড়ে নেয়, আর
+  এটা লেখে:
+
+  ```text
+  Two-factor sign-in is off for admin@example.com. Sign in with the password and turn it on again.
+  ```
+
+  যদি উত্তর আসে "no account with the email …", address-টা মিলিয়ে দেখুন। Audit log-এ reset-টা "সার্ভারে টু-ফ্যাক্টর রিসেট"
+  হিসেবে লেখা হয়, `"via": "cli"`-সহ।
+
+Reset করলে account-এর recovery code-গুলোও মুছে যায়। এর passkey মোছে না, আর এর কোনো device থেকে sign out-ও করায়
+না। API token দিয়ে কখনো two-factor sign-in reset করা যায় না।
+
+<Aside type="danger" title="ফিরে ঢোকার একটা উপায় রাখুন">
+- Panel যখন recovery code দেখায়, তখনই সেগুলো ফোন থেকে দূরে কোথাও রেখে দিন।
+- দ্বিতীয় একজন administrator-কে two-factor sign-in-সহ তাঁর নিজের account দিন, যাতে panel কখনো একটা ফোনের ওপর
+  নির্ভর না করে।
+- Panel-এর server-এ আপনার SSH access ঠিক রাখুন: administrator-এর জন্য ফিরে ঢোকার শেষ উপায় এটাই।
+</Aside>
 
 ### প্রত্যেক administrator-এর এটা ব্যবহার করা উচিত
 
 [সার্ভার নিরাপত্তা](/guides/security/overview/) পাতার checklist সেই administrator-দের তালিকা দেখায়, যাঁরা শুধু
 password দিয়ে sign in করেন ("1 জন অ্যাডমিনিস্ট্রেটর শুধু পাসওয়ার্ড দিয়ে সাইন ইন করেন:" আর তাঁদের email)। তাঁদের
-প্রত্যেককে two-factor sign-in চালু করতে বলুন।
+প্রত্যেককে two-factor sign-in চালু করতে বলুন। Checklist শুধু two-factor sign-in দেখে: যাঁর passkey আছে কিন্তু
+two-factor sign-in নেই, সেই administrator-ও তালিকায় থাকেন, কারণ তখনো শুধু তাঁর password দিয়েই sign in করা যায়।
 
 <Aside type="note">
-যে administrator কোনো **customer হিসেবে** sign in করেন (তাঁকে সাহায্য করতে), তিনি customer-এর password বা
-two-factor settings দেখতে বা বদলাতে পারেন না। পাতায় লেখা থাকে: "এই সেটিংগুলো গ্রাহকের নিজের। আপনার নিজেরটা বদলাতে
-নিজের অ্যাকাউন্টে ফিরুন।"
+যে administrator কোনো **customer হিসেবে** sign in করেন (তাঁকে সাহায্য করতে), তিনি customer-এর password,
+two-factor sign-in, recovery code, passkey বা sign in থাকা device দেখতে বা বদলাতে পারেন না। পাতায় লেখা থাকে: "এই
+সেটিংগুলো গ্রাহকের নিজের। আপনার নিজেরটা বদলাতে নিজের অ্যাকাউন্টে ফিরুন।"
 </Aside>
+
+## Passkey
+
+<Badge text="পরের release" variant="note" /> Passkey দিয়ে password আর code টাইপ না করে আঙুলের ছাপ, মুখ, device-এর
+PIN বা একটা security key দিয়ে sign in করা যায়। Passkey WebAuthn নামের একটা standard মেনে চলে: passkey-র গোপন
+অংশটা কখনো আপনার device বা security key ছেড়ে বের হয় না, তাই কোনো নকল sign-in পাতা চুরি করার মতো কিছু পায় না।
+
+Passkey ঢোকার একটা বাড়তি উপায়, password-এর বদলি নয়: আপনার password (আর two-factor code) আগের মতোই চলে। একাধিক
+passkey যোগ করতে পারেন, যেমন একটা laptop-এ, একটা ফোনে।
+
+### শুরু করার আগে
+
+- Panel-টা তার **host name দিয়ে HTTPS-এ** খুলুন, যেমন `https://panel.example.com`। IP address-এ passkey চলে না,
+  আর সাধারণ `http://`-তে চলে শুধু `localhost`-এ।
+- Passkey চলে **শুধু সেই address-এ, যেখানে সেটা যোগ করেছেন**। `panel.example.com`-এ যোগ করা passkey panel-টা
+  `server1.example.com` হিসেবে বা একটা [brand-এর domain](/guides/admin/branding/#domain)-এ খুললে চলে না। যে address
+  সবসময় ব্যবহার করেন, সেখানেই যোগ করুন, বা যে কয়টা address ব্যবহার করেন তার প্রত্যেকটায় একটা করে।
+- আপনার browser আর device-কে passkey সমর্থন করতে হবে: যেমন Windows Hello, Touch ID বা Face ID, Android-এর screen
+  lock, passkey রাখে এমন password manager, বা USB বা NFC security key। ব্যবহার করা না গেলে **পাসকি** (Passkeys)
+  card-এ লেখা থাকে: "এই ব্রাউজার এখানে পাসকি ব্যবহার করতে পারে না। পাসকির জন্য HTTPS আর পাসকি সমর্থন করে এমন
+  ব্রাউজার লাগে।"
+
+### Passkey যোগ করুন
+
+<Steps>
+
+1. **আপনার অ্যাকাউন্ট → নিরাপত্তা** খুলুন। **পাসকি** card-এ **পাসকি যোগ করুন** (Add a passkey) বেছে নিন।
+
+2. একটা **নাম** (Name) দিন, যাতে বোঝা যায় কোন device-এ আছে, যেমন `Laptop`, `Phone` বা `Security key` (৬০ অক্ষর
+   পর্যন্ত; খালি রাখলে নাম হয় "Passkey")।
+
+3. **আপনার পাসওয়ার্ড** (Your password) দিয়ে **পাসকি বানান** (Create the passkey) বেছে নিন।
+
+4. আপনার browser বা system আঙুলের ছাপ, মুখ, PIN বা security key দিয়ে নিশ্চিত করতে বলে। ৫ মিনিটের মধ্যে তার ধাপগুলো
+   শেষ করুন; এর পরে panel বলে "অনেক সময় লেগে গেছে। আবার চেষ্টা করুন।"
+
+</Steps>
+
+Passkey-টা এখন তালিকায় দেখায়, তার নাম, কবে যোগ করেছেন ("যোগ করা হয়েছে …") আর শেষ কবে ব্যবহার করেছেন ("শেষ
+ব্যবহার …", বা "এখনো ব্যবহার হয়নি")-সহ। Audit log-এ লেখা হয় "পাসকি যোগ হয়েছে"।
+
+সরাতে পাশের bin icon বেছে নিয়ে নিশ্চিত করুন ("… পাসকিটা সরাবেন? এটা দিয়ে আর সাইন-ইন হবে না।")। যে device-এ
+passkey আছে সেটা হারালে বা কাউকে দিয়ে দিলে passkey সরিয়ে ফেলুন। Panel device বা password manager থেকে passkey মুছতে
+পারে না; চাইলে সেখানে নিজে মুছুন। Audit log-এ লেখা হয় "পাসকি সরানো হয়েছে"।
+
+### Passkey দিয়ে sign in করুন
+
+Sign-in পাতায় **পাসকি দিয়ে সাইন-ইন** (Sign in with a passkey) বেছে নিন (**সাইন ইন** বাটনের নিচে, "অথবা"-র পরে)।
+আপনার browser এই panel-এর address-এর জন্য তার কাছে থাকা passkey-গুলো দেখায়; আপনারটা বেছে নিয়ে আঙুলের ছাপ, মুখ,
+PIN বা security key দিয়ে নিশ্চিত করুন। Email, password বা code কিছুই টাইপ করতে হয় না।
+
+একটা passkey একসাথে **দুটো factor** হিসেবেই গোনা হয়: আপনার কাছে যা আছে (device), আর আপনি যা বা যা জানেন (আঙুলের
+ছাপ, মুখ বা PIN, যা device উত্তর দেওয়ার আগে যাচাই করে)। তাই two-factor sign-in চালু থাকলেও এটা দিয়ে sign in হয়।
+
+Password-এর মতোই, গত ৯০ দিনে ব্যবহার হয়নি এমন address থেকে sign in করলে একটা **নতুন ঠিকানা থেকে সাইন-ইন**
+(Sign-in from a new address) alert যায়। Sign-in-টা audit log-এ থাকে (`auth.login`, `"method": "passkey"`-সহ),
+আর [sign in থাকা device](#sessions)-এর তালিকায় device-টার পাশে **পাসকি** (Passkey) badge দেখায়।
+
+**পাসকি দিয়ে সাইন-ইন** বাটন দেখায় শুধু এমন browser-এ, যেটা এই পাতায় passkey ব্যবহার করতে পারে; তাই সাধারণ
+`http://`-তে (`localhost` ছাড়া) এটা থাকে না।
+
+### Passkey কাজ না করলে
+
+| Panel যা বলে | যা করবেন |
+| --- | --- |
+| "এই ঠিকানায় পাসকি ব্যবহার করা যায় না। প্যানেলটা তার হোস্ট নাম দিয়ে HTTPS-এ খুলুন।" | আপনি panel-টা IP address দিয়ে খুলেছেন। এর host name `https://`-সহ ব্যবহার করুন। |
+| "পাসকি ব্যবহার করা যায়নি। আবার চেষ্টা করুন, বা পাসওয়ার্ড দিয়ে সাইন-ইন করুন।" | আপনার device-এর উত্তর মানা হয়নি, যেমন passkey-টা panel-এ সরিয়ে ফেলা হয়েছে। Password দিয়ে sign in করে **পাসকি** তালিকা দেখুন। |
+| "অনেক সময় লেগে গেছে। আবার চেষ্টা করুন।" | Panel-এর অনুরোধ আর আপনার device-এর উত্তরের মাঝে ৫ মিনিটের বেশি পেরিয়ে গেছে। |
+| "এই পাসকি আগেই যোগ করা আছে।" | এই device বা security key-তে আপনার account-এর একটা passkey আগে থেকেই আছে। |
+| "পাসকিটা আগেই সরানো হয়েছে।" | এটা আগেই সরানো হয়েছে, হয়তো browser-এর অন্য কোনো tab-এ। |
+
+আপনার browser যদি কোনো passkey-ই খুঁজে না পায়, দেখুন panel-টা সেই address-এই খুলেছেন কিনা যেখানে passkey যোগ
+করেছিলেন। Browser-এর passkey window বন্ধ করে দিলে কিছুই হয় না, কোনো error-ও দেখায় না। ব্যর্থ passkey sign-in এক
+address থেকে [চেষ্টার সীমা](#too-many-attempts)-র মধ্যে গোনা হয়।
 
 ## Sign-in alert
 
-গত ৯০ দিনে যে address থেকে sign in করেননি, সেখান থেকে sign in করলে ekPanel আপনাকে ওই address-সহ একটা **নতুন ঠিকানা
-থেকে সাইন-ইন** (Sign-in from a new address) alert পাঠায়। কোনো account-এর একেবারে প্রথম sign-in এর মধ্যে ধরা হয়
-না।
+গত ৯০ দিনে যে address থেকে sign in করেননি, সেখান থেকে password বা passkey দিয়ে sign in করলে ekPanel আপনাকে ওই
+address-সহ একটা **নতুন ঠিকানা থেকে সাইন-ইন** (Sign-in from a new address) alert পাঠায়। কোনো account-এর একেবারে
+প্রথম sign-in এর মধ্যে ধরা হয় না।
 
 Alert panel-এর ঘণ্টার নিচে দেখা যায়, আর **আপনার অ্যাকাউন্ট → নোটিফিকেশন** (Your account → Notifications)-এ আপনার
 বেছে নেওয়া channel-গুলোতে যায় (email, Telegram, Discord, Slack বা একটা webhook)। দেখুন
-[Notification](/guides/admin/notifications/)।
+[Notification](/guides/admin/notifications/)। Recovery code দিয়ে sign in করলে তার নিজের একটা alert-ও যায়: দেখুন
+[Recovery code](#recovery-codes)।
 
 Sign in-টা যদি আপনি নিজে না করে থাকেন, সাথে সাথে password বদলান (এতে অন্য সব device থেকেও sign out হয়ে যায়) আর
 two-factor sign-in চালু করুন।
@@ -96,29 +257,49 @@ two-factor sign-in চালু করুন।
 ### অনেকবার চেষ্টা
 
 ১৫ মিনিটের মধ্যে ১০ বার sign-in ব্যর্থ হলে, এক address থেকে হোক বা এক email address-এর জন্য, sign-in থামিয়ে
-রাখা হয়: "অনেকবার চেষ্টা করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।" প্রতিটা ব্যর্থ sign-in audit log-এ লেখা হয়।
+রাখা হয়: "অনেকবার চেষ্টা করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।" ভুল বা আগে ব্যবহার হওয়া recovery code একটা
+ব্যর্থ sign-in হিসেবে গোনা হয়, ব্যর্থ passkey sign-in-ও (তার address-এর জন্য)। প্রতিটা ব্যর্থ sign-in audit log-এ
+লেখা হয়।
 
 ## Session
 
 - Sign in করলে ওই device-এ **৭ দিন** sign in থাকেন, আর প্রতিবার panel ব্যবহার করলে ৭ দিন আবার নতুন করে শুরু হয়।
-- যে computer আর ব্যবহার করেন না সেখানে sign in করে থাকলে **সাইন ইন থাকা ডিভাইস** (Signed-in devices) card-এ
-  **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices) বেছে নিন। আপনি যে device ব্যবহার করছেন সেটায় sign
-  in থাকে।
 - Customer হিসেবে sign in করা administrator-এর সময় এক ঘণ্টায় সীমিত।
 - গত ১৫ মিনিটে password না দিয়ে থাকলে [web terminal](/guides/apps/terminal/) খোলার সময় আবার password (আর two-factor
-  code) চাওয়া হয়।
+  code) চাওয়া হয়, passkey দিয়ে sign in করে থাকলেও।
+
+<Badge text="পরের release" variant="note" /> **সাইন ইন থাকা ডিভাইস** (Signed-in devices) card-এ সেই সব browser-এর
+তালিকা থাকে, যেখানে এখন আপনার account-এ sign in করা আছে, সবচেয়ে সাম্প্রতিক ব্যবহার আগে। প্রতিটা লাইনে দেখায়:
+
+- browser আর system, যেমন `Firefox · Linux` বা `Chrome · Android`;
+- আপনি এখন যে browser ব্যবহার করছেন তার পাশে **এই ডিভাইস** (This device);
+- device-টা passkey দিয়ে sign in করে থাকলে **পাসকি** (Passkey);
+- কোনো administrator আপনার হয়ে sign in করে থাকলে **একজন অ্যাডমিন** (An administrator) (customer-এর account-এ);
+- address, কবে sign in করেছে ("সাইন-ইন …") আর শেষ কবে দেখা গেছে ("শেষ দেখা …")। শেষ দেখার সময় বড়জোর প্রতি ৫
+  মিনিটে একবার আপডেট হয়।
+
+একটা device থেকে sign out করতে তার লাইনে **সাইন আউট** (Sign out) বেছে নিন। কিছু জিজ্ঞেস না করেই সাথে সাথে sign
+out হয়ে যায়, আর audit log-এ লেখা হয় "ডিভাইস সাইন আউট"। আপনি যে device ব্যবহার করছেন, তালিকায় তার কোনো **সাইন
+আউট** বাটন নেই: এর বদলে স্বাভাবিকভাবে panel থেকে sign out করুন।
+
+এই device ছাড়া বাকি সব device থেকে sign out করতে **অন্য সব ডিভাইস থেকে সাইন আউট** (Sign out all other devices)
+বেছে নিন। অচেনা কোনো device বা address দেখলে এটা করুন, আর password-ও বদলান।
 
 Session cookie হলো `HttpOnly`, `SameSite=Lax` আর (HTTPS-এ) `__Host-` prefix-সহ `Secure`, তাই পাতার script বা অন্য
 site এগুলো পড়তে বা পাঠাতে পারে না।
 
 ## যা এখনো নেই
 
-- **Passkey** (device-এর fingerprint বা face দিয়ে sign in, WebAuthn) পরিকল্পনায় আছে।
-- **Sign in থাকা device-এর তালিকা**, যেখান থেকে প্রতিটা আলাদা করে বন্ধ করা যাবে, পরিকল্পনায় আছে; আজ আপনি অন্য সব
-  device থেকে একসাথে sign out করতে পারেন।
 - Script আর অন্য program-এর জন্য **API token** আসবে পরের release-এ: দেখুন
-  [API token](/guides/security/api-tokens/)।
-- Two-factor sign-in-এর **recovery code** এখনো নেই।
+  [API token](/guides/security/api-tokens/)। Device থেকে sign out করলে token revoke হয় না।
+- Panel-এ কোনো administrator **অন্য administrator-এর** two-factor sign-in reset করতে পারেন না; panel-এর server-এ
+  `ekpanel reset-2fa` ব্যবহার করুন।
+- Recovery code দিয়ে web terminal খোলা যায় না।
+- Recovery code আর sign in থাকা device-এর তালিকা একটা local panel-এ browser দিয়ে চালিয়ে দেখা হয়েছে: একটা recovery
+  code দিয়ে একবার sign in হয়েছে আর দ্বিতীয়বার ফিরিয়ে দেওয়া হয়েছে, card-এ তখন 9টা code বাকি দেখিয়েছে, আর অন্য
+  device থেকে sign out করলে তার session শেষ হয়েছে। Customer-এর two-factor sign-in reset আর passkey panel-এর
+  automated test-এ আছে (passkey একটা virtual authenticator দিয়ে)। **আসল ফোন, laptop বা security key দিয়ে passkey
+  যোগ করা এখনো চালিয়ে দেখা হয়নি।**
 
 দেখুন [roadmap](/project/roadmap/)।
 
@@ -126,6 +307,7 @@ site এগুলো পড়তে বা পাঠাতে পারে ন�
 
 <CardGrid>
 	<LinkCard title="সার্ভার নিরাপত্তা" href="/guides/security/overview/" description="Checklist, two-factor sign-in ছাড়া administrator-সহ।" />
+	<LinkCard title="Customer" href="/guides/admin/customers/" description="Customer-এর password বা two-factor sign-in reset করুন।" />
 	<LinkCard title="Notification" href="/guides/admin/notifications/" description="Sign-in alert কোথায় পাঠানো হয়।" />
 	<LinkCard title="Security model" href="/concepts/security-model/" description="ekPanel কীভাবে account আর server সুরক্ষিত রাখে।" />
 	<LinkCard title="API token" href="/guides/security/api-tokens/" description="Script আর ekctl-এর key, scope আর মেয়াদসহ।" />

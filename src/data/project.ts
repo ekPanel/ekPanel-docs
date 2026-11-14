@@ -12,8 +12,11 @@ export const project = {
 	/** The roadmap phase being worked on (see /project/roadmap/). 4a (releases and updates) is
 	 * done and the first release, v0.1.0, was published from it on 2026-11-09. The API part of
 	 * 4b (tokens, OpenAPI, ekctl) is done on dev for the next release; the Terraform provider
-	 * comes later, and work goes on with 4c. */
-	currentPhase: '4c',
+	 * comes later. 4c (moving between servers, and rebuilding a website from a backup) is done
+	 * on dev too, and so is 4d (importers: cPanel, website archives, Coolify). Work goes on with
+	 * 4e (resellers and white-label): 4e-1 to 4e-4 (account security, customers, resellers,
+	 * white-label) are done on dev; sub-users (4e-5) come next. */
+	currentPhase: '4e',
 	links: {
 		org: 'https://github.com/ekPanel',
 		repo: 'https://github.com/ekPanel/ekpanel',

@@ -123,6 +123,19 @@ After 10 failed sign-ins from one address, or for one email address, the panel r
 sign-ins for 15 minutes. Wait, then try again. If you use two-factor authentication, check
 that your phone's clock is right: codes change every 30 seconds.
 
+## I lost the phone with my two-factor codes
+
+From the next release, use one of your recovery codes in the code field of the sign-in page, or
+sign in with a passkey if you added one. An administrator can reset a customer's two-factor
+sign-in on the customers list. For an administrator's account, run this on the panel's server:
+
+```bash
+sudo -u ekpanel ekpanel reset-2fa admin@example.com
+```
+
+Then sign in with the password and turn two-factor sign-in on again. See
+[If you lose your phone](/guides/security/accounts/#if-you-lose-your-phone).
+
 ## A server shows as offline
 
 The panel marks a server offline when its agent's connection is gone, and sends a
@@ -206,6 +219,77 @@ what went wrong:
 ```bash
 sudo journalctl -u caddy --since "30 min ago" | grep -i -E "error|challenge"
 ```
+
+## A website shows "Website suspended" or "Bandwidth used up"
+
+From the next release, these short pages (with HTTP status 503) come from ekPanel itself, not
+from the website:
+
+- **"Website suspended"**: an administrator or their reseller has
+  [suspended](/guides/admin/customers/#suspend-a-customer) the website's owner, or the owner's
+  [reseller](/guides/admin/resellers/#suspend-a-reseller) is suspended. The customers list shows
+  "Suspended since …" on the customer, or the **Resellers** page on the reseller. Click
+  **Unsuspend** there to bring everything back.
+- **"Bandwidth used up"**: the owner's package stops websites once its monthly
+  [bandwidth](/guides/admin/customers/#how-bandwidth-is-counted) is used up. The customers list
+  shows "Bandwidth used up: websites stopped". It ends by itself in the next month (UTC), or at
+  once with a larger package. If it shows "Reseller's bandwidth used up: websites stopped", the
+  reseller's total is used up instead: raise it under **Edit reseller**, or wait for the next
+  month. See [Bandwidth](/guides/admin/resellers/#bandwidth).
+
+The same pages show on the addresses of the customer's apps.
+
+## Messages about a reseller's account
+
+From the next release, a [reseller](/guides/admin/resellers/), their customers, or an
+administrator working for them may see these:
+
+| Message | What it means and what to do |
+| --- | --- |
+| "The reseller's account allows no more customers." (also websites, databases, apps, cron jobs, email domains, mailboxes) | The reseller's total is reached, counted over what all their customers have. Delete something, or an administrator raises the total with **Edit reseller**. |
+| "The disk space of the reseller's account is used up." | All their customers together use the reseller's **Disk space (GB)**. Delete files, or raise the total. Website files are measured every 30 minutes, so freed space may count only after the next measurement. |
+| "The reseller's account cannot use that server." | The reseller's **Servers** do not include it. Choose another server, or an administrator ticks it under **Servers**. |
+| "This package gives more than your reseller account allows: …." | The package gives more than the reseller has, in the field named. Lower it. A limited size cannot be left empty, because empty means "no limit". See [A reseller's packages](/guides/admin/resellers/#a-resellers-packages). |
+| "Add a customer first: as a reseller, everything you create belongs to one of your customers." or "Choose the customer this is for." | Resellers own nothing themselves. Add a customer (one for yourself, for your own website), then choose them under **For**. |
+| "An administrator suspended this customer, so only an administrator can lift it." | Ask the administrator to unsuspend the customer. |
+| "Sign in as the customer to connect their Cloudflare account." | Use **Sign in as** on the customer, then connect their Cloudflare account as them. |
+| "This reseller still has customers. Move them to yourself or another reseller, or delete them, first." | Move each customer with **Edit** (choose another **Reseller** or **None (your own customer)**), or delete them; then delete the reseller. |
+| "Choose a reseller." | The reseller chosen for a customer does not exist any more. Reload the page and choose again. |
+| "Check the limits: counts are 0 or more, and sizes must be large enough." | A reseller's limit is out of range: memory at least 64 MB, CPU at least 5% of a core, bandwidth at least 1 GB. |
+
+## The domain of a brand does not answer
+
+From the next release, a [brand's domain](/guides/admin/branding/#domain) is served by the server
+that runs the panel. Open **Branding** and look at the badge next to the domain:
+
+- **No server**: the server that runs the panel is not added to the panel, so nothing serves the
+  domain. [Add it](/guides/admin/servers/) on **Servers**.
+- **Being set up**: the panel's server has not taken the domain up yet. The page checks again
+  every few seconds. If it stays like this, check that the server is connected (see
+  [A server shows as offline](#a-server-shows-as-offline)).
+- **Failed**: the panel's server could not set it up. Administrators see the error under the
+  domain.
+- **Active**, but the browser cannot connect or warns about the certificate: Caddy gets the
+  certificate only once the domain points at the server. Check that `dig +short panel.example.com`
+  shows the addresses the **Branding** page lists, and that ports 80 and 443 reach the server.
+  Then read Caddy's log on the panel's server:
+
+  ```bash
+  sudo journalctl -u caddy --since "30 min ago" | grep -i panel.example.com
+  ```
+
+  The agent on the panel's server writes the brands' domains to
+  `/etc/ekpanel/caddy/sites/panel-domains.caddy`.
+  Domains ending in `.test`, `.localhost`, `.internal`, `.example` or `.invalid` get a certificate
+  from Caddy's own authority, which browsers warn about.
+
+Two more things work as designed:
+
+- The domain you set up with the installer's `--domain` always shows the panel's brand, even if a
+  brand names it.
+- A passkey added at one of the panel's addresses does not work at another. Sign in there with
+  your password and two-factor code, and add a passkey there too. See
+  [Passkeys](/guides/security/accounts/#passkeys).
 
 ## The name server will not start (port 53)
 

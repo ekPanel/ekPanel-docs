@@ -1,11 +1,11 @@
 ---
 title: Cron job
-description: Website বা app-এর জন্য নির্দিষ্ট সময়ে command চালান, preset বা যেকোনো cron expression দিয়ে, আপনার time zone-এ, সময়সীমা, log আর এখনই চালানোর সুবিধা সহ।
+description: Website বা app-এর জন্য নির্দিষ্ট সময়ে command চালান, preset বা যেকোনো cron expression দিয়ে, আপনার time zone-এ, সময়সীমা, log, এখনই চালানোর সুবিধা আর fail করলে alert সহ।
 sidebar:
   order: 7
 ---
 
-import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, CardGrid, LinkCard, Badge } from '@astrojs/starlight/components';
 
 Cron job একটা নির্দিষ্ট সময়সূচি ধরে command চালায়: প্রতি রাতে একটা backup script, প্রতি মিনিটে WordPress বা Laravel-এর
 scheduler, প্রতি সোমবার একটা report। ekPanel-এ একটা job কোনো **website** বা কোনো **app**-এর হয়, আর সেটার সাথেই চলে যায়।
@@ -180,6 +180,10 @@ Job-এর list-এ:
 - **জব সম্পাদনা** (Edit job) কোথায় চলে সেটা ছাড়া সবকিছু বদলায়।
 - **জব মুছুন** (Delete job) server থেকে এটা সরিয়ে দেয়।
 
+<Badge text="পরের release" variant="note" /> কোনো admin একজন customer-কে
+[suspend](/guides/admin/customers/#suspend-a-customer) করে রাখলে, তাঁর সব job server-এ থেমে থাকে। প্রতিটা job নিজের
+**চালু** (On) বা **বন্ধ রাখা** (Paused) setting রেখে দেয়, যা suspend তুলে দিলে আবার খাটে।
+
 ## Status আর output
 
 প্রতিটা job তার পরের run দেখায় (**পরেরবার …** (Next …)), আর **শেষবারের ফল আর আউটপুট** (Last run and output)-এর নিচে:
@@ -191,9 +195,33 @@ Job-এর list-এ:
 
 Output বেশিদিন রাখতে চাইলে ওপরের script-এর উদাহরণের মতো job-এর output একটা file-এ লিখুন।
 
-<Aside type="caution">
-Cron job fail করলে ekPanel এখনো notification পাঠায় না। গুরুত্বপূর্ণ job মাঝে মাঝে check করুন।
-</Aside>
+## Fail করলে alert
+
+<Badge text="পরের release" variant="note" />
+
+একটা job fail করলে ekPanel job-এর মালিক আর admin-দের একটা **ক্রন জব ব্যর্থ** (Cron job failed)
+[notification](/guides/admin/notifications/) পাঠায়, যেমন: "nightly backup (example.com)-এর শেষ রান ব্যর্থ হয়েছে: exit
+code 3।" কারণ হয় এগুলোর একটা:
+
+- `exit code …`: command একটা error দিয়ে শেষ হয়েছে;
+- `time limit reached`: এটা তার **সময়সীমা**-র চেয়ে বেশি চলেছে;
+- `killed`: একটা signal দিয়ে এটা থামানো হয়েছে;
+- `out of memory`: kernel এটা থামিয়েছে, যেমন package-এর memory limit-এ পৌঁছে।
+
+কীভাবে কাজ করে:
+
+- প্রতি **৫ মিনিটে** panel প্রতিটা **চালু** job-এর শেষ শেষ-হওয়া run পড়ে, প্রতি server-এ একটা `systemctl show` call দিয়ে।
+- একটা fail **একবারই** জানানো হয়। Job fail করতে থাকলে আর alert আসে না। একটা run সফল হওয়ার পর পরের fail আবার জানানো
+  হয়।
+- প্রতিটা check-এ শুধু শেষ run-টাই গোনা হয়। দুটো check-এর মাঝে যে job fail করে তারপর সফল হয়, সেটা জানানো হয় না।
+- Pause করা job দেখা হয় না। Check-এর সময় যে job চলছে, বা যে job একটা offline server-এ আছে, সেটা পরের কোনো check-এ
+  দেখা হয়।
+- এই alert-সহ release-এ update করার ঠিক পরে, এক ঘণ্টার বেশি পুরোনো fail জানানো হয় না।
+
+Alert website বা app-এর page-এ link করে। Email, Telegram বা অন্য channel-এ পেতে channel-এর **ঘটনা** (Events)-এর নিচে
+**ক্রন জব ব্যর্থ**-এ টিক দিন (বা কোনো event-এই টিক দেবেন না, যার মানে সব event)।
+
+Project-এর test VM-এ exit code 3 দিয়ে শেষ হওয়া একটা job একটাই "ক্রন জব ব্যর্থ" notification পাঠিয়েছে।
 
 ## Package-এর সীমা
 

@@ -104,8 +104,9 @@ UI Arabic-এর মতো ডান-থেকে-বাম ভাষার জ�
   কোনো endpoint নেই।
 - এটা শুরু থেকেই অনেক ভাষার জন্য বানানো।
 
-cPanel-এর তুলনায় এতে এখনো যা **নেই**: reseller, cPanel backup-এর importer, server-এর মধ্যে site
-সরানো, একটা WAF, আর billing integration। এগুলো আছে [phase 4](/project/roadmap/)-এ।
+cPanel-এর তুলনায় এতে এখনো যা **নেই**: একটা WAF আর billing integration। এগুলো আছে [phase 4](/project/roadmap/)-এ।
+Server-এর মধ্যে website, app, database আর পুরো customer সরানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট করা,
+reseller account আর white-label branding আসছে পরের release-এ।
 
 ## এটা দিয়ে কি hosting বিক্রি করা যায়?
 
@@ -113,15 +114,22 @@ cPanel-এর তুলনায় এতে এখনো যা **নেই**:
 memory আর CPU-এর সীমা (memory আর CPU kernel মানতে বাধ্য করে), PHP version, server, email আর FTP।
 Customer-রা একই panel-এ sign in করে আর শুধু নিজেদের জিনিসই দেখে।
 
-এখনো নেই: reseller account, white-label branding, customer suspend করা, bandwidth-এর সীমা, আর billing
-integration (WHMCS, Blesta, Paymenter)। আর ekPanel এখনো শুরুর দিকের software, তাই আজ এটা দিয়ে
-hosting বিক্রি করবেন না। দেখুন [Customer আর package](/guides/admin/customers/)।
+পরের release থেকে আপনি একজন customer-কে suspend করতে, তাঁর website আর অন্য জিনিস অন্য কাউকে দিতে, আর তাঁর মাসিক
+bandwidth সীমিত করতেও পারবেন। আপনি [reseller](/guides/admin/resellers/)-ও বানাতে পারবেন, যাঁরা আপনার server-এ নিজের
+customer-দের কাছে hosting বিক্রি করেন, নিজের package দিয়ে, আপনার ঠিক করা মোটের মধ্যে; আর panel-কে আপনার নিজের
+[নাম, রং, logo আর domain](/guides/admin/branding/) দিতে, বা একজন reseller-কে তাঁর নিজেরটা দিতে দিতে পারবেন।
+
+এখনো নেই: sub-user আর billing integration (WHMCS, Blesta, Paymenter)। আর ekPanel এখনো শুরুর দিকের software, তাই আজ এটা দিয়ে hosting বিক্রি করবেন না। দেখুন
+[Customer আর package](/guides/admin/customers/)।
 
 ## cPanel বা অন্য panel থেকে কি site import করা যায়?
 
-এখনো না। cPanel backup, aaPanel আর Coolify-এর importer phase 4d-তে আসার plan আছে। আজকের দিনে আপনি
-একটা website যোগ করে file manager বা SFTP দিয়ে এর file upload করতে পারেন, আর আপনার চেনা tool দিয়ে
-database import করতে পারেন।
+হ্যাঁ, পরের release-এ। [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) একটা পুরো cPanel account তার full backup
+থেকে নিয়ে আসে, তার website, database, email আর DNS zone-সহ। [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)
+একটা একটা করে website আনে, তার file-এর archive আর database dump থেকে: aaPanel-এর নিজের backup, বা অন্য host থেকে সাধারণ
+WordPress বা অন্য যেকোনো website। [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/) Coolify-এর application আর service
+তার API দিয়ে নিয়ে আসে, তাদের variable, domain আর রাখা folder-সহ image, Git আর Compose app হিসেবে; তাদের volume-এর data আপনি নিজে
+কপি করেন।
 
 ## এটা কি বাইরে তথ্য পাঠায় (phone home)?
 

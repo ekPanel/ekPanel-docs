@@ -11,8 +11,17 @@ ekPanel is built in phases. Each phase ends with something you can install on a 
 use. **Phases 0 to 3 are done**, and so is the first part of phase 4: releases and updates (4a).
 The first release, v0.1.0, came out of it on 9 November 2026. Since then the API part of 4b
 (API tokens, the OpenAPI description and the `ekctl` command-line tool) is done and comes with
-the next release; next is moving between servers (4c). The full plan, with every decision and
-test, is
+the next release, and so is 4c: moving a website, an app, a database or everything a
+customer has on a server to another server, and rebuilding a website on another server from
+its backup when its server is gone. 4d, importers, is done too: a whole cPanel account can be
+imported from its full backup, with its websites, files, MySQL databases, email with its mail,
+cron jobs and DNS zones; one website at a time, from aaPanel or any other host, from an
+archive of its files with its database dump; and Coolify's applications and services, through
+its API. 4e has started: its first part, account security (recovery codes for two-factor
+sign-in, resetting someone's two-factor sign-in, a list of signed-in devices, and passkeys), is
+done and comes with the next release, and so is its second part: suspending customers, changing
+the owner of websites and other things, bandwidth limits in packages, and alerts for failed cron
+jobs, its third part: resellers, and its fourth: white-label branding. Sub-users come next. The full plan, with every decision and test, is
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md) in the main repository.
 
 <Aside type="caution" title="Early software">
@@ -118,26 +127,119 @@ Still to come:
 - One way to follow slow work: a `task_id` on every answer that starts it (today some answers
   are a task, some an item with its state, some a deployment)
 
-### 4c. Moving between servers
+### 4c. Moving between servers <Badge text="done" variant="success" />
 
-- Move a website, an app or a database to another ekPanel server, with DNS and certificate
-  switched over
-- Restore a backup onto another server; move a whole customer
-- Copies over the agents' own connection, not public SSH
+Done in the `dev` branch; it comes with the **next release**. Website and app moves, and
+rebuilding from a backup, were tested with two VMs; database and customer moves so far only
+with the panel's automated tests:
 
-### 4d. Importers
+- [Move a website](/guides/websites/move/), with the databases you choose, to another ekPanel
+  server: files with owners and ACLs, databases, certificate, settings and cron jobs. The new
+  server is checked before anything switches, DNS the panel manages follows, and the old copy
+  keeps serving until you remove it. A failed move leaves the website where it was
+- [Move an app](/guides/apps/move/) to another ekPanel server: its Docker volumes with numeric
+  owners, a Git app's current build (nothing is rebuilt), certificate, settings and cron jobs.
+  The app is stopped while it moves; the old copy stays stopped with its data until you remove
+  it, and a failed move starts it again where it was. Apps with pull request previews do not
+  move
+- [Move a database](/guides/data/move-database/) on its own: dump, switch, load on the new
+  server with the same user and password; the old copy stays until you remove it. Websites and
+  apps on the old server keep using the old copy, so usually you move the website with its
+  databases instead
+- [Move a customer](/guides/admin/move-customer/): everything a customer has on one server, one
+  thing at a time (the first website takes all their databases along), all checked before the
+  first move starts, stopping at the first failure; what moved stays moved
+- [Rebuild a website from a backup](/guides/websites/rebuild/) on another server, with the
+  databases you choose, when its server is gone: the S3 storage is connected on the new server
+  with its recovery key, and the website's home folder and databases come back from their
+  newest backups. Only for S3 storage, since a local backup location is on the lost server.
+  Tried with two VMs and an S3 test server: rebuilt in about 10 seconds with the same files,
+  owners, ACLs and data
+- The copy goes over the agents' own connections to the panel, not public SSH
 
-- cPanel backups (accounts, files, databases, mail, DNS, cron jobs, certificates)
-- aaPanel sites and databases; plain WordPress from another host
-- Coolify applications and services
-- A report of what was imported and what was not
+Left for later:
 
-### 4e. Resellers and white-label
+- Checking the new server's free disk space before a move, and suggesting the databases a
+  website really uses instead of all of its owner's
+- For app moves: fetching the app's page after the move, and taking a Git app's kept builds
+  along (until then, deploy again before rolling back)
 
-- Resellers with their own packages and customers, within limits an administrator gives them
-- White-label: name, logo, colours and the panel's domain
-- Sub-users with chosen permissions
-- Passkeys, and a list of active sessions
+### 4d. Importers <Badge text="done" variant="success" />
+
+Done in the `dev` branch; it comes with the **next release**. Each importer was tried in the VM
+(the cPanel and website archive imports with backups built like those hosts', the Coolify import
+with a real Coolify v4). Next is 4e.
+
+- cPanel backups: websites, files, MySQL databases, email with its mail, cron jobs and DNS
+  zones <Badge text="done" variant="success" />. Certificates are not imported on purpose: new
+  ones are issued once the domains point to the server
+- aaPanel sites and databases; plain WordPress (or any website) from another host, through the
+  website archive import <Badge text="done" variant="success" />
+- [Coolify applications and services](/guides/admin/import-coolify/), through Coolify's API
+  <Badge text="done" variant="success" />: image, Git and Compose apps with their variables,
+  first domain and port, and kept folders. The data in volumes is for the administrator to copy;
+  databases are not imported
+- A report of what was imported and what was not <Badge text="done" variant="success" /> (for
+  Coolify, notes on each app)
+
+### 4e. Resellers and white-label <Badge text="partly done" variant="caution" />
+
+Done in the `dev` branch; it comes with the **next release**:
+
+- [Account security](/guides/security/accounts/) <Badge text="done" variant="success" />:
+  - Ten one-time recovery codes when two-factor sign-in is turned on, shown once and kept only
+    as hashes; usable in the sign-in's code field, with an alert and an audit log entry when one
+    is used, and new ones on the Security page
+  - Resetting someone's two-factor sign-in: a customer's from the customers list, anyone's with
+    `ekpanel reset-2fa` on the panel's server. API tokens can never do it
+  - Passkeys, and the active sessions listed and ended one by one on the Security page
+  - Recovery codes and sessions were tried in a browser on a local panel; passkeys so far only
+    in the automated tests, with a virtual authenticator, not yet with a real device
+- [Customers](/guides/admin/customers/) <Badge text="done" variant="success" />:
+  - [Suspending a customer](/guides/admin/customers/#suspend-a-customer), with a reason only
+    administrators see: no sign-in (password, passkey or API token), a "suspended" page (503) on
+    their websites and app addresses, apps stopped, cron jobs paused, SFTP and FTP off,
+    mailboxes locked while mail still arrives. Nothing is deleted, and unsuspending puts
+    everything back
+  - [Changing the owner](/guides/admin/customers/#change-the-owner) of websites, databases,
+    apps, email domains and DNS zones, to another customer or to the administrators, checked
+    against the new owner's package first. Nothing moves on the server
+  - [Bandwidth limits](/guides/admin/customers/#how-bandwidth-is-counted) per calendar month
+    in packages, with alerts at 90% and 100%, and, if the package says so, a "bandwidth used up"
+    page (503) on the websites until the next month or a larger package
+  - [Alerts for failed cron jobs](/guides/websites/cron/#failure-alerts), checked every 5
+    minutes, once until a run succeeds again
+  - Suspending, the bandwidth stop, the cron alert and changing the owner were tried in the VM
+- [Resellers](/guides/admin/resellers/) (4e-3) <Badge text="done" variant="success" />:
+  - Resellers with their own packages and customers, within limits an administrator gives them:
+    totals for all their customers (counted on what the customers have, so a reseller may sell
+    more than they have), the most one package may give, and the PHP versions, images, servers
+    and features their packages may offer
+  - A reseller sees and manages only their customers and their customers' things; not servers,
+    backups, security, imports, updates or the audit log
+  - Suspending a reseller suspends all their customers; a reseller cannot lift a suspension an
+    administrator made
+  - A bandwidth total for all their customers, with alerts and an optional stop; resellers also
+    get their customers' alerts
+  - Administrators filter customers by reseller, move a customer to another reseller, and sign
+    in as a reseller
+  - Tried in the VM: the website total, suspending and unsuspending, the bandwidth stop, an owner
+    change between a reseller's customers, and deleting a reseller
+- [Branding (white-label)](/guides/admin/branding/) (4e-4) <Badge text="done" variant="success" />:
+  - The panel's own name, color, logo and domain, set by administrators, and a reseller's own,
+    when an administrator allows it, for them and their customers
+  - The name in the header, the browser tab, notifications and authenticator apps; the color
+    adjusted to keep text readable (4.5:1) in both themes; the logo saved again as a plain PNG
+  - Each brand's domain served by the panel's server with its own certificate, showing its brand
+    on the sign-in page; links in notifications use it
+  - A link to the source code stays, as the AGPL asks
+  - Tried in the VM: the panel's and a reseller's domains served with their own certificates and
+    brands next to a customer's website, signing in at the reseller's domain, taking the
+    reseller's branding away and back, and a domain the installer's Caddyfile already serves
+
+Still to come:
+
+- Sub-users (4e-5) with chosen permissions
 
 ### 4f. Security center
 
@@ -156,9 +258,7 @@ These are taken along where they fit:
 
 - A database browser, and database import and export
 - Restoring single files, and downloading a backup
-- Suspending a customer, bandwidth limits in packages, alerts for failed cron jobs
 - Wildcard certificates (DNS-01) through Cloudflare or the built-in DNS
-- Moving a website, database or app to another owner
 - Trying the Cloudflare API and outside mail delivery for real
 
 ## Later: phase 5, game servers

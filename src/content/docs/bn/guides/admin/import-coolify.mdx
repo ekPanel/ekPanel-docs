@@ -1,0 +1,400 @@
+---
+title: Coolify থেকে ইমপোর্ট
+description: Coolify-এর API দিয়ে তার application আর service নিয়ে আসুন। এগুলো variable, domain, port আর রাখা folder-সহ image, Git আর Compose app হয়ে যায়; volume-এর data আপনি নিজে কপি করেন।
+sidebar:
+  order: 10
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Coolify (version 4) থেকে application আর service আপনার কোনো server-এ নিয়ে আসতে পারেন। আপনার দেওয়া একটা token দিয়ে
+panel Coolify-এর API থেকে এগুলো পড়ে, আর আপনি যেগুলো বেছে নেন তার প্রতিটার জন্য একটা ekPanel
+[app](/guides/apps/docker-apps/) বানায়: একটা Docker image app, একটা Git app বা একটা Compose app, তার variable, domain আর
+port, আর volume-এ রাখা folder-সহ। ওই volume-গুলোর **data** আসে না: সেটা আপনি নিজে কপি করেন। Domain নতুন server-এ point না
+করা পর্যন্ত visitor-দের জন্য কিছুই বদলায় না।
+
+<Aside type="tip">
+একটা পুরো cPanel account আনতে হলে দেখুন [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/)। aaPanel বা অন্য যেকোনো host থেকে
+একটা website আনতে হলে দেখুন [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/)।
+</Aside>
+
+## শুরু করার আগে
+
+- আপনি **admin**। Customer-রা এই পাতা দেখেন না; তবে আপনি কোনো customer-এর জন্য ইমপোর্ট করতে পারেন (দেখুন
+  [Customer-এর জন্য ইমপোর্ট](#importing-for-a-customer))।
+- **Coolify-এর API চালু আছে।** Coolify-তে **Settings → Advanced** খুলে API চালু করুন।
+- **Panel Coolify-তে পৌঁছাতে পারে।** Coolify-এর address-এ call করে panel নিজে, আপনার browser না, আর যে server-এ ইমপোর্ট করছেন
+  সেটাও না। Coolify শুধু আপনার নিজের network বা VPN থেকে পাওয়া গেলে panel সেটা পড়তে পারবে না।
+- **Server connected**: এটা [panel-এ যোগ করা](/start/add-server/) আছে আর **সার্ভার** (Servers) পাতায় **অনলাইন** (Online)
+  দেখায়। App-গুলো এই server-এই চলবে। App-গুলোর image, Git app build করা, আর যে data কপি করবেন, এগুলোর জন্য এতে যথেষ্ট disk
+  জায়গা আর memory থাকতে হবে।
+- **দুটো server-এই SSH দিয়ে login করতে পারেন**, Coolify-এরটা আর নতুনটা, `root` হিসেবে বা `sudo` আছে এমন user হিসেবে, যাতে
+  volume-এর data কপি করা যায়।
+
+## Coolify-তে একটা API token বানান
+
+<Steps>
+
+1. Coolify-তে **Keys & Tokens**, তারপর **API tokens** খুলুন।
+
+2. Token-টার একটা নাম দিন, যেমন `ekpanel-import`, আর **read** আর **read:sensitive** permission-এ tick দিন। Panel শুধু পড়ে,
+   তাই অন্য কোনো permission লাগে না।
+
+3. Token-টা বানিয়ে কপি করুন। Coolify এটা একবারই দেখায়।
+
+</Steps>
+
+**read:sensitive** থাকলে token গোপন মানগুলো দেখতে পায়। এটা না থাকলে Coolify variable-এর মান আর service-এর Compose file লুকিয়ে
+রাখে: তখন variable আসে মান ছাড়া, আর service ও Docker Compose application ইমপোর্ট করা যায় না ("Coolify এর Compose ফাইল পাঠায়নি: টোকেনে read:sensitive
+লাগবে")।
+
+<Aside type="caution" title="Token-টা Coolify-এর সব গোপন তথ্য পড়তে পারে">
+Panel token-টা শুধু যে request-এর সাথে দেন সেটার জন্যই ব্যবহার করে, শুধু আপনার দেওয়া address-এ পাঠায় (redirect follow করে না),
+আর কখনো জমা রাখে না। পাতা ছেড়ে না যাওয়া পর্যন্ত আপনার browser এটা পাতায় রাখে। তবুও ইমপোর্ট শেষ হলে Coolify-তে token-টা মুছে
+দিন।
+</Aside>
+
+## Coolify পড়ুন
+
+<Steps>
+
+1. Sidebar-এ **অ্যাডমিন** (Administration)-এর নিচে **ইমপোর্ট** (Import)-এ click করুন। `Ctrl+K` চেপে "ইমপোর্ট" লিখেও
+   যেতে পারেন।
+
+2. **Coolify** tab-এ click করুন ("Coolify-এর API দিয়ে অ্যাপ্লিকেশন আর সার্ভিস")।
+
+3. **১. Coolify-এর সাথে যুক্ত হন** (1. Connect to Coolify)-এর নিচে **Coolify-এর ঠিকানা** (Coolify's address)-এ সেই address
+   লিখুন যেটা দিয়ে Coolify খোলেন, যেমন `https://coolify.example.com`। শেষে `/api/v1` থাকা address-ও চলে।
+
+4. **API টোকেন** (API token)-এ token-টা paste করুন।
+
+5. **Coolify পড়ুন** (Read Coolify)-এ click করুন।
+
+</Steps>
+
+এরপর panel দেখায় **২. কী আনবেন বেছে নিন** (2. Choose what to import): token-এর জন্য Coolify-এর API যত application, service আর
+database দেখায়, সবগুলো। প্রতিটা লাইনে থাকে:
+
+- Coolify-তে resource-টার নাম, আর একটা badge: **অ্যাপ্লিকেশন** (Application), **সার্ভিস** (Service) বা **ডেটাবেস**
+  (Database);
+- Coolify-এর type: application-এর build pack (যেমন `dockerimage`, `nixpacks` বা `dockercompose`), service-এর ধরন (যেমন
+  `uptime-kuma`), বা database-এর ধরন (যেমন `standalone-postgresql`);
+- এর domain-গুলো, না থাকলে এর image বা Git repository।
+
+Coolify-তে দেখানোর মতো কিছু না থাকলে পাতা বলে "Coolify-তে কোনো অ্যাপ্লিকেশন বা সার্ভিস নেই।"
+
+যে লাইনে tick box নেই, সেটা ইমপোর্ট করা যায় না। সেখানে কারণ লেখা থাকে:
+
+| কারণ | মানে |
+| --- | --- |
+| "ডেটাবেস আনা হয় না: এখানে একটা বানিয়ে তার ডাম্প লোড করুন" | Panel-এ একটা [database](/guides/data/databases/) বানান, Coolify-এর database-এর dump নিন আর সেটা load করুন (দেখুন [Database](/guides/data/databases/#limits-and-what-is-not-there-yet))। ekPanel-এ নেই এমন database হলে, যেমন MongoDB, তার image একটা app হিসেবে চালান আর তার volume কপি করুন। |
+| "এই ধরনের বিল্ড আনা যায় না" | Application-টা এমন একটা build pack ব্যবহার করে যা ইমপোর্ট চেনে না। |
+| "এর কোনো Git রিপোজিটরি নেই" | Repository ছাড়া একটা Dockerfile, Nixpacks বা static application, যেমন যার Dockerfile Coolify-তে লিখে দেওয়া হয়েছিল। হাতে একটা Git app বা image app বানান। |
+| "Coolify এর Compose ফাইল পাঠায়নি: টোকেনে read:sensitive লাগবে" | **read:sensitive**-সহ একটা token বানিয়ে Coolify আবার পড়ুন। |
+
+## কী ইমপোর্ট করবেন বেছে নিন
+
+<Steps>
+
+1. যা ইমপোর্ট করতে চান তাতে tick দিন। তালিকা আসার সময় ইমপোর্ট করা যায় এমন সব application আর service-এ tick দেওয়া থাকে।
+
+2. **এখানে নাম** (Name here) দেখে নিন, এটা ekPanel-এ app-এর নাম। শুরুতে থাকে Coolify-এর নাম থেকে বানানো app-এর নাম: ছোট হাতের
+   অক্ষর, অন্য অক্ষর dash হয়ে যায়, অক্ষর দিয়ে শুরু না হলে সামনে `app-`, সর্বোচ্চ 32 অক্ষর। "Ghost Blog" হয় `ghost-blog`।
+   নামে 2–32টা ছোট হাতের অক্ষর, সংখ্যা আর dash থাকে, শুরু হয় অক্ষর দিয়ে আর শেষ হয় না dash দিয়ে, আর server-এ ওই নামের app
+   আগে থেকে থাকা চলবে না।
+
+3. **সার্ভার** (Server)-এ বেছে নিন app-গুলো কোন server-এ চলবে।
+
+4. **কার জন্য** (For)-এ বেছে নিন app-গুলোর মালিক কে: **অ্যাডমিনদের (কোনো প্যাকেজ নয়)** (Administrators (no package)) বা কোনো
+   customer।
+
+5. এর নিচের note-টা পড়ে নিন: "সেটিংস আসে: ইমেজ, Compose ফাইল বা Git রিপোজিটরি, প্রথম ডোমেইন আর তার পোর্ট, ভ্যারিয়েবল আর
+   ভলিউমে রাখা ফোল্ডার। ভলিউমের ডেটা আসে না: ডোমেইন এখানে পয়েন্ট করার আগে নিজে কপি করুন।" তারপর **ইমপোর্ট করুন** (Import)-এ
+   click করুন।
+
+</Steps>
+
+Panel tick দেওয়া প্রতিটা Coolify থেকে আবার পড়ে আর তার app বানায়, একটার পর একটা। প্রতিটা আলাদাভাবে বানানো হয়: একটা ব্যর্থ হলে
+বাকিগুলো থামে না, আর যে app-গুলো বানানো হয়ে গেছে সেগুলো থেকে যায়।
+
+তারপর পাতা দেখায় "_count_টার মধ্যে _made_টা বানানো হয়েছে", আর প্রতিটার জন্য একটা লাইন:
+
+- একটা tick আর app-এর নাম, যেটা app-এর পাতা খোলে; বা একটা cross, নাম, আর কেন বানানো হয়নি (দেখুন
+  [সমস্যা সমাধান](#troubleshooting));
+- কী আসেনি, বা এরপর কী করতে হবে, তার note (দেখুন [ইমপোর্টে কী বানানো হয়](#what-the-import-makes))।
+
+তালিকার নিচে: "অ্যাপগুলো এখন সার্ভারে চালু হচ্ছে। এদের ডেটা কপি করুন, দেখে নিন, তারপর ডোমেইনগুলো এই সার্ভারের দিকে পয়েন্ট
+করুন।" **অ্যাপ দেখুন** (Open apps) app-এর তালিকা খোলে; **আরেকটা ইমপোর্ট** (Import another) Coolify-এর তালিকায় ফিরে যায়,
+যেমন যেটা ব্যর্থ হয়েছে সেটা অন্য নামে ইমপোর্ট করতে। আগে যেগুলো বানানো হয়ে গেছে সেগুলোর tick তুলে দিন।
+
+<Aside type="caution">
+ফলাফল আর তার note শুধু এই পাতাতেই দেখায়, কোথাও রাখা হয় না। পাতা ছাড়ার আগে পড়ে নিন, বা কপি করে রাখুন। বানানো প্রতিটা app-এর
+জন্য [audit log](/concepts/security-model/#the-audit-log)-এ একটা entry (`import.coolify`) থাকে।
+</Aside>
+
+## ইমপোর্টে কী বানানো হয়
+
+প্রতিটা application বা service একটা app হয়। বানানোর সাথে সাথেই server সেটা set up করে: image pull হয়, আর image app আর Compose
+app চালু হয়। Git app তার প্রথম deploy-এর জন্য অপেক্ষা করে।
+
+### Docker image application
+
+Coolify-এর **Docker Image** build pack-ওয়ালা application হয় একটা **Docker ইমেজ** (Docker image) app:
+
+- **Image**: Coolify-এর image, তার tag-সহ, যেমন `ghost:5`।
+- **কন্টেইনারের ভেতরের পোর্ট** (Port inside the container): domain-এ port থাকলে সেটা (`https://app.example.com:3000`-এ
+  `3000`), নইলে Coolify-এর **Ports Exposes**-এর প্রথমটা।
+- **Domain**, **variable** আর **রাখা folder**: নিচে দেখুন।
+
+### Git application
+
+Coolify-এর **Dockerfile**, **Nixpacks**, **Static** বা **Railpack** build pack আর একটা Git repository-ওয়ালা application হয় একটা
+[Git app](/guides/apps/git-deploys/):
+
+- **Git রিপোজিটরি** (Git repository): Coolify-এর repository। Coolify তার GitHub App দিয়ে GitHub-এ গেলে শুধু `owner/repo`
+  রাখে; সেটা হয় `https://github.com/owner/repo`।
+- **Branch**: Coolify-এর branch (না থাকলে `main`)।
+- **Build folder**: Coolify-এর **Base Directory** (`/` হলে `.`)।
+- **বিল্ড পদ্ধতি** (Build with): Coolify-এর Dockerfile build pack-এর জন্য **Dockerfile**, base directory-র ভেতরে Coolify-এর
+  Dockerfile location-সহ। বাকিগুলোর জন্য **Railpack**: ekPanel-এ Nixpacks নেই, তাই Nixpacks আর static application এখানে
+  [Railpack](/guides/apps/git-deploys/#railpack) দিয়ে build হয়। Note বলে "এখানে Railpack দিয়ে বিল্ড হবে (Coolify-তে ছিল
+  nixpacks): প্রথম বিল্ডটা দেখে নিন"।
+- **কন্টেইনারের ভেতরের পোর্ট**: image application-এর মতোই।
+- **প্রতিটি push-এ ডিপ্লয়** (Deploy on every push) চালু থাকে, কিন্তু repository-তে
+  [webhook](/guides/apps/git-deploys/#webhooks-deploy-on-every-push) যোগ না করা পর্যন্ত push-এ deploy হয় না।
+
+ইমপোর্টের সময় কিছু build হয় না: "এখনো কিছু চলছে না: প্রথম রিলিজ বিল্ড করতে অ্যাপের পেজ থেকে ডিপ্লয় করুন"। Repository-র SSH
+address থাকলে, বা Coolify deploy key দিয়ে সেখানে গেলে, note বলে "প্রাইভেট রিপোজিটরি: অ্যাপের ডিপ্লয় কী (তার পেজে)
+রিপোজিটরিতে যোগ করুন, তারপর ডিপ্লয় করুন"। দেখুন [deploy key](/guides/apps/git-deploys/#private-repositories-the-deploy-key)।
+
+<Aside type="note" title="Coolify-এর GitHub App দিয়ে private repository">
+এমন repository হয় `https://github.com/owner/repo`, আর ফলাফলে লেখা থাকে এটা GitHub App দিয়ে এসেছে। Private হলে প্রথম deploy
+সেটা clone করতে পারে না: App-এর পাতায় repository বদলে তার SSH address দিন (`git@github.com:owner/repo.git`), app-এর deploy key
+repository-তে যোগ করুন, তারপর deploy করুন।
+</Aside>
+
+### Docker Compose application আর service
+
+Coolify-এর **Docker Compose** build pack-ওয়ালা application, আর প্রতিটা service (Uptime Kuma-র মতো এক-click service, বা আপনার
+নিজের Compose file), হয় একটা **Compose ফাইল** (Compose file) app:
+
+- **Compose file**: Coolify-তে file-টা যেমন আছে, deploy করার সময় Coolify নিজের settings যোগ করার আগের অবস্থায়। এক-click
+  service-এর জন্য সেটা Coolify-এর template।
+- **Named volume**: Coolify-এর file named volume ব্যবহার করে, কিন্তু উপরের `volumes:` অংশে সেগুলো declare করে না (deploy করার
+  সময় Coolify সেটা যোগ করে)। Compose এমন file নেয় না, তাই ইমপোর্ট সেগুলো declare করে দেয়।
+- **Variable**: সবগুলো, service-এর জন্য Coolify যেগুলো বানায় সেগুলোসহ, যেমন `SERVICE_FQDN_*`, `SERVICE_URL_*` আর
+  `SERVICE_PASSWORD_*`। File এগুলো `${NAME}` হিসেবে পড়ে, তাই Coolify-এর মতো একই password পায়, আর আপনার কপি করা data-র সাথেও
+  মেলে।
+- **ডোমেইনের সার্ভিস** (Service for the domain): file-এর প্রথম যে অংশের (Compose-এর ভাষায় একটা service) domain আছে। Service-এর
+  জন্য port আসে domain থেকে (যেমন `https://app.example.com:3000`), বা Coolify-এর `SERVICE_FQDN_<PART>_<PORT>` variable থেকে,
+  যেমন `SERVICE_FQDN_UPTIMEKUMA_3001`। দুইভাবেই port না পেলে একটা note দেখায়; app-এর পাতায় domain আর port যোগ করুন।
+
+Admin-এর Compose file privilege-এর জন্য check করা হয় না (দেখুন
+[ekPanel Compose file-এ কী check করে](/guides/apps/docker-apps/#what-ekpanel-checks-in-a-compose-file))। App-এর পাতায় file-টা
+পড়ে নিন।
+
+### Variable
+
+- Preview deployment-এর জন্য Coolify যেগুলো শুধু ব্যবহার করে সেগুলো বাদে সব variable আসে। একই নাম দুবার থাকলে প্রথম মানটা থাকে।
+- মান আসে শুধু **read:sensitive**-ওয়ালা token দিয়ে। এটা না থাকলে note বলে "_n_টা ভ্যারিয়েবল মান ছাড়া এসেছে: টোকেন হয়তো গোপন
+  ডেটা পড়তে পারে না। অ্যাপের পেজে মান বসান"।
+- App কীভাবে এগুলো ব্যবহার করে, দেখুন [Environment variable](/guides/apps/docker-apps/#environment-variables)।
+
+### Domain আর port
+
+- এখানে একটা app-এর **একটাই domain**। প্রথম domain হয় app-এর domain, free HTTPS-সহ: domain server-এ point করলে certificate
+  নেওয়া হয়। বাকিগুলোর তালিকা দেওয়া হয়: "আরও ডোমেইন (_domain_): এখানে একটা অ্যাপের একটাই ডোমেইন; বাকিগুলো রিডাইরেক্ট বা অন্য
+  অ্যাপ দিয়ে এর দিকে পাঠান"।
+- যে domain-এর port ইমপোর্ট খুঁজে পায় না, সেটা বাদ যায়: "_domain_ ডোমেইনের কোনো পোর্ট নেই: অ্যাপের পেজে ডোমেইন আর কন্টেইনারের
+  পোর্ট বসান"।
+- App-এর port `127.0.0.1`-এই থাকে (দেখুন [Port private রাখা হয়](/guides/apps/docker-apps/#ports-are-kept-private))।
+
+### Volume আর file mount
+
+- Coolify-এর persistent storage এখানে খালি volume হয়: "_n_টা ভলিউম: ফোল্ডারগুলো এখানে রাখা হবে, খালি। এদের ডেটা Coolify-এর
+  সার্ভার থেকে কপি করুন"। Image বা Git app-এর জন্য প্রতিটা mount path হয় একটা
+  [রাখা folder](/guides/apps/docker-apps/#folders-to-keep)। Compose app-এর জন্য named volume হলো file-এ যেগুলো আছে।
+- Coolify-এর file mount (যে file Coolify container-এর ভেতরে লিখে দেয়, যেমন একটা configuration file) ইমপোর্ট হয় না:
+  "Coolify-এর _n_টা ফাইল মাউন্ট আনা হয়নি"। এগুলো নিজে যোগ করুন, যেমন variable হিসেবে, বা Compose file-এ।
+
+### যা ইমপোর্ট হয় না
+
+- **Volume-এর data।** Folder বানানো হয়, খালি। Data কপি করুন, দেখুন
+  [একটা volume-এর data কপি করুন](#copy-the-data-of-a-volume)।
+- **Database**, file mount, আর Coolify-এর server-এর যে folder কোনো Compose file mount করে।
+- **Scheduled task**: এগুলো [cron job](/guides/websites/cron/) হিসেবে যোগ করুন।
+- **Health check আর resource limit**: app-এর পাতায় [memory আর CPU limit](/guides/apps/docker-apps/#memory-and-cpu-limits)
+  দিন।
+- **Preview deployment**: চাইলে Git app-এর জন্য [pull request preview](/guides/apps/git-deploys/#pull-request-previews) চালু
+  করুন।
+- **Coolify-এর proxy label আর নিজের মতো করা Traefik বা Caddy settings**, আর **HTTP basic auth**। ekPanel-এর web server একটা
+  domain একটা port-এ পাঠায়।
+
+## Customer-এর জন্য ইমপোর্ট
+
+**কার জন্য** (For)-এ কোনো customer বেছে নিয়ে admin তাঁর জন্য ইমপোর্ট করতে পারেন। তাঁর জন্য app বানানোর সময়ের মতোই, customer-এর
+[package](/guides/admin/customers/#package-limits) প্রতিটা app-এ খাটে:
+
+- **Image app**: image-টা package-এর **অনুমোদিত Docker ইমেজ** (Allowed Docker images)-এ থাকতে হবে, নইলে প্রতিটা ব্যর্থ হয়
+  "প্যাকেজে এই ইমেজ নেই।" বলে।
+- **Git app**: package-এ **Git অ্যাপ** (Git apps) চালু থাকতে হবে, নইলে প্রতিটা ব্যর্থ হয় "প্যাকেজে Git অ্যাপ নেই।" বলে।
+- **Compose app আর service customer-এর জন্য সবসময় ব্যর্থ হয়**: "গ্রাহকেরা Docker ইমেজ চালাতে পারেন, Compose ফাইল নয়।" এগুলো
+  admin-দের জন্য ইমপোর্ট করুন, বা একই service [app catalogue](/guides/apps/catalog/)-এ থাকলে (Uptime Kuma আছে) customer-এর
+  জন্য সেখান থেকে install করুন।
+- Package-এ server-টা থাকতে হবে ("এই প্যাকেজ ওই সার্ভার ব্যবহার করতে পারে না।"), আরও একটা app-এর জায়গা থাকতে হবে ("আপনার
+  প্যাকেজে আর অ্যাপ যোগ করা যাবে না।"), আর disk জায়গা বাকি থাকতে হবে ("প্যাকেজের ডিস্কের জায়গা শেষ। কিছু ফাইল মুছে জায়গা খালি
+  করুন।")।
+
+## ইমপোর্টের পরে
+
+<Steps>
+
+1. Coolify-এর server থেকে প্রতিটা volume-এর **data কপি করুন** (নিচে দেখুন)। কেউ নতুন app ব্যবহার শুরু করার আগেই করুন, নইলে তারা
+   যা লিখবে তার ওপর data বসে যাবে।
+
+2. **প্রতিটা Git app deploy করুন**, তার পাতা থেকে **ডিপ্লয় করুন** (Deploy) দিয়ে। Private repository হলে আগে তার deploy key যোগ
+   করুন। একটা server-এ প্রথম Railpack build-এ কয়েক মিনিট লাগে।
+
+3. **প্রতিটা app check করুন।** তার পাতায় **কন্টেইনার** (Containers) আর **লগ** (Logs) দেখুন। মান ছাড়া আসা variable-এর মান বসান।
+   DNS বদলানোর আগে একটা domain চালিয়ে দেখতে, শুধু আপনার computer-এ সেটা নতুন server-এ point করুন, তার `hosts` file-এ একটা লাইন
+   দিয়ে (Linux আর macOS-এ `/etc/hosts`, Windows-এ `C:\Windows\System32\drivers\etc\hosts`), আর পরে লাইনটা মুছে দিন:
+
+   ```text
+   203.0.113.20  app.example.com
+   ```
+
+   Browser certificate নিয়ে সতর্ক করবে: DNS server-এ point করলে তবেই server আসল certificate পায়।
+
+4. **Domain-গুলো server-এ point করুন।** আপনার DNS host-এ প্রতিটা domain-এর `A` record (আর থাকলে `AAAA`) বদলে server-এর
+   address দিন, বা ekPanel-এর [built-in name server](/guides/dns/name-servers/#add-a-domain) ব্যবহার করুন। Certificate নিজে
+   থেকেই আসে।
+
+5. Domain এখানে point করার পরে **Coolify-তে resource-গুলো বন্ধ করুন**, যাতে একই app দুই জায়গায় না চলে (আর data-র দুটো কপিতে না
+   লেখে), তারপর সেগুলো মুছে দিন। Coolify-তে API token-টা মুছে দিন।
+
+</Steps>
+
+### একটা volume-এর data কপি করুন
+
+App-গুলো খালি volume নিয়ে চালু হয়, তাই data ঢোকানোর আগে app বন্ধ করুন। `myapp`-এর জায়গায় এখানে app-এর নাম আর `203.0.113.20`-এর
+জায়গায় নতুন server-এর address দিন।
+
+<Steps>
+
+1. **Coolify-তে volume-টা খুঁজুন।** Coolify-এর server-এ volume-গুলোর তালিকা দেখুন। Coolify resource-এর storage settings-এ প্রতিটা
+   volume-এর নাম তার mount path-সহ দেখায়।
+
+   ```bash
+   sudo docker volume ls
+   ```
+
+2. **Pack করে কপি করুন।** আগে Coolify-তে resource-টা বন্ধ করুন, যাতে কিছু এতে না লেখে। `COOLIFY_VOLUME`-এর জায়গায় volume-এর নাম
+   দিন:
+
+   ```bash
+   sudo docker run --rm -v COOLIFY_VOLUME:/from:ro debian:12-slim \
+       tar -C /from --numeric-owner -czf - . > myapp-data.tar.gz
+   scp myapp-data.tar.gz root@203.0.113.20:/root/
+   ```
+
+3. **এখানে app-টা বন্ধ করুন**, তার পাতার **বন্ধ করুন** (Stop) দিয়ে। Git app তার volume পায় প্রথম deploy-এর সময়: আগে deploy করুন,
+   তারপর বন্ধ করুন।
+
+4. **নতুন server-এ app-এর volume খুঁজুন।** ekPanel app-এর volume-এর নাম app-এর নামে রাখে:
+
+   ```bash
+   sudo docker volume ls --filter label=com.docker.compose.project=ekpanel-myapp
+   ```
+
+   Image বা Git app-এর প্রথম রাখা folder হলো `ekpanel-myapp_data0`, দ্বিতীয়টা `ekpanel-myapp_data1`, এভাবে, app-এর পাতার **যে
+   ফোল্ডারগুলো রাখা হবে** (Folders to keep)-এর ক্রমে। Compose app-এ file-এর `data` নামের volume হলো `ekpanel-myapp_data`।
+
+5. **Data এতে unpack করুন**, তারপর **চালু করুন** (Start) দিয়ে app চালু করুন আর archive মুছে দিন:
+
+   ```bash
+   sudo docker run --rm -i -v ekpanel-myapp_data0:/to debian:12-slim \
+       tar -C /to --numeric-owner -xzf - < /root/myapp-data.tar.gz
+   sudo rm /root/myapp-data.tar.gz
+   ```
+
+</Steps>
+
+Owner সংখ্যা হিসেবে থাকে (user ID 1000 থাকে user ID 1000), যার মানে দুই server-এই container-এর ভেতরে একই।
+
+## API দিয়ে
+
+`sites` scope-সহ admin-এর [API token](/guides/security/api-tokens/) দিয়ে ইমপোর্ট করা যায়। Customer-দের token দিয়ে যায় না।
+
+| Endpoint | যা করে |
+| --- | --- |
+| `POST /api/v1/imports/coolify/inspect` | Coolify পড়ে। Body: `{"url": "https://coolify.example.com", "token": "…"}`। উত্তরে থাকে `resources`, প্রতিটায় `uuid`, `kind` (`application`, `service` বা `database`), `name`, `type`, `status`, `domains`, `image`, `git_url`, `app_name` (এখানে যে নাম পাবে), `app_kind` (`image`, `git`, `compose`, বা ইমপোর্ট করা না গেলে `""`) আর `reason` (`database`, `build_pack`, `no_repository` বা `no_compose`)। |
+| `POST /api/v1/imports/coolify` | ইমপোর্ট করে। Body: `{"url", "token", "server_id", "owner_id", "resources": [{"kind": "application", "uuid": "…", "name": "ghost-blog"}]}`। `kind` হলো `application` বা `service`; `name` হলো এখানে app-এর নাম। `200` দিয়ে উত্তর দেয়, সাথে `results`, প্রতিটা resource-এর জন্য একটা: `uuid`, `name`, `app_id` (app বানানো হলে), বা `code` আর `message` (একটা [error](/reference/api/#errors), যেমন `app_name_taken`), আর `notes`, প্রতিটায় একটা `code` (যেমন `coolify_volumes`) আর একটা `name` বা `count`। |
+
+আলাদা আলাদা resource-এর error থাকে `results`-এ, উত্তরের status-এ না। পুরো request ব্যর্থ হয় শুধু তখন, যখন Coolify পড়া যায় না
+(`invalid_coolify`, `coolify_unauthorized`, `coolify_unreachable`), server বা customer নেই, বা `resources` খালি
+(`nothing_to_import`)।
+
+Admin-দের জন্য `owner_id` খালি রাখুন। [ekctl](/reference/cli/#any-endpoint-ekctl-api) দিয়ে, body একটা file-এ রাখুন, যাতে Coolify-এর
+token আপনার shell-এর history-তে না যায়:
+
+```bash
+ekctl api POST imports/coolify/inspect --data @coolify.json
+ekctl api POST imports/coolify --data @coolify-import.json
+```
+
+`coolify.json`-এ থাকে `{"url":"https://coolify.example.com","token":"<Coolify token>"}`, আর `coolify-import.json`-এ একই জিনিস, সাথে
+`"server_id":"<server id>","owner_id":"","resources":[{"kind":"application","uuid":"<uuid>","name":"ghost-blog"}]`।
+পরে দুটো file-ই মুছে দিন।
+
+## সীমা আর যা এখনো নেই
+
+- শুধু **Coolify version 4**, তার API (`/api/v1`) দিয়ে।
+- **শুধু settings, data না।** Volume খালি আসে, আর database আসে না।
+- **একটা app-এ একটাই domain।** অন্য domain-এর জন্য একটা redirect বা আরেকটা app লাগে।
+- **Nixpacks build হয়ে যায় Railpack build**, কিছু repository-র জন্য যাতে কিছু বদলাতে হতে পারে।
+- **Customer** শুধু image আর Git app পান; Compose app আর service admin-দের জন্য।
+- একটা আসল Coolify v4 (তার নিজের installer দিয়ে install করা) নিয়ে test VM-এ চালিয়ে দেখা হয়েছে: দুটো domain, variable (বাংলা
+  লেখাসহ) আর একটা volume-ওয়ালা একটা nginx image application; `coollabsio/coolify-examples` থেকে একটা Nixpacks Node.js
+  application, এখানে Railpack দিয়ে build হয়েছে আর প্রথম deploy-এর পরে সাড়া দিয়েছে; এক-click Uptime Kuma service, যার declare না
+  করা volume declare করা হয়েছে আর যেটা healthy অবস্থায় চলেছে; আর একটা নিজের Compose service (`traefik/whoami`)। একটা PostgreSQL
+  database তালিকায় এসেছে, ইমপোর্ট হয়নি। **read:sensitive** ছাড়া শুধু-পড়ার token দিয়ে service ইমপোর্ট করা যায়নি। এখনো অনেক আসল
+  Coolify server দিয়ে চালিয়ে দেখা হয়নি।
+
+## সমস্যা সমাধান
+
+| Message | যা করবেন |
+| --- | --- |
+| "Coolify-এর ঠিকানা (https://…) আর একটা API টোকেন দিন।" | `https://` বা `http://`-সহ address দিন, তার ভেতরে user name বা password ছাড়া, আর token-টা space ছাড়া paste করুন। |
+| "Coolify টোকেনটা নেয়নি। Keys & Tokens-এ নতুন একটা বানান, আর দেখুন API চালু আছে কি না (Settings → Advanced)।" | Token ভুল, মোছা, বা মেয়াদ শেষ, বা Coolify-এর API বন্ধ। Coolify-তে API চালু করুন আর নতুন একটা token বানান। |
+| "Coolify-এর API পড়া যায়নি: …" | Panel Coolify-তে পৌঁছাতে পারেনি, বা API-এর উত্তর পায়নি। `connection refused` বা timeout: address-টা, আর panel-এর server সেখানে পৌঁছাতে পারে কিনা, দেখুন। `301` বা `302`: address-টা redirect করে (যেমন `http://` থেকে `https://`-এ); যেখানে redirect করে সেই address দিন। `404`: address-টা Coolify-এর না। `invalid character '<'`: address-টা Coolify-এর API না, একটা web পাতা দিয়ে উত্তর দিয়েছে। |
+| "Coolify থেকে এটা পড়া যায়নি।" | একটা resource পড়া যায়নি, যেমন তালিকা পড়ার পরে Coolify-তে সেটা মুছে ফেলা হয়েছে। Coolify আবার পড়ুন। |
+| "২–৩২টি ছোট হাতের ইংরেজি অক্ষর, সংখ্যা আর ড্যাশ দিন, শুরু হবে অক্ষর দিয়ে।" | **এখানে নাম** বদলান: এটা dash দিয়ে শেষও হতে পারবে না। |
+| "নতুন সার্ভারে এই নামের অ্যাপ আগে থেকেই আছে।" | অন্য নাম দিন, বা আগে অন্য app-টা মুছুন। |
+| "অন্য একটা ওয়েবসাইট এই ডোমেইন ব্যবহার করছে।" | Panel-এর অন্য কোনো website বা app-এর এই domain আছে। আগে সেটা মুছুন, বা app-টা ইমপোর্ট করে তার পাতায় অন্য domain দিন। |
+| "২৫৬ KB পর্যন্ত একটা Compose ফাইল দিন।" | Coolify কোনো Compose file পাঠায়নি (**read:sensitive**-সহ একটা token বানান), বা file-টা 256 KB-এর বড়। |
+| "কন্টেইনারের ভেতরে অ্যাপ যে পোর্টে শোনে তা দিন।" | Git application-টার জন্য Coolify-তে কোনো port নেই। Coolify-তে **Ports Exposes** দিয়ে আবার ইমপোর্ট করুন, বা Git app হাতে বানান। |
+| "আপনার প্যাকেজে আর অ্যাপ যোগ করা যাবে না।", "প্যাকেজে এই ইমেজ নেই।", "প্যাকেজে Git অ্যাপ নেই।", "গ্রাহকেরা Docker ইমেজ চালাতে পারেন, Compose ফাইল নয়।" | দেখুন [Customer-এর জন্য ইমপোর্ট](#importing-for-a-customer)। |
+
+**ইমপোর্টের পরপরই একটা app সমস্যা দেখায়।** তার পাতার message আসে Docker বা Compose থেকে। Coolify-এর Compose file হয়তো সব address-এ
+port publish করে ("publishes port … on every address, which skips the firewall"): **সেটিং** (Settings)-এ এর `ports:` অংশ মুছে দিন,
+কারণ domain এটা ছাড়াই service-এ পৌঁছায়। Coolify-এর file-এ এমন settings-ও থাকতে পারে যা শুধু Coolify বোঝে: Compose-এর message যা
+বলে সেটা মুছে দিন।
+
+**একটা Git app-এর প্রথম build ব্যর্থ হয়।** Build log খুলুন। Railpack যদি Nixpacks-এর থেকে আলাদাভাবে repository build করে,
+repository-তে একটা Dockerfile যোগ করুন আর app-এর পাতায় **বিল্ড পদ্ধতি** (Build with) বদলে **Dockerfile** দিন। Repository clone
+করতে না পারলে দেখুন [Coolify-এর GitHub App দিয়ে private repository](#git-applications)।
+
+**App চলছে কিন্তু data নেই।** Data কপি না করা পর্যন্ত volume খালি থাকে। দেখুন
+[একটা volume-এর data কপি করুন](#copy-the-data-of-a-volume)।
+
+## সম্পর্কিত
+
+<CardGrid>
+	<LinkCard title="Docker app" href="/guides/apps/docker-apps/" description="Image আর Compose app, variable আর রাখা folder।" />
+	<LinkCard title="Git deploy" href="/guides/apps/git-deploys/" description="Build, deploy key, webhook আর preview।" />
+	<LinkCard title="App catalogue" href="/guides/apps/catalog/" />
+	<LinkCard title="cPanel থেকে ইমপোর্ট" href="/guides/admin/import-cpanel/" />
+	<LinkCard title="ওয়েবসাইট আর্কাইভ ইমপোর্ট" href="/guides/admin/import-website/" />
+	<LinkCard title="Customer আর package" href="/guides/admin/customers/" />
+	<LinkCard title="REST API" href="/reference/api/" />
+</CardGrid>

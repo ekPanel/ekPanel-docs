@@ -119,6 +119,7 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | `/etc/ekpanel/caddy/sites/<site id>.caddy` | Website-এর Caddy configuration। Agent লেখে; edit করবেন না। |
 | `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | Domain-সহ app-এর জন্য একই জিনিস। |
 | `/etc/ekpanel/caddy/sites/webmail.caddy` | Email চালু থাকলে webmail। |
+| `/etc/ekpanel/caddy/sites/panel-domains.caddy` | পরের release থেকে, panel-এর নিজের server-এ: panel-এর আর reseller-দের [brand](/guides/admin/branding/#domain)-এর domain, panel-এ পাঠানোর জন্য। Agent লেখে; edit করবেন না। |
 | `/var/log/caddy/site-<site id>.log` | Website-এর request log (JSON)। |
 | `/var/log/caddy/app-<app id>.log` | একটা app-এর request log। |
 | `/etc/php/<version>/fpm/pool.d/` | Administrator-দের website-এর PHP-FPM pool। |
@@ -127,6 +128,7 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | `/etc/ekpanel/cron/` | Cron job-এর script। |
 | `/etc/ekpanel/ssh/` | SFTP key, root-এর মালিকানার file-এ, যা site account-রা বদলাতে পারে না। |
 | `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH setting, যা SFTP-কে প্রতিটা site-এর folder-এ আটকে রাখে। |
+| `/srv/ekpanel/incoming/<move id>/` | [Website](/guides/websites/move/) বা [app সরানোর](/guides/apps/move/) সময় নতুন server-এ: কপি হওয়া home folder (`home.tar`) আর database dump, বা app-এর volume (`vol-<volume>.tar`), জায়গামতো বসানো পর্যন্ত। তারপর, বা সরানো ব্যর্থ হলে, মুছে ফেলা হয়। শুধু root। |
 
 `<account>` হলো website-এর Linux account, website-এর page-এ **লিনাক্স অ্যাকাউন্ট** হিসেবে দেখানো।
 একটা website বা app-এর ID হলো panel-এ এর address-এ থাকা লম্বা ID।

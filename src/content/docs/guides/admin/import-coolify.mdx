@@ -1,0 +1,434 @@
+---
+title: Import from Coolify
+description: Bring applications and services over from Coolify through its API. They become image, Git and Compose apps with their variables, domain, port and kept folders; you copy the data in their volumes.
+sidebar:
+  order: 10
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+You can bring applications and services from Coolify (version 4) over to one of your servers.
+The panel reads them through Coolify's API with a token you give it, and makes an ekPanel
+[app](/guides/apps/docker-apps/) of each one you choose: a Docker image app, a Git app or a
+Compose app, with its variables, its domain and port, and the folders it keeps in volumes. The
+**data** in those volumes does not come over: you copy it yourself. Nothing changes for visitors
+until you point the domains at the new server.
+
+<Aside type="tip">
+To bring a whole cPanel account, see [Import from cPanel](/guides/admin/import-cpanel/). To bring
+one website from aaPanel or any other host, see
+[Import a website archive](/guides/admin/import-website/).
+</Aside>
+
+## Before you start
+
+- You are an **administrator**. Customers do not see this page; you can import for a customer
+  (see [Importing for a customer](#importing-for-a-customer)).
+- **Coolify's API is on.** In Coolify, open **Settings → Advanced** and turn on the API.
+- **The panel can reach Coolify.** The panel itself calls Coolify's address, not your browser
+  and not the server you import to. If Coolify is only reachable from your own network or a VPN,
+  the panel cannot read it.
+- **The server is connected**: it is [added to the panel](/start/add-server/) and shows
+  **Online** on the **Servers** page. The apps will run on this server. It needs enough disk
+  space and memory for the apps' images, for building Git apps, and for the data you copy.
+- **You can log in to both servers over SSH**, Coolify's and the new one, as `root` or a user
+  with `sudo`, to copy the data in the volumes.
+
+## Make an API token in Coolify
+
+<Steps>
+
+1. In Coolify, open **Keys & Tokens** and then **API tokens**.
+
+2. Give the token a name, such as `ekpanel-import`, and tick the **read** and
+   **read:sensitive** permissions. The panel only reads, so it needs no other permission.
+
+3. Make the token and copy it. Coolify shows it only once.
+
+</Steps>
+
+**read:sensitive** lets the token see secret values. Without it, Coolify hides the values of
+variables and Compose files: variables then come over without their values, and services and
+Docker Compose applications cannot be imported ("Coolify did not send its Compose file: the token needs
+read:sensitive").
+
+<Aside type="caution" title="The token can read every secret in Coolify">
+The panel uses the token only for the request you make with it, sends it only to the address
+you enter (it does not follow redirects), and never stores it. Your browser keeps it in the page
+until you leave. Still, delete the token in Coolify once the import is done.
+</Aside>
+
+## Read Coolify
+
+<Steps>
+
+1. In the sidebar, under **Administration**, click **Import**. You can also press `Ctrl+K` and
+   type "Import".
+
+2. Click the **Coolify** tab ("Applications and services, through Coolify's API").
+
+3. Under **1. Connect to Coolify**, enter **Coolify's address**, the address you open Coolify
+   at, such as `https://coolify.example.com`. An address that ends in `/api/v1` works too.
+
+4. Paste the token into **API token**.
+
+5. Click **Read Coolify**.
+
+</Steps>
+
+The panel then shows **2. Choose what to import**: every application, service and database
+Coolify's API lists for the token. Each line has:
+
+- the resource's name in Coolify, and a badge: **Application**, **Service** or **Database**;
+- Coolify's type: the build pack of an application (such as `dockerimage`, `nixpacks` or
+  `dockercompose`), the kind of a service (such as `uptime-kuma`), or the kind of a database
+  (such as `standalone-postgresql`);
+- its domains, or else its image or Git repository.
+
+If Coolify has nothing to show, the page says "Coolify has no applications or services."
+
+A line without a tick box cannot be imported. It says why:
+
+| Reason | What it means |
+| --- | --- |
+| "Databases are not imported: make one here and load a dump of it" | Make a [database](/guides/data/databases/) on the panel, dump Coolify's database and load the dump (see [Databases](/guides/data/databases/#limits-and-what-is-not-there-yet)). For a database ekPanel does not have, such as MongoDB, run its image as an app and copy its volume. |
+| "This kind of build cannot be imported" | The application uses a build pack the import does not know. |
+| "It has no Git repository" | A Dockerfile, Nixpacks or static application without a repository, such as one whose Dockerfile was typed into Coolify. Make a Git app or an image app by hand. |
+| "Coolify did not send its Compose file: the token needs read:sensitive" | Make a token with **read:sensitive** and read Coolify again. |
+
+## Choose what to import
+
+<Steps>
+
+1. Tick what you want to import. Every application and service that can be imported is ticked
+   when the list appears.
+
+2. Check **Name here**, the name of the app in ekPanel. It starts as Coolify's name made into
+   an app name: lowercase, other characters become dashes, `app-` in front of a name that does
+   not start with a letter, at most 32 characters. "Ghost Blog" becomes `ghost-blog`. A name has
+   2–32 lowercase letters, digits and dashes, starts with a letter and does not end with a dash,
+   and the server must not have an app with that name yet.
+
+3. In **Server**, choose the server the apps will run on.
+
+4. In **For**, choose who owns the apps: **Administrators (no package)** or a customer.
+
+5. Read the note under them: "Settings come over: image, Compose file or Git repository, the
+   first domain and its port, variables and the folders kept in volumes. The data in the volumes
+   does not: copy it yourself before you point the domains here." Then click **Import**.
+
+</Steps>
+
+The panel reads each one you ticked from Coolify again and makes its app, one after the other.
+Each is made on its own: one that fails does not stop the others, and the apps already made
+stay.
+
+Then the page shows "_made_ of _count_ made" and a line for each:
+
+- a tick and the app's name, which opens the app's page; or a cross, the name, and why it was
+  not made (see [Troubleshooting](#troubleshooting));
+- notes on what did not come over, or what to do next (see [What the import makes](#what-the-import-makes)).
+
+Under the list: "The apps start on the server now. Copy their data, check them, then point their
+domains at this server." **Open apps** opens the list of apps; **Import another** goes back to
+the list from Coolify, for example to import what failed under another name. Untick the ones
+already made first.
+
+<Aside type="caution">
+The results and their notes are shown only on this page and are not kept. Read them, or copy
+them, before you leave the page. The [audit log](/concepts/security-model/#the-audit-log) has an entry
+(`import.coolify`) for each app made.
+</Aside>
+
+## What the import makes
+
+Each application or service becomes one app. The server sets it up as soon as it is made:
+images are pulled and image apps and Compose apps start. Git apps wait for their first deploy.
+
+### Docker image applications
+
+An application with Coolify's **Docker Image** build pack becomes a **Docker image** app:
+
+- **Image**: Coolify's image with its tag, such as `ghost:5`.
+- **Port inside the container**: the port in the domain, when there is one (`3000` in
+  `https://app.example.com:3000`), or else the first of Coolify's **Ports Exposes**.
+- **Domain**, **variables** and **folders to keep**: see below.
+
+### Git applications
+
+An application with Coolify's **Dockerfile**, **Nixpacks**, **Static** or **Railpack** build pack
+and a Git repository becomes a [Git app](/guides/apps/git-deploys/):
+
+- **Git repository**: Coolify's repository. When Coolify reaches GitHub through its GitHub App,
+  it keeps only `owner/repo`; that becomes `https://github.com/owner/repo`.
+- **Branch**: Coolify's branch (`main` if it has none).
+- **Build folder**: Coolify's **Base Directory** (`.` for `/`).
+- **Build with**: **Dockerfile** for Coolify's Dockerfile build pack, with Coolify's Dockerfile
+  location inside the base directory. **Railpack** for the others: ekPanel does not have
+  Nixpacks, so Nixpacks and static applications are built with
+  [Railpack](/guides/apps/git-deploys/#railpack) here. The note says "Built with Railpack here
+  (Coolify used nixpacks): check the first build".
+- **Port inside the container**: as for image applications.
+- **Deploy on every push** is on, but pushes deploy only once you add the
+  [webhook](/guides/apps/git-deploys/#webhooks-deploy-on-every-push) to the repository.
+
+Nothing is built during the import: "Nothing runs yet: deploy it from the app's page to build
+the first release". For a repository with an SSH address, or one Coolify reached with a deploy
+key, the note says "A private repository: add the app's deploy key (on its page) to the
+repository, then deploy". See [the deploy key](/guides/apps/git-deploys/#private-repositories-the-deploy-key).
+
+<Aside type="note" title="Private repositories through Coolify's GitHub App">
+Such a repository becomes `https://github.com/owner/repo`, and the result says it came through
+the GitHub App. If it is private, the first deploy cannot clone it: on the app's page, change
+the repository to its SSH address (`git@github.com:owner/repo.git`) and add the app's deploy key
+to the repository, then deploy.
+</Aside>
+
+### Docker Compose applications and services
+
+An application with Coolify's **Docker Compose** build pack, and every service (a one-click
+service such as Uptime Kuma, or a Compose file of your own), becomes a **Compose file** app:
+
+- **Compose file**: the file as it is in Coolify, before Coolify adds its own settings when it
+  deploys. For a one-click service, that is Coolify's template.
+- **Named volumes**: Coolify's file uses named volumes without declaring them in its top-level
+  `volumes:` section (Coolify adds that when it deploys). Compose refuses such a file, so the
+  import declares them.
+- **Variables**: all of them, with the ones Coolify makes for services, such as
+  `SERVICE_FQDN_*`, `SERVICE_URL_*` and `SERVICE_PASSWORD_*`. The file reads them as
+  `${NAME}`, so it gets the same passwords as in Coolify, and they still match the data you
+  copy.
+- **Service for the domain**: the first part of the file (a service in Compose's sense) that
+  has a domain. The port comes from the domain (such as `https://app.example.com:3000`), or
+  from Coolify's `SERVICE_FQDN_<PART>_<PORT>` variable, such as `SERVICE_FQDN_UPTIMEKUMA_3001`.
+  A domain with no port either way gets a note; add the domain and port on the app's page.
+
+An administrator's Compose file is not checked for privileges (see
+[What ekPanel checks in a Compose file](/guides/apps/docker-apps/#what-ekpanel-checks-in-a-compose-file)).
+Read the file on the app's page.
+
+### Variables
+
+- Every variable comes over, except the ones Coolify uses only for preview deployments. A name
+  that appears twice keeps its first value.
+- Values come only with a token that has **read:sensitive**. Without it, the note says
+  "_n_ variables came without their values: the token may not read sensitive data. Fill them in
+  on the app's page".
+- See [Environment variables](/guides/apps/docker-apps/#environment-variables) for how apps use
+  them.
+
+### Domains and ports
+
+- An app here has **one domain**. The first domain becomes the app's domain, with free HTTPS:
+  the certificate is issued once the domain points to the server. The others are listed:
+  "More domains (_domains_): an app here has one domain; point the others at it with a redirect
+  or another app".
+- A domain the import cannot find a port for is left out: "The domain _domain_ has no port to
+  route to: add the domain and the container port on the app's page".
+- App ports stay on `127.0.0.1` (see [Ports are kept private](/guides/apps/docker-apps/#ports-are-kept-private)).
+
+### Volumes and file mounts
+
+- Coolify's persistent storage becomes empty volumes here: "_n_ volumes: the folders are kept
+  here, empty. Copy their data from Coolify's server". For an image or Git app, each mount path
+  becomes a [folder to keep](/guides/apps/docker-apps/#folders-to-keep). For a Compose app, the
+  named volumes are the ones in the file.
+- Coolify's file mounts (files Coolify writes into a container, such as a configuration file)
+  are not imported: "_n_ file mounts from Coolify are not imported". Add them yourself, for
+  example as a variable, or in the Compose file.
+
+### What is not imported
+
+- **The data in volumes.** The folders are made, empty. Copy the data, see
+  [Copy the data of a volume](#copy-the-data-of-a-volume).
+- **Databases**, file mounts, and folders of Coolify's server that a Compose file mounts.
+- **Scheduled tasks**: add them as [cron jobs](/guides/websites/cron/).
+- **Health checks and resource limits**: set [memory and CPU limits](/guides/apps/docker-apps/#memory-and-cpu-limits)
+  on the app's page.
+- **Preview deployments**: turn on [pull request previews](/guides/apps/git-deploys/#pull-request-previews)
+  for a Git app if you want them.
+- **Coolify's proxy labels and custom Traefik or Caddy settings**, and **HTTP basic auth**.
+  ekPanel's web server routes the one domain to the one port.
+
+## Importing for a customer
+
+An administrator can import for a customer by choosing them in **For**. The customer's
+[package](/guides/admin/customers/#package-limits) applies to each app, as when you make an app
+for them:
+
+- **Image apps**: the image must be in the package's **Allowed Docker images**, or each fails
+  with "The package does not include this image."
+- **Git apps**: the package must have **Git apps** turned on, or each fails with "The package
+  does not include Git apps."
+- **Compose apps and services always fail** for a customer: "Customers can run Docker images,
+  not Compose files." Import them for the administrators, or install the same service from the
+  [app catalogue](/guides/apps/catalog/) for the customer if it is there (Uptime Kuma is).
+- The package must allow the server ("This package cannot use that server."), have room for one
+  more app ("Your package allows no more apps."), and have disk space left ("The disk space of
+  the package is used up. Delete files to free some.").
+
+## After the import
+
+<Steps>
+
+1. **Copy the data** of each volume from Coolify's server (see below). Do it before anyone uses
+   the new app, or what they write there is overwritten.
+
+2. **Deploy each Git app** from its page with **Deploy**. For a private repository, add its
+   deploy key first. The first Railpack build on a server takes several minutes.
+
+3. **Check each app.** On its page, look at **Containers** and **Logs**. Fill in variables that
+   came without values. To try a domain before you switch DNS, point it at the new server on
+   your computer only, with a line in its `hosts` file (`/etc/hosts` on Linux and macOS,
+   `C:\Windows\System32\drivers\etc\hosts` on Windows), and remove the line afterwards:
+
+   ```text
+   203.0.113.20  app.example.com
+   ```
+
+   Your browser warns about the certificate: the server gets a real one only once DNS points to
+   it.
+
+4. **Point the domains at the server.** At your DNS host, change each domain's `A` record (and
+   `AAAA`, if you have one) to the server's address, or use ekPanel's
+   [built-in name servers](/guides/dns/name-servers/#add-a-domain). The certificates follow by
+   themselves.
+
+5. **Stop the resources in Coolify** once the domains point here, so the same app does not run
+   in two places (and write to two copies of its data), then remove them. Delete the API token
+   in Coolify.
+
+</Steps>
+
+### Copy the data of a volume
+
+The apps start with empty volumes, so stop the app before you copy its data in. Replace
+`myapp` with the app's name here and `203.0.113.20` with the new server's address.
+
+<Steps>
+
+1. **Find the volume in Coolify.** On Coolify's server, list the volumes. Coolify shows each
+   volume's name with its mount path in the resource's storage settings.
+
+   ```bash
+   sudo docker volume ls
+   ```
+
+2. **Pack it and copy it over.** Stop the resource in Coolify first, so nothing writes to it.
+   Replace `COOLIFY_VOLUME` with the volume's name:
+
+   ```bash
+   sudo docker run --rm -v COOLIFY_VOLUME:/from:ro debian:12-slim \
+       tar -C /from --numeric-owner -czf - . > myapp-data.tar.gz
+   scp myapp-data.tar.gz root@203.0.113.20:/root/
+   ```
+
+3. **Stop the app here** with **Stop** on its page. A Git app gets its volumes with its first
+   deploy: deploy it first, then stop it.
+
+4. **Find the app's volume on the new server.** ekPanel names an app's volumes after the app:
+
+   ```bash
+   sudo docker volume ls --filter label=com.docker.compose.project=ekpanel-myapp
+   ```
+
+   For an image or Git app, the first folder to keep is `ekpanel-myapp_data0`, the second
+   `ekpanel-myapp_data1`, and so on, in the order of **Folders to keep** on the app's page. For a
+   Compose app, a volume named `data` in the file is `ekpanel-myapp_data`.
+
+5. **Unpack the data into it**, then start the app with **Start** and delete the archive:
+
+   ```bash
+   sudo docker run --rm -i -v ekpanel-myapp_data0:/to debian:12-slim \
+       tar -C /to --numeric-owner -xzf - < /root/myapp-data.tar.gz
+   sudo rm /root/myapp-data.tar.gz
+   ```
+
+</Steps>
+
+Owners are kept as numbers (user ID 1000 stays user ID 1000), which mean the same inside the
+container on both servers.
+
+## With the API
+
+An administrator's [API token](/guides/security/api-tokens/) with the `sites` scope can import.
+Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/imports/coolify/inspect` | Read Coolify. Body: `{"url": "https://coolify.example.com", "token": "…"}`. Answers with `resources`, each with `uuid`, `kind` (`application`, `service` or `database`), `name`, `type`, `status`, `domains`, `image`, `git_url`, `app_name` (the name it gets here), `app_kind` (`image`, `git`, `compose`, or `""` when it cannot be imported) and `reason` (`database`, `build_pack`, `no_repository` or `no_compose`). |
+| `POST /api/v1/imports/coolify` | Import. Body: `{"url", "token", "server_id", "owner_id", "resources": [{"kind": "application", "uuid": "…", "name": "ghost-blog"}]}`. `kind` is `application` or `service`; `name` is the app's name here. Answers `200` with `results`, one per resource: `uuid`, `name`, `app_id` (when the app was made), or `code` and `message` (an [error](/reference/api/#errors), such as `app_name_taken`), and `notes`, each with a `code` (such as `coolify_volumes`) and a `name` or `count`. |
+
+Errors of single resources are in `results`, not in the answer's status. The whole request fails
+only when Coolify cannot be read (`invalid_coolify`, `coolify_unauthorized`,
+`coolify_unreachable`), the server or customer does not exist, or `resources` is empty
+(`nothing_to_import`).
+
+Leave `owner_id` empty for administrators. With [ekctl](/reference/cli/#any-endpoint-ekctl-api),
+put the body in a file so the Coolify token does not end up in your shell's history:
+
+```bash
+ekctl api POST imports/coolify/inspect --data @coolify.json
+ekctl api POST imports/coolify --data @coolify-import.json
+```
+
+`coolify.json` holds `{"url":"https://coolify.example.com","token":"<Coolify token>"}`, and
+`coolify-import.json` the same with
+`"server_id":"<server id>","owner_id":"","resources":[{"kind":"application","uuid":"<uuid>","name":"ghost-blog"}]`.
+Delete both files afterwards.
+
+## Limits and what is not there yet
+
+- **Coolify version 4** only, through its API (`/api/v1`).
+- **Settings only, not data.** Volumes come over empty, and databases do not come over.
+- **One domain per app.** Other domains need a redirect or another app.
+- **Nixpacks builds become Railpack builds**, which may need changes for some repositories.
+- **Customers** get image and Git apps only; Compose apps and services are for administrators.
+- Tried in a test VM with a real Coolify v4 (installed with its own installer): an nginx image
+  application with two domains, variables (with Bangla text) and a volume; a Nixpacks Node.js
+  application from `coollabsio/coolify-examples`, built here with Railpack, which answered after
+  its first deploy; the one-click Uptime Kuma service, whose undeclared volume was declared and
+  which ran healthy; and a Compose service of its own (`traefik/whoami`). A PostgreSQL database
+  was listed and not imported. With a read-only token without **read:sensitive**, the services
+  could not be imported. Not yet tried with many real Coolify servers.
+
+## Troubleshooting
+
+| Message | What to do |
+| --- | --- |
+| "Enter Coolify's address (https://…) and an API token." | Enter the address with `https://` or `http://`, without a user name or password in it, and paste the token without spaces. |
+| "Coolify did not accept the token. Make a new one under Keys & Tokens, and check that the API is on (Settings → Advanced)." | The token is wrong, deleted or expired, or Coolify's API is off. Turn the API on in Coolify and make a new token. |
+| "Could not read Coolify's API: …" | The panel could not reach Coolify, or got no API answer. `connection refused` or a timeout: check the address and that the panel's server can reach it. `301` or `302`: the address redirects (for example from `http://` to `https://`); enter the address it redirects to. `404`: the address is not Coolify's. `invalid character '<'`: the address answered with a web page, not with Coolify's API. |
+| "Could not read it from Coolify." | One resource could not be read, for example because it was deleted in Coolify after you read the list. Read Coolify again. |
+| "Use 2–32 lowercase letters, digits and dashes, starting with a letter." | Change **Name here**: it must also not end with a dash. |
+| "The target server already has an app with this name." | Choose another name, or delete the other app first. |
+| "Another website already uses this domain." | Another website or app on the panel has the domain. Delete it first, or import the app and give it another domain on its page. |
+| "Paste a Compose file of up to 256 KB." | The file from Coolify is larger than 256 KB. |
+| "Enter the port the app listens on inside its container." | Coolify has no port for the Git application. Set **Ports Exposes** in Coolify and import again, or make the Git app by hand. |
+| "Your package allows no more apps.", "The package does not include this image.", "The package does not include Git apps.", "Customers can run Docker images, not Compose files." | See [Importing for a customer](#importing-for-a-customer). |
+
+**An app shows a problem right after the import.** The message on its page comes from Docker or
+Compose. A Compose file from Coolify may publish ports on every address
+("publishes port … on every address, which skips the firewall"): remove its `ports:` section in
+**Settings**, since the domain reaches the service without it. Coolify's file may also hold
+settings only Coolify understands: remove what Compose's message names.
+
+**A Git app's first build fails.** Open the build log. If Railpack builds the repository
+differently from Nixpacks, add a Dockerfile to the repository and set **Build with** to
+**Dockerfile** on the app's page. If it cannot clone the repository, see
+[Private repositories through Coolify's GitHub App](#git-applications).
+
+**The app runs but has no data.** The volume is empty until you copy its data. See
+[Copy the data of a volume](#copy-the-data-of-a-volume).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Docker apps" href="/guides/apps/docker-apps/" description="Image and Compose apps, variables and folders to keep." />
+	<LinkCard title="Git deploys" href="/guides/apps/git-deploys/" description="Builds, deploy keys, webhooks and previews." />
+	<LinkCard title="App catalogue" href="/guides/apps/catalog/" />
+	<LinkCard title="Import from cPanel" href="/guides/admin/import-cpanel/" />
+	<LinkCard title="Import a website archive" href="/guides/admin/import-website/" />
+	<LinkCard title="Customers and packages" href="/guides/admin/customers/" />
+	<LinkCard title="REST API" href="/reference/api/" />
+</CardGrid>

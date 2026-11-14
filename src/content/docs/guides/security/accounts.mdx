@@ -1,6 +1,6 @@
 ---
 title: Account security
-description: Protect your panel account with two-factor sign-in, sign-in alerts, a good password and signing out other devices.
+description: Protect your panel account with two-factor sign-in and recovery codes, passkeys, sign-in alerts, a good password and a list of signed-in devices.
 sidebar:
   order: 6
 ---
@@ -8,8 +8,16 @@ sidebar:
 import { Steps, Aside, Badge, LinkCard, CardGrid } from '@astrojs/starlight/components';
 
 Your ekPanel account controls servers with root access, so it is worth protecting well. This
-page covers two-factor sign-in, alerts about new sign-ins, passwords and sessions. Everything
-here is under **Your account → Security** in the menu, for administrators and customers alike.
+page covers two-factor sign-in, recovery codes, passkeys, alerts about new sign-ins, passwords
+and signed-in devices. Everything here is under **Your account → Security** in the menu, for
+administrators, customers and (from the next release) resellers alike.
+
+<Aside type="caution" title="New after v0.1.0">
+Recovery codes, resetting someone's two-factor sign-in, passkeys and the list of signed-in
+devices are in the main repository's `dev` branch and come with the **next release**. They are
+marked <Badge text="next release" variant="note" /> below. A panel on v0.1.0 has two-factor
+sign-in without recovery codes, and only **Sign out all other devices**.
+</Aside>
 
 ## Two-factor sign-in
 
@@ -33,6 +41,10 @@ Authenticator, Aegis or 1Password.
 
 4. Enter the **6-digit code** the app shows and choose **Confirm and turn on**.
 
+5. <Badge text="next release" variant="note" /> The panel shows ten **recovery codes**. Save
+   them with **Copy** or **Download** (a file called `ekpanel-recovery-codes.txt`), then choose
+   **I have saved them**. See [Recovery codes](#recovery-codes).
+
 </Steps>
 
 The card now shows <Badge text="On" variant="success" />. Nothing changes until you confirm with a
@@ -42,42 +54,210 @@ From now on, after your email and password, the sign-in page asks: "Open your au
 and enter the 6-digit code for ekPanel." Codes change every 30 seconds; the code just before or
 after the current one is accepted too, to allow for a clock that is slightly off.
 
-<Aside type="danger" title="Keep a way back in">
-ekPanel has **no recovery codes yet**, and there is no button for another administrator to turn
-off someone's two-factor sign-in. If you lose your phone, you lose access.
+<Badge text="next release" variant="note" /> With [branding](/guides/admin/branding/), the sign-in
+page names the panel you see instead of ekPanel, and so does the account in your authenticator
+app when you turn two-factor sign-in on. An account added to the app earlier keeps its old name
+there; its codes still work.
 
-- When you set it up, save the key (the text under "Can't scan?") in a password manager, or use
-  an authenticator app that backs up its codes.
-- Give a second administrator their own account with two-factor sign-in, so the panel is never
-  in one phone's hands.
+### Recovery codes
+
+<Badge text="next release" variant="note" /> A recovery code lets you sign in once without your
+authenticator app, for example after you lose your phone. When you turn on two-factor sign-in,
+the panel makes **ten** of them, such as `k7mqx-3vh9p`, and shows them **only that once**:
+"Save these recovery codes somewhere safe, away from your phone. Each one signs you in once if
+you lose your authenticator app. They are shown only now."
+
+Keep them in a password manager or print them, but not on the phone that has your
+authenticator app. The panel keeps only a SHA-256 hash of each code, so nobody can read them
+back later, not even an administrator.
+
+**To sign in with a recovery code**, enter your email and password as usual. On the next step
+the field is called "Code from the app, or a recovery code", with the hint "Lost your phone?
+Enter one of your recovery codes." Type one of your codes there and choose **Verify**. Upper or
+lower case, spaces and dashes do not matter. Each code works **once**; a code that was used
+already is refused like a wrong code.
+
+When a recovery code is used:
+
+- You get a **Sign-in with a recovery code** alert, with the address it came from and how many
+  codes are left. It appears under the bell and in the channels you chose under
+  [Notifications](/guides/admin/notifications/). If it was not you, change your password, make
+  new recovery codes and sign out the other devices.
+- The audit log records it as "Signed in with a recovery code", with the number of codes left.
+
+The **Two-factor authentication** card shows how many codes you have left, such as "9 codes
+left. Each signs you in once instead of the app's code." With **3 or fewer** left, the line is
+shown in the warning colour.
+
+**To make new codes**, choose **Make new recovery codes**, enter your password ("Enter your
+password to make new codes (the old ones stop working)") and choose **Make new recovery codes**
+again. You get ten new codes, shown once as before, and **all the old ones stop working**, used
+or not. Do this when few are left, or when you think someone has seen them.
+
+<Aside type="note">
+Recovery codes are for the sign-in page only. Opening a [web terminal](/guides/apps/terminal/)
+asks for the code from your authenticator app; a recovery code is not accepted there.
 </Aside>
 
 ### Turn it off
 
 Choose **Turn off two-factor authentication**, enter your password, and confirm. Repeated wrong
-passwords are limited, as at sign-in.
+passwords are limited, as at sign-in. Turning it off also deletes your recovery codes; if you
+turn it on again later, you get ten new ones.
+
+### If you lose your phone
+
+<Badge text="next release" variant="note" /> Without your authenticator app, you have three ways
+back in:
+
+- **A recovery code**, on the sign-in page, as described [above](#recovery-codes). Once you are
+  in, turn two-factor sign-in off and on again with your new phone. That also gives you ten new
+  recovery codes.
+- **A passkey**, if you added one: choose **Sign in with a passkey**. It needs no code. See
+  [Passkeys](#passkeys).
+- **Someone resets it for you.** Two-factor sign-in is then off, and you sign in with your
+  password alone. Turn it on again right away under **Your account → Security**.
+
+Who can reset it:
+
+- **A customer's** two-factor sign-in: any administrator, with **Reset two-factor** on the
+  customers list. See
+  [Customers](/guides/admin/customers/#reset-a-password-or-two-factor-sign-in).
+- **An administrator's** own, or anyone's: someone with root access to the panel's server, with
+  a command. There is no button for this in the panel, so a person who has only an
+  administrator's password cannot use it. On the server where the panel runs, type:
+
+  ```bash
+  sudo -u ekpanel ekpanel reset-2fa admin@example.com
+  ```
+
+  Use the email address of the account. The command reads the panel's settings from
+  `/etc/ekpanel/panel.env` by itself, and prints:
+
+  ```text
+  Two-factor sign-in is off for admin@example.com. Sign in with the password and turn it on again.
+  ```
+
+  If it answers "no account with the email …", check the address. The audit log records the
+  reset as "Two-factor reset on the server", with `"via": "cli"`.
+
+Resetting removes the account's recovery codes too. It does not remove its passkeys, and it does
+not sign out its devices. API tokens can never reset two-factor sign-in.
+
+<Aside type="danger" title="Keep a way back in">
+- Save your recovery codes when the panel shows them, away from your phone.
+- Give a second administrator their own account with two-factor sign-in, so the panel is never
+  in one phone's hands.
+- Keep your SSH access to the panel's server: for an administrator, it is the last way back in.
+</Aside>
 
 ### Every administrator should use it
 
 The checklist on the [Server security](/guides/security/overview/) page lists administrators
 who sign in with a password only ("1 administrator signs in with a password only:" and their
-email). Ask each of them to turn on two-factor sign-in.
+email). Ask each of them to turn on two-factor sign-in. The checklist looks only at two-factor
+sign-in: an administrator with a passkey but without two-factor sign-in is still listed, because
+their password alone still signs them in.
 
 <Aside type="note">
 An administrator who signs in **as a customer** (to help them) cannot see or change the
-customer's password or two-factor settings. The page says: "These settings belong to the
-customer. Go back to your own account to change yours."
+customer's password, two-factor sign-in, recovery codes, passkeys or signed-in devices. The page
+says: "These settings belong to the customer. Go back to your own account to change yours."
 </Aside>
+
+## Passkeys
+
+<Badge text="next release" variant="note" /> A passkey lets you sign in with your fingerprint,
+your face, your device's PIN or a security key, instead of typing a password and a code. Passkeys
+follow a standard called WebAuthn: the secret part of a passkey never leaves your device or
+security key, so there is nothing a fake sign-in page could steal.
+
+A passkey is an extra way in, not a replacement: your password (and two-factor code) keep
+working. You can add several, for example one on your laptop and one on your phone.
+
+### Before you start
+
+- Open the panel by its **host name over HTTPS**, such as `https://panel.example.com`.
+  Passkeys do not work on an IP address, and over plain `http://` they work only on
+  `localhost`.
+- A passkey works **only on the address you add it on**. One added on `panel.example.com` does
+  not work when you open the panel as `server1.example.com`, or at a
+  [brand's domain](/guides/admin/branding/#domain). Add it on the address you always use, or one
+  on each address you use.
+- Your browser and device must support passkeys: for example Windows Hello, Touch ID or Face ID,
+  Android's screen lock, a password manager that keeps passkeys, or a USB or NFC security key. If
+  they cannot be used, the **Passkeys** card says: "This browser cannot use passkeys here.
+  Passkeys need HTTPS and a browser that supports them."
+
+### Add a passkey
+
+<Steps>
+
+1. Open **Your account → Security**. In the **Passkeys** card, choose **Add a passkey**.
+
+2. Give it a **Name** that tells you which device it is on, such as `Laptop`, `Phone` or
+   `Security key` (up to 60 characters; left empty, it is called "Passkey").
+
+3. Enter **Your password** and choose **Create the passkey**.
+
+4. Your browser or system asks you to confirm with your fingerprint, face, PIN or security key.
+   Follow its steps within 5 minutes; after that the panel says "That took too long. Try
+   again."
+
+</Steps>
+
+The passkey is now listed with its name, when you added it ("Added …") and when you last used
+it ("last used …", or "not used yet"). The audit log records "Passkey added".
+
+To remove one, choose the bin icon next to it and confirm ("Remove the passkey …? It will no
+longer sign you in."). Remove a passkey when you lose or give away the device it is on. The
+panel cannot delete it from the device or password manager itself; do that there if you want.
+The audit log records "Passkey removed".
+
+### Sign in with a passkey
+
+On the sign-in page, choose **Sign in with a passkey** (under "or", below the **Sign in**
+button). Your browser offers the passkeys it has for this panel's address; choose yours and
+confirm with your fingerprint, face, PIN or security key. You do not type an email, a password
+or a code.
+
+A passkey counts as **both factors** at once: something you have (the device) and something you
+are or know (your fingerprint, face or PIN, which the device checks before it answers). So it
+signs you in even when two-factor sign-in is on.
+
+As with a password, signing in from an address you have not used in the last 90 days sends a
+**Sign-in from a new address** alert. The sign-in is in the audit log (`auth.login`, with
+`"method": "passkey"`), and the device shows a **Passkey** badge in the list of
+[signed-in devices](#sessions).
+
+The **Sign in with a passkey** button shows only in a browser that can use passkeys on this
+page, so it is missing on plain `http://` (except `localhost`).
+
+### When a passkey does not work
+
+| The panel says | What to do |
+| --- | --- |
+| "Passkeys cannot be used on this address. Open the panel by its host name over HTTPS." | You opened the panel by its IP address. Use its host name with `https://`. |
+| "The passkey could not be used. Try again, or sign in with your password." | Your device's answer was refused, for example because the passkey was removed in the panel. Sign in with your password, then check the **Passkeys** list. |
+| "That took too long. Try again." | More than 5 minutes passed between the panel's request and your device's answer. |
+| "This passkey is added already." | This device or security key already has a passkey for your account. |
+| "That passkey is gone already." | It was removed already, perhaps in another browser tab. |
+
+If your browser finds no passkey at all, check that you opened the panel on the same address
+where you added it. If you close the browser's passkey window, nothing happens and no error is
+shown. Failed passkey sign-ins count toward the [limit on attempts](#too-many-attempts) from one
+address.
 
 ## Sign-in alerts
 
-When you sign in from an address you have not signed in from in the last 90 days, ekPanel sends
-you a **Sign-in from a new address** alert with that address. The very first sign-in of an
-account does not count.
+When you sign in from an address you have not signed in from in the last 90 days, with a
+password or a passkey, ekPanel sends you a **Sign-in from a new address** alert with that
+address. The very first sign-in of an account does not count.
 
 The alert appears under the bell in the panel, and in the channels you choose under **Your
 account → Notifications** (email, Telegram, Discord, Slack or a webhook). See
-[Notifications](/guides/admin/notifications/).
+[Notifications](/guides/admin/notifications/). A sign-in with a recovery code sends an alert of
+its own as well: see [Recovery codes](#recovery-codes).
 
 If you did not sign in yourself, change your password right away (which also signs out every
 other device) and turn on two-factor sign-in.
@@ -96,30 +276,51 @@ other device) and turn on two-factor sign-in.
 ### Too many attempts
 
 After 10 failed sign-ins within 15 minutes, from one address or for one email address, sign-in
-is paused: "Too many attempts. Wait 15 minutes and try again." Every failed sign-in is written
-to the audit log.
+is paused: "Too many attempts. Wait 15 minutes and try again." A wrong or used recovery code
+counts as a failed sign-in, and so does a failed passkey sign-in (for its address). Every failed
+sign-in is written to the audit log.
 
 ## Sessions
 
 - Signing in keeps you signed in on that device for **7 days**, and each time you use the panel
   the 7 days start again.
-- If you signed in on a computer you no longer use, choose **Sign out all other devices** in the
-  **Signed-in devices** card. The device you use stays signed in.
 - An administrator signed in as a customer is limited to one hour.
 - Opening a [web terminal](/guides/apps/terminal/) asks for your password (and two-factor code)
-  again if you have not given it in the last 15 minutes.
+  again if you have not given it in the last 15 minutes, also when you signed in with a passkey.
+
+<Badge text="next release" variant="note" /> The **Signed-in devices** card lists every browser
+where your account is signed in now, the most recently used first. Each line shows:
+
+- the browser and system, such as `Firefox · Linux` or `Chrome · Android`;
+- **This device** for the browser you are using now;
+- **Passkey** when that device signed in with a passkey;
+- **An administrator** when an administrator is signed in as you (on a customer's account);
+- the address, when it signed in ("signed in …") and when it was last seen ("seen …"). The last
+  seen time is updated at most every 5 minutes.
+
+To sign out one device, choose **Sign out** on its line. It is signed out at once, without a
+question, and the audit log records "Device signed out". The device you are using has no
+**Sign out** button in the list: sign out of the panel as usual instead.
+
+To sign out every device except this one, choose **Sign out all other devices**. Do that, and
+change your password, if you see a device or address you do not recognise.
 
 Session cookies are `HttpOnly`, `SameSite=Lax` and (with HTTPS) `Secure` with the `__Host-`
 prefix, so scripts on a page and other sites cannot read or send them.
 
 ## What is not there yet
 
-- **Passkeys** (signing in with your device's fingerprint or face, WebAuthn) are planned.
-- A **list of signed-in devices**, each to end on its own, is planned; today you can sign out
-  all other devices at once.
 - **API tokens** for scripts and other programs come with the next release: see
-  [API tokens](/guides/security/api-tokens/).
-- **Recovery codes** for two-factor sign-in are not there yet.
+  [API tokens](/guides/security/api-tokens/). Signing out devices does not revoke them.
+- An administrator cannot reset **another administrator's** two-factor sign-in in the panel;
+  use `ekpanel reset-2fa` on the panel's server.
+- A recovery code cannot be used to open a web terminal.
+- Recovery codes and the list of signed-in devices were tried in a browser on a local panel: a
+  recovery code signed in once and was refused the second time, the card then showed 9 codes
+  left, and signing out another device ended its session. Resetting a customer's two-factor
+  sign-in and passkeys are covered by the panel's automated tests (passkeys with a virtual
+  authenticator). **Adding a passkey with a real phone, laptop or security key has not been
+  tried yet.**
 
 See the [roadmap](/project/roadmap/).
 
@@ -127,6 +328,7 @@ See the [roadmap](/project/roadmap/).
 
 <CardGrid>
 	<LinkCard title="Server security" href="/guides/security/overview/" description="The checklist, including administrators without two-factor sign-in." />
+	<LinkCard title="Customers" href="/guides/admin/customers/" description="Reset a customer's password or two-factor sign-in." />
 	<LinkCard title="Notifications" href="/guides/admin/notifications/" description="Where sign-in alerts are sent." />
 	<LinkCard title="Security model" href="/concepts/security-model/" description="How ekPanel protects accounts and servers." />
 	<LinkCard title="API tokens" href="/guides/security/api-tokens/" description="Keys for scripts and ekctl, with scopes and an expiry." />

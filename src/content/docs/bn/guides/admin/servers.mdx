@@ -2,7 +2,7 @@
 title: Server
 description: আপনার server-গুলোর live আর পুরোনো metric দেখুন, তাদের service দেখুন ও restart করুন, NAT-এর জন্য public address সেট করুন, আর একটা server সরান।
 sidebar:
-  order: 2
+  order: 5
 ---
 
 import { Steps, Aside } from '@astrojs/starlight/components';
@@ -123,6 +123,9 @@ Panel প্রতি মিনিটে check করে। Agent **3 মিন�
 Server offline থাকা অবস্থায় তার website আর app চলতে থাকে (web request-এর পথে agent নেই), কিন্তু panel
 সেখানে কিছু বদলাতে পারে না। এর মধ্যে করা পরিবর্তনগুলো agent ফিরে এলে apply হয়।
 
+Server একেবারে চলে গেলে, তার website-গুলো তাদের S3 backup থেকে
+[অন্য server-এ আবার বানাতে](/guides/websites/rebuild/) পারেন।
+
 কোনো server-এর disk **90% ভরে** গেলেও panel admin-দের সতর্ক করে। এই সতর্কবার্তা একবার পাঠানো হয়, আর
 আবার পাঠানো হয় শুধু disk 85%-এর নিচে নেমে আবার ভরে গেলে।
 
@@ -176,17 +179,25 @@ Server-এর এখনকার agent certificate সাথে সাথে ব
 <Aside type="caution">
 Panel ওই server সম্পর্কে যা জানত সবকিছুও ভুলে যায়: তার website, database, app, cron job, backup
 location, mail setting আর metric-এর ইতিহাস panel থেকে হারিয়ে যায়। File, database আর container server-এ
-থেকে যায়, কিন্তু server আবার connect করলেও সেগুলো panel-এ ফিরে আসে না। আগে দরকারি জিনিসের backup নিন।
+থেকে যায়, কিন্তু server আবার connect করলেও সেগুলো panel-এ ফিরে আসে না। আগে দরকারি জিনিসের backup নিন, আর
+যে [website](/guides/websites/move/) আর [app](/guides/apps/move/) রাখতে চান সেগুলো অন্য server-এ সরান।
 </Aside>
 
 ## Limit আর যা এখনো নেই
 
-- Server-এর মধ্যে website, database বা app সরানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
+- Website (তার database সহ), database আর app অন্য server-এ সরানো যায়, একবারে একটা করে: দেখুন
+  [Website সরান](/guides/websites/move/), [Database সরান](/guides/data/move-database/) আর [App সরান](/guides/apps/move/)।
+  একজন customer-এর এক server-এর সবকিছু একবারে সরে: দেখুন [Customer সরান](/guides/admin/move-customer/)। Server চলে গেলে
+  তার website-গুলো [backup থেকে অন্য server-এ আবার বানানো](/guides/websites/rebuild/) যায়, একবারে একটা। একটা server-এর সব
+  website একসাথে সরানো বা আবার বানানো: এখনো নেই (দেখুন [roadmap](/project/roadmap/))।
 - Agent update হয় **আপডেট** (Updates) page থেকে, panel-এর সাথে, server page থেকে নয়। দেখুন
   [আপডেট](/guides/admin/updates/)।
 
 ## সম্পর্কিত
 
 - [Server যোগ করুন](/start/add-server/): একটা command দিয়ে নতুন server connect করুন।
+- [Website সরান](/guides/websites/move/): একটা website আর তার database অন্য server-এ সরান।
+- [App সরান](/guides/apps/move/): একটা app আর তার data অন্য server-এ সরান।
+- [Customer সরান](/guides/admin/move-customer/): একজন customer-এর এক server-এর সবকিছু সরান।
 - [Web terminal](/guides/apps/terminal/): Browser-এ একটা server-এর root shell।
 - [Notification](/guides/admin/notifications/): Offline server আর ভরা disk-এর খবর পান।

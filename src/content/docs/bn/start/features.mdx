@@ -12,8 +12,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 সাথে এখনো চালিয়ে দেখা না হয়ে থাকে, তালিকায় সেটা বলা আছে।
 
 <Aside type="note">
-এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line) ছাড়া, যা আসবে
-পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
+server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে), আর customer suspend করা, মালিক বদলানো, bandwidth limit, ব্যর্থ cron job-এর alert, reseller ও branding ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -78,6 +78,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 - Website-এর জন্য job (site-এর account হিসেবে চলে) আর app-এর জন্য job (container-এর ভেতরে চলে)।
 - Preset বা যেকোনো cron expression, আপনার time zone-এ, সাথে পরের পাঁচবার কখন চলবে তা দেখানো হয়।
 - সময়সীমা, শেষ ফলাফল আর output, **এখনই চালান** (Run now) আর pause।
+- <Badge text="পরের release" variant="note" /> Job fail করলে একটা alert
+  ([Fail করলে alert](/guides/websites/cron/#failure-alerts)), আবার ঠিকমতো না চলা পর্যন্ত একবারই।
 
 ## Log আর traffic
 
@@ -98,6 +100,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 - App-এর port `127.0.0.1`-এ থাকে, তাই Docker firewall-এ ফুটো করতে পারে না। যেসব Compose file
   public port খোলে, আপনি অনুমতি না দিলে সেগুলো নেওয়া হয় না।
 - একটা app delete করলে তার data থেকে যায়, যদি না আপনি সেটাও delete করতে বেছে নেন।
+- <Badge text="পরের release" variant="note" /> একটা app তার data সহ [অন্য server-এ সরান](/guides/apps/move/)।
 
 ## App catalogue
 
@@ -140,6 +143,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
   account, যা শুধু সেই database-এই ঢুকতে পারে।
 - Password একবারই দেখানো হয়, কখনো রাখা হয় না; panel শুধু database-এর নিজের hash রাখে।
 - Connection-এর তথ্য, size আর password reset।
+- <Badge text="পরের release" variant="note" /> একটা database আলাদাভাবে [অন্য server-এ সরান](/guides/data/move-database/)।
 
 ## Backup
 
@@ -152,6 +156,8 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 - Encryption key হলো একটা recovery key, যা একবারই দেখানো হয়। Panel এটা কখনো রাখে না।
 - একটা website নতুন folder-এ বা বর্তমান file-এর ওপরে restore করুন, আর database restore করুন
   তার জায়গাতেই।
+- <Badge text="পরের release" variant="note" /> একটা server হারিয়ে গেলে, তার website-গুলো তাদের S3 backup থেকে
+  [অন্য server-এ আবার বানান](/guides/websites/rebuild/)।
 
 ## Cloudflare DNS
 
@@ -210,6 +216,12 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   list দিয়ে।
 - **Account**: two-factor sign-in (TOTP), sign-in rate limiting, **অন্য সব ডিভাইস থেকে সাইন আউট**
   (Sign out all other devices), আর নতুন address থেকে sign-in হলে একটা alert।
+- <Badge text="পরের release" variant="note" /> [Account-এর নিরাপত্তা](/guides/security/accounts/):
+  two-factor sign-in-এর দশটা এক-বারের recovery code, একটা ব্যবহার হলে alert-সহ; customer তালিকা থেকে
+  customer-এর two-factor sign-in reset, আর panel-এর server-এ `ekpanel reset-2fa` দিয়ে administrator-এর;
+  password আর code-এর বদলে passkey (আঙুলের ছাপ, মুখ, PIN বা security key); আর sign in থাকা device-এর তালিকা,
+  যার প্রতিটা আলাদা করে sign out করা যায়। Passkey একটা virtual authenticator দিয়ে test করা হয়েছে, আসল device
+  দিয়ে এখনো নয়।
 - প্রতিটা পরিবর্তনের একটা append-only audit log (শুধু যোগ করা যায়, মোছা বা বদলানো যায় না)।
 
 ## Customer আর package
@@ -223,6 +235,21 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   করে। Disk ব্যবহার প্রতি 30 মিনিটে মাপা হয়।
 - **তাঁর হয়ে ঢুকুন** (Sign in as): এক ঘণ্টার জন্য একজন customer হিসেবে panel-এ ঢোকা, যা audit
   log-এ লেখা থাকে।
+- <Badge text="পরের release" variant="note" /> একজন customer-এর এক server-এর
+  [সবকিছু একবারে অন্য server-এ সরান](/guides/admin/move-customer/)।
+- <Badge text="পরের release" variant="note" /> [একজন customer-কে suspend করুন](/guides/admin/customers/#suspend-a-customer):
+  তিনি sign in করতে পারেন না, তাঁর website-এ একটা "suspended" page দেখায়, app আর cron job থামে, আর কিছুই মোছা হয় না।
+- <Badge text="পরের release" variant="note" /> Website, database, app, email domain আর DNS zone-এর
+  [মালিক বদলান](/guides/admin/customers/#change-the-owner), নতুন মালিকের package মিলিয়ে।
+- <Badge text="পরের release" variant="note" /> Package-এ মাসিক [bandwidth limit](/guides/admin/customers/#how-bandwidth-is-counted),
+  90% আর 100%-এ alert-সহ, আর package বললে পরের মাস পর্যন্ত website বন্ধ।
+- <Badge text="পরের release" variant="note" /> [Reseller](/guides/admin/resellers/): তাঁরা নিজের customer-দের কাছে
+  hosting বিক্রি করেন, নিজের package দিয়ে, আপনার ঠিক করা সীমার মধ্যে: সব customer মিলিয়ে মোট (customer-দের যা আছে তা
+  গুনে), একটা package-এর সর্বোচ্চ, আর কোন server, PHP version ও image তাঁরা দিতে পারবেন। একজন reseller-কে suspend করলে
+  তাঁর সব customer suspend হন; customer-এর মতোই reseller-এর bandwidth সীমিত আর বন্ধ করা যায়।
+- <Badge text="পরের release" variant="note" /> [Branding (white-label)](/guides/admin/branding/): panel-এর নিজের নাম,
+  রং, logo আর domain, আর আপনি অনুমতি দিলে একজন reseller-এর নিজেরটা, তাঁর আর তাঁর customer-দের জন্য। রংটা এমনভাবে
+  বদলানো হয় যাতে দুই theme-এই পড়া যায়, আর প্রতিটা domain নিজের certificate পায় আর sign-in page-এ নিজের brand দেখায়।
 
 ## Notification
 
@@ -231,12 +258,13 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - Panel-এর ভেতরে (না-পড়া সংখ্যাসহ একটা ঘণ্টা) আর email, Telegram, Discord, Slack বা signed
   webhook-এ।
 - যেমন: কোনো server offline, disk ভরে যাওয়া, backup ব্যর্থ হওয়া, কোনো website বা app apply না
-  হওয়া, কোনো package-এর disk limit প্রায় শেষ, ব্যর্থ task, আর নতুন address থেকে sign-in।
+  হওয়া, কোনো package-এর disk limit প্রায় শেষ, ব্যর্থ task, আর নতুন address থেকে sign-in। পরের release থেকে
+  ব্যর্থ cron job আর bandwidth-ও, আর reseller-রা তাঁদের customer-দের alert পান।
 - প্রতিটা message প্রাপকের নিজের ভাষায় লেখা হয়।
 
 ## অনেক server
 
-[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/)
+[Server guide](/guides/admin/servers/) · [Server যোগ করা](/start/add-server/) · [আপডেট](/guides/admin/updates/) · [Website সরান](/guides/websites/move/) · [App সরান](/guides/apps/move/) · [Database সরান](/guides/data/move-database/) · [Customer সরান](/guides/admin/move-customer/) · [Backup থেকে আবার বানান](/guides/websites/rebuild/) · [cPanel থেকে ইমপোর্ট](/guides/admin/import-cpanel/) · [ওয়েবসাইট আর্কাইভ ইমপোর্ট](/guides/admin/import-website/) · [Coolify থেকে ইমপোর্ট](/guides/admin/import-coolify/)
 
 - একটা command দিয়ে server যোগ করুন, যা agent আর web server install করে। Agent নিজে mutual TLS দিয়ে
   panel-এ connect করে, তাই NAT-এর পেছনেও কাজ করে।
@@ -246,6 +274,31 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 - Live CPU, memory, disk, network, load আর uptime, 30 দিনের history-সহ।
 - প্রতিটা server-এর service (Caddy, PostgreSQL, cron আর অন্যান্য), restart-সহ।
 - Background task, panel-এ তাদের অগ্রগতি দেখা যায়।
+- <Badge text="পরের release" variant="note" /> একটা website, আপনার বেছে নেওয়া database সহ, অন্য server-এ সরানো:
+  file (owner আর ACL সহ), database আর certificate server-গুলোর agent-এর মধ্যে কপি হয়, কিছু বদলানোর আগে নতুন server
+  যাচাই করা হয়, panel যে DNS চালায় তা পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি চলতে থাকে। দুটো VM দিয়ে test করা।
+- <Badge text="পরের release" variant="note" /> একটা app অন্য server-এ সরানো: app বন্ধ করা হয়, তার Docker volume (সংখ্যায়
+  owner সহ) আর Git app-এর বর্তমান build server-গুলোর agent-এর মধ্যে কপি হয়, নতুন server app set up করে তার volume ভরে,
+  panel যে DNS চালায় তা পেছনে যায়, আর আপনি না মোছা পর্যন্ত পুরোনো কপি তার data সহ বন্ধ থাকে। দুটো VM দিয়ে test করা।
+- <Badge text="পরের release" variant="note" /> একটা database আলাদাভাবে অন্য server-এ সরানো, একই user আর password সহ; আপনি
+  না মোছা পর্যন্ত পুরোনো কপি থাকে।
+- <Badge text="পরের release" variant="note" /> একজন customer-এর এক server-এর সবকিছু (website, database আর app) একবারে
+  সরানো: আগে সব check করা হয়, তারপর একটার পর একটা সরে, প্রথম ব্যর্থতায় থেমে যায়।
+- <Badge text="পরের release" variant="note" /> Server চলে গেলে আপনার বেছে নেওয়া database সহ একটা website তার সবচেয়ে
+  নতুন S3 backup থেকে অন্য server-এ আবার বানানো। Panel যে DNS চালায় তা পেছনে যায়। দুটো VM আর একটা S3 test server দিয়ে
+  test করা।
+- <Badge text="পরের release" variant="note" /> একটা cPanel account তার full backup (`cpmove` file) থেকে ইমপোর্ট করা:
+  file-সহ website, একই নাম, user আর password-সহ MySQL database, password, forwarder আর mail-সহ mailbox, cron job, আর
+  ekPanel-এর name server-এ DNS zone, সাথে কী এসেছে আর কী আসেনি তার report। Certificate ইমপোর্ট হয় না: domain server-এ
+  point করলে নতুন certificate নেওয়া হয়। Test VM-এ চালিয়ে দেখা।
+- <Badge text="পরের release" variant="note" /> একটা website তার file-এর archive (`.zip`, `.tar.gz` বা `.tar`) আর database
+  dump থেকে ইমপোর্ট করা: aaPanel-এর site আর database backup যেমন আছে তেমনই, বা অন্য host থেকে সাধারণ WordPress বা অন্য
+  যেকোনো website। WordPress তার database password রেখে দেয়, আর তার `wp-config.php` নতুন database-এর দিকে বদলে যায়। Test
+  VM-এ চালিয়ে দেখা।
+- <Badge text="পরের release" variant="note" /> Coolify-এর API দিয়ে তার application আর service ইমপোর্ট করা, শুধু ওই একটা
+  request-এর জন্য দেওয়া token দিয়ে: এগুলো তাদের variable, প্রথম domain আর port, আর রাখা folder-সহ Docker image, Git আর Compose
+  app হয়ে যায়। Volume-এর data আপনি নিজে কপি করেন; database তালিকায় আসে, ইমপোর্ট হয় না। একটা আসল Coolify v4 নিয়ে test VM-এ
+  চালিয়ে দেখা।
 
 ## API আর command line
 
@@ -254,7 +307,7 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
 <Badge text="পরের release" variant="note" /> এগুলো main repository-র `dev` branch-এ আছে, আর আসবে v0.1.0-এর পরের
 release-এ।
 
-- Script-এর জন্য **API token**, administrator আর customer দুজনের জন্যই: প্রতিটা অংশের scope (read, website,
+- Script-এর জন্য **API token**, administrator, reseller আর customer সবার জন্য: প্রতিটা অংশের scope (read, website,
   database, app, DNS, email, backup, server, customer, settings), মেয়াদ, একবার দেখানো, revoke করা যায়, শেষ ব্যবহার
   দেখা যায়, আর audit log-এ নাম থাকে। Token কখনো account-এর নিরাপত্তা বদলাতে বা terminal খুলতে পারে না।
 - পুরো API-এর একটা **OpenAPI 3.1 description**, `/api/v1/openapi.json`-এ, প্রতিটা operation-এর দরকারি scope-সহ।
@@ -275,12 +328,9 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| সরানো | একটা website, app বা database অন্য server-এ সরানো; একটা backup অন্য server-এ restore করা; পুরো একজন customer সরানো |
-| Importer | cPanel backup, aaPanel, অন্য host থেকে সাধারণ WordPress, Coolify |
-| Reseller | নিজস্ব customer-সহ reseller, white-label (নাম, logo, রং, domain), sub-user, passkey, active session-এর তালিকা |
+| Sub-user | বেছে নেওয়া অনুমতি-সহ sub-user। Reseller আর white-label আসছে পরের release-এ |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
 
 আরও কিছু ছোট জিনিসও এখনো নেই: database browser আর import/export, একটা single file restore করা বা
-backup download করা, customer suspend করা, bandwidth limit, ব্যর্থ cron job-এর alert, wildcard
-certificate (DNS-01), আর কোনো জিনিস অন্য মালিকের কাছে সরানো। এরপর phase 5-এ আসবে game server।
+backup download করা, আর wildcard certificate (DNS-01)। এরপর phase 5-এ আসবে game server।

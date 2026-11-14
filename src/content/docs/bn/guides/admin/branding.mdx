@@ -1,0 +1,267 @@
+---
+title: Branding (white-label)
+description: Panel-কে নিজের নাম, রং, logo আর domain দিন, আর একজন reseller-কে তাঁর নিজেরটা দিতে দিন, তাঁর আর তাঁর customer-দের জন্য।
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+**Branding**, যাকে **white-label**-ও বলে, panel-কে আপনার নিজের নাম, রং, logo আর domain দেয়, যাতে আপনার
+customer-রা ekPanel-এর বদলে আপনার hosting ব্যবসাকে দেখেন। একজন admin সবার জন্য panel-এর brand সেট করেন।
+Admin যে [reseller](/guides/admin/resellers/)-কে অনুমতি দেন, তিনি নিজের brand সেট করতে পারেন, যা তিনি আর তাঁর
+customer-রা দেখেন।
+
+<Aside type="caution" title="v0.1.0-এর পরে নতুন">
+Branding আছে main repository-র `dev` branch-এ, আর আসবে **পরের release-এ**। v0.1.0-এর panel-এ এখনো
+**ব্র্যান্ডিং** (Branding) page নেই।
+</Aside>
+
+## শুরু করার আগে
+
+- **Admin:** **ব্র্যান্ডিং** (Branding) মেনুতে **অ্যাডমিন** (Administration)-এর নিচে, **আপডেট**-এর ঠিক ওপরে
+  (page-টা `/settings/branding`)। Command palette (`Ctrl K`) থেকেও খোলা যায়।
+- **Reseller:** **ব্র্যান্ডিং** থাকে মেনুতে **রিসেলার** (Reseller)-এর নিচে, **গ্রাহক** আর **প্যাকেজ**-এর পরে।
+  আগে একজন admin-কে [আপনাকে নিজের branding-এর অনুমতি দিতে](#let-a-reseller-use-their-own-brand) হবে; তার আগ
+  পর্যন্ত page-এ লেখা থাকে "আপনার জন্য ব্র্যান্ডিং চালু নেই", আর সেখানে কিছুই বদলানো যায় না।
+- **Domain-এর জন্য:** আপনার নিয়ন্ত্রণে থাকা একটা DNS নাম, যেমন `panel.example.com`, আর যে server-এ panel
+  চলে সেটা [panel-এ যোগ করা](/guides/admin/servers/) থাকতে হবে, port 80 আর 443 খোলা রেখে। Domain-এ সাড়া দেয়
+  panel-এর নিজের server-ই।
+
+## কে কোন brand দেখেন
+
+| কে | দেখেন |
+| --- | --- |
+| Admin-রা, আপনার নিজের customer-রা, আর যে reseller-এর নিজের branding নেই তিনি ও তাঁর customer-রা | Panel-এর brand |
+| নিজের branding থাকা একজন reseller, আর তাঁর সব customer | Reseller-এর brand |
+| যে admin কোনো reseller বা customer-এর ওপর **তাঁর হয়ে ঢুকুন** (Sign in as) ব্যবহার করেছেন | সেই account-এর brand |
+| যিনি এখনো sign in করেননি (sign-in page) | যে domain খুলেছেন তার brand: reseller-এর domain-এ reseller-এর brand, অন্য যেকোনো address-এ panel-এর |
+
+Sign in করার পর brand চলে **account** অনুযায়ী, address অনুযায়ী নয়: reseller-এর একজন customer panel-এর মূল
+address-এ sign in করলেও reseller-এর brand-ই দেখেন।
+
+কিছু সেট না করলে panel দেখতে ekPanel-এর মতোই থাকে।
+
+## Panel-এর brand সেট করুন
+
+Admin হিসেবে:
+
+<Steps>
+
+1. **ব্র্যান্ডিং** (Branding) খুলুন।
+
+2. একটা **নাম** (Name) দিন, সর্বোচ্চ 60 অক্ষর। নাম ekPanel রাখতে চাইলে খালি রাখুন।
+
+3. Color picker দিয়ে একটা **রং** (Color) বেছে নিন, বা `#rrggbb` আকারে লিখুন, যেমন `#1a7f4b`। ekPanel-এর
+   সবুজ রাখতে খালি রাখুন, বা **ডিফল্ট রং নিন** (Use the default)-এ click করুন।
+
+4. Panel নিজের address-এ সাড়া দিক চাইলে একটা **ডোমেইন** (Domain) দিন, যেমন `panel.example.com` (দেখুন
+   [Domain](#domain)), নয়তো খালি রাখুন।
+
+5. **সংরক্ষণ** (Save)-এ click করুন। Page-এ লেখা আসে "সেভ হয়েছে"।
+
+6. **লোগো** (Logo)-র নিচে **লোগো আপলোড করুন** (Upload a logo)-এ click করে একটা ছবি বেছে নিন (দেখুন
+   [Logo](#logo))।
+
+</Steps>
+
+**প্রিভিউ** (Preview) দেখায় নাম বা logo, আর আপনার রঙে একটা button, একটা link আর একটা highlight, প্যানেল যেভাবে রংটা ঠিক করে নেবে সেভাবেই, light আর dark দুই theme-এ।
+Save করলে সব জায়গায় চালু হয়।
+
+## একজন reseller-কে নিজের brand দিতে দিন
+
+Admin অনুমতি না দেওয়া পর্যন্ত reseller কোনো brand সেট করতে পারেন না।
+
+<Steps>
+
+1. **রিসেলার** (Resellers) খুলে reseller-এর card-এ **রিসেলার বদলান** (Edit reseller)-এ click করুন।
+
+2. **নিজের ব্র্যান্ডিং** (Own branding)-এ টিক দিন: "রিসেলার তার গ্রাহকদের জন্য প্যানেলকে নিজের নাম, লোগো, রং
+   আর ডোমেইন দিতে পারবে।" নতুন reseller-এর বেলায় এটা বন্ধ থাকে।
+
+3. **পরিবর্তন সেভ করুন** (Save changes)-এ click করুন।
+
+</Steps>
+
+এরপর reseller-এর card-এ একটা <Badge text="নিজের ব্র্যান্ডিং" /> badge দেখায়।
+
+অনুমতি ফিরিয়ে নিতে টিক তুলে দিন। তখন reseller আর তাঁর customer-রা আবার panel-এর brand দেখেন, আর reseller-এর
+domain আর serve হয় না। তাঁর settings থেকে যায়, তাই আবার টিক দিলে সব ফিরে আসে।
+
+## একজন reseller-এর brand সেট করুন
+
+Reseller হিসেবে, admin অনুমতি দেওয়ার পর:
+
+<Steps>
+
+1. **ব্র্যান্ডিং** (Branding) খুলুন: "আপনার নিজের নাম, লোগো, রং আর ডোমেইন। আপনি আর আপনার গ্রাহকেরা প্যানেলটা
+   এভাবেই দেখবেন।"
+
+2. একটা **নাম** (Name) দিন। Reseller-কে নাম দিতেই হয়।
+
+3. একটা **রং** (Color) বেছে নিন, বা panel-এর রং রাখতে খালি রাখুন।
+
+4. চাইলে একটা **ডোমেইন** (Domain) দিন: "আপনার গ্রাহকেরা এখানে সাইন ইন করবে, আর সাইন ইনের আগেই আপনার
+   ব্র্যান্ডিং দেখবে। তাদের ইমেইলের লিংকেও এটাই থাকবে।" Panel-এরটা ব্যবহার করতে খালি রাখুন।
+
+5. **সংরক্ষণ** (Save)-এ click করুন।
+
+6. **লোগো**-র নিচে **লোগো আপলোড করুন**-এ click করুন। আগে নাম save করতে হয়: "আগে আপনার প্যানেলের নাম সেভ
+   করুন।"
+
+</Steps>
+
+Reseller-এর নাম আর logo একসাথে চলে। আপনার নিজের logo না থাকলে আপনার customer-রা দেখেন আপনার নাম, তার প্রথম
+অক্ষরের একটা tile-সহ; panel-এর logo **নয়**। রং আর domain খালি রাখলে panel-এরটা নেওয়া হয়।
+
+## নাম
+
+নাম দেখা যায়:
+
+- header-এ আর sign-in page-এ, logo না থাকলে নামের প্রথম অক্ষরের একটা tile-এর পাশে;
+- browser tab-এর title-এ;
+- [notification](/guides/admin/notifications/)-এ, যেমন "কেউ … থেকে আপনার Host BD অ্যাকাউন্টে ঢুকেছেন।" আর
+  "Host BD-এ খুলুন: …";
+- panel-এর যেসব লেখায় আগে ekPanel থাকত সেখানে, যেমন "Host BD একটা শক্তিশালী পাসওয়ার্ড বানিয়ে একবার দেখাবে।";
+- authenticator app-এ, account-এর নাম হিসেবে, যখন কেউ [two-factor sign-in](/guides/security/accounts/#two-factor-sign-in)
+  চালু করেন। নাম বদলানোর আগে সেট করা code app-এ পুরোনো নামই রাখে; সেগুলো কাজ করতে থাকে।
+
+নাম সর্বোচ্চ 60 অক্ষরের হতে পারে, `<` বা `>` ছাড়া।
+
+## রং
+
+রং ব্যবহার হয় button, link আর highlight-এ। "দরকার হলে রংটা একটু গাঢ় বা হালকা করা হয়, যাতে লাইট আর ডার্ক দুই
+থিমেই লেখা পড়া যায়": panel রংটা এমনভাবে বদলায় যাতে দুই theme-এই লেখার contrast কমপক্ষে 4.5:1 থাকে। অবস্থা
+বোঝানোর রং (সবুজ, হলুদ আর লাল, যেমন **চালু** বা **ব্যর্থ**) বদলায় না।
+
+## Logo
+
+- PNG, JPEG, GIF বা WebP, সর্বোচ্চ 2 MB, কমপক্ষে 16×16 pixel। SVG নেওয়া হয় না।
+- Panel ছবিটা পড়ে আবার PNG হিসেবে save করে, 1024×512 pixel-এর মধ্যে আঁটার মতো ছোট করে, যাতে শুধু সাধারণ pixel-ই
+  serve হয়।
+- Header-এ আর sign-in page-এ প্রায় 32 pixel উঁচু করে দেখানো হয়, আর browser tab-এর icon-ও এটাই। "স্বচ্ছ
+  ব্যাকগ্রাউন্ডের চওড়া লোগো দুই থিমেই ভালো দেখায়।"
+
+আরেকটা upload করতে **লোগো বদলান** (Change the logo)-এ, আর সরাতে **সরান** (Remove)-এ click করুন।
+
+## Domain
+
+একটা brand-এর domain হলো panel-এর একটা বাড়তি address, যেমন `panel.example.com`। যে server-এ panel চলে, সেটাই
+এতে সাড়া দেয়: domain-এর DNS সেই server-এ point করলে তার Caddy একটা free Let's Encrypt certificate নেয়, আর
+request-গুলো panel-এ পাঠিয়ে দেয়। যিনি sign in করেননি, তিনি সেখানে সেই brand-এর sign-in page দেখেন।
+
+Website-এর domain-এর মতোই domain-টা দখল হয়ে যায়: একই সময়ে আর কোনো website, app বা অন্য brand এটা ব্যবহার করতে
+পারে না। কেউ করলে save করার সময় আসে "এই ডোমেইনটা এরই মধ্যে একটা ওয়েবসাইট, অ্যাপ বা অন্য প্যানেল ব্যবহার করছে।"
+
+<Steps>
+
+1. **ডোমেইন** (Domain) দিয়ে **সংরক্ষণ**-এ click করুন।
+
+2. Page-এ কোন DNS record বানাতে হবে তা দেখায়: "এই DNS রেকর্ড দিয়ে panel.example.com প্যানেলের সার্ভারে পয়েন্ট
+   করুন:", server-এর public IPv4 address-সহ একটা `A` record আর IPv6 address-সহ একটা `AAAA` record, প্রতিটার
+   পাশে একটা copy button।
+
+3. Domain-এর DNS যেখানে আছে, সেখানে এই record-গুলো বানান।
+
+4. Domain-এর পাশের badge **চালু** (Active) না দেখানো পর্যন্ত অপেক্ষা করুন, তারপর domain-টা খুলুন।
+
+</Steps>
+
+Badge domain-এর অবস্থা দেখায়:
+
+| অবস্থা | মানে |
+| --- | --- |
+| **চালু** (Active) | Panel-এর server domain-টা serve করছে। Domain-এর DNS server-এ point করলে এর certificate আসে। |
+| **চালু হচ্ছে** (Being set up) | Panel-এর server এখনো এটা নেয়নি। Page কয়েক সেকেন্ড পরপর আবার দেখে। |
+| **ব্যর্থ** (Failed) | Panel-এর server এটা সেট করতে পারেনি। Admin-রা domain-এর নিচে error দেখেন। |
+| **সার্ভার নেই** (No server) | "প্যানেল যে সার্ভারে চলে সেটা প্যানেলে যোগ করা নেই, তাই এই ডোমেইনে এখনো কেউ সাড়া দিতে পারবে না।" আগে [server-টা যোগ করুন](/guides/admin/servers/)। |
+
+কিছু domain-এর বেলায় অন্যভাবে হয়:
+
+- `.test`, `.localhost`, `.internal`, `.example` বা `.invalid` দিয়ে শেষ হওয়া domain Let's Encrypt-এর বদলে
+  Caddy-র নিজের authority থেকে certificate পায়, lab আর test-এর জন্য। Browser এ নিয়ে সতর্ক করে।
+- একজন reseller panel-এর নিজের address ব্যবহার করতে পারেন না: যে address-এ তিনি panel খুলে রেখেছেন, বা
+  [notification settings](/guides/admin/notifications/#before-you-start-the-mail-server-administrators)-এর
+  **প্যানেলের ঠিকানা** (Panel address)।
+- Installer-এর `--domain` দিয়ে সেট করা domain আগে থেকেই server-এর মূল Caddyfile serve করে, তাই panel এটা দ্বিতীয়বার
+  যোগ করে না। সেই address-এ সবসময় panel-এর brand দেখায়।
+
+একজন user-এর notification-এর link-এ থাকে তাঁর brand-এর domain (`https://` আর domain), নয়তো notification
+settings-এর **প্যানেলের ঠিকানা**।
+
+### Passkey আর একাধিক address
+
+"পাসকি একটা ঠিকানার সাথেই কাজ করে: প্যানেলের অন্য ঠিকানায় যোগ করা পাসকি এখানে চলবে না।" `panel.example.com`-এ
+যোগ করা একটা [passkey](/guides/security/accounts/#passkeys) `cp.example.net`-এ কাজ করে না। নতুন address-এ passkey
+ব্যবহার করতে সেখানে password আর two-factor code দিয়ে sign in করুন, আর সেখানেও একটা passkey যোগ করুন।
+
+## যা ekPanel-ই থাকে
+
+- **Source code-এর link।** Menu-র নিচে আর sign-in page-এর নিচে একটা ছোট **সোর্স কোড** (Source code) link থাকে।
+  Panel-এর license, [AGPL](/project/license/), চায় যে panel তার source code সব ব্যবহারকারীকে দেবে, তাই এটা বন্ধ করা
+  যায় না।
+- **Software নিয়ে লেখাগুলো** ekPanel নামই রাখে: [update](/guides/admin/updates/) ("ekPanel 1.2 এসেছে"),
+  firewall-এর লেখায় "ekPanel agent", আর setup page।
+- Website-গুলো যে **"Website suspended" আর "Bandwidth used up" page** দেখায়, সেগুলো web server-এর serve করা
+  সাধারণ page, কোনো brand ছাড়া।
+
+## API দিয়ে
+
+| Endpoint | কীসের জন্য | Token scope |
+| --- | --- | --- |
+| `GET /api/v1/branding` | Sign in করা থাকলে caller-এর brand, নইলে domain-এর: `name`, `color`, `logo_url`, `custom`, `url`, `source_url`। সবার জন্য খোলা | লাগে না |
+| `GET /api/v1/branding/logo/{id}` | একটা logo, PNG হিসেবে। সবার জন্য খোলা | লাগে না |
+| `GET /api/v1/brand` | আপনার settings: admin-এর বেলায় panel-এর, reseller-এর বেলায় তাঁর নিজের, `allowed`, `domain_state`, `addresses` আর `panel` (panel-এর যে brand-এ তিনি ফিরে যান)-সহ | `settings` (বা `read`) |
+| `PUT /api/v1/brand` | `{"name": "…", "color": "…", "domain": "…"}` save করা | `settings` |
+| `PUT /api/v1/brand/logo` | Logo upload: ছবিটাই body, `application/octet-stream` হিসেবে পাঠানো | `settings` |
+| `DELETE /api/v1/brand/logo` | Logo সরানো | `settings` |
+
+যেমন, **সেটিংস** (Settings) scope-সহ একটা token দিয়ে:
+
+```bash
+export EKP_TOKEN='ekp_…'   # from Your account → API tokens
+PANEL=https://panel.example.com/api/v1
+
+curl -sS -X PUT -H "Authorization: Bearer $EKP_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Host BD","color":"#1a7f4b","domain":""}' \
+  "$PANEL/brand"
+
+curl -sS -X PUT -H "Authorization: Bearer $EKP_TOKEN" -H 'Content-Type: application/octet-stream' \
+  --data-binary @logo.png "$PANEL/brand/logo"
+```
+
+`PUT /brand` তিনটা field একসাথে save করে, তাই যেগুলো রাখতে চান সেগুলোও পাঠান। Admin একজন reseller-কে নিজের
+branding-এর অনুমতি দেন reseller-এর limit-এ `"white_label": true` দিয়ে (`POST` বা `PUT /resellers`)। দেখুন
+[API reference](/reference/api/#administrators-and-resellers)।
+
+Audit log-এ লেখা হয় "ব্র্যান্ডিং বদলানো হয়েছে", "লোগো বদলানো হয়েছে" আর "লোগো সরানো হয়েছে"
+(`brand.updated`, `brand.logo_changed`, `brand.logo_removed`)।
+
+## সমস্যা হলে
+
+| Message বা সমস্যা | মানে আর কী করবেন |
+| --- | --- |
+| "৬০ অক্ষর পর্যন্ত একটা নাম দিন, < বা > ছাড়া।" (`invalid_brand_name`) | নাম বেশি লম্বা, বা এতে `<` বা `>` আছে। Reseller-কে নামও দিতে হয়। |
+| "#1a7f4b-এর মতো একটা রং দিন।" (`invalid_color`) | রং লিখুন `#` আর ছয়টা hexadecimal অঙ্ক দিয়ে, বা খালি রাখুন। |
+| "অন্তত ১৬×১৬ পিক্সেলের একটা PNG, JPEG, GIF বা WebP ছবি আপলোড করুন।" (`invalid_logo`) | File-টা এই format-গুলোর কোনোটা নয় (SVG নেওয়া হয় না), বা খুব ছোট। |
+| "লোগো সর্বোচ্চ ২ MB হতে পারে।" (`logo_too_large`) | File ছোট করুন। |
+| "আগে আপনার প্যানেলের নাম সেভ করুন।" (`brand_name_first`) | Logo upload-এর আগে reseller-কে একটা নাম save করতে হয়। |
+| "এই ডোমেইনটা এরই মধ্যে একটা ওয়েবসাইট, অ্যাপ বা অন্য প্যানেল ব্যবহার করছে।" (`domain_taken`) | অন্য কোনো website, app বা brand-এর এটা আছে, বা (reseller-এর বেলায়) এটা panel-এর নিজের address। অন্য domain বেছে নিন। |
+| "একজন অ্যাডমিনিস্ট্রেটর আপনাকে নিজের ব্র্যান্ডিংয়ের অনুমতি দেননি।" (`white_label_off`) | একজন admin-কে আপনার জন্য **নিজের ব্র্যান্ডিং**-এ টিক দিতে বলুন। |
+| Domain সাড়া দেয় না, বা এর ঠিকঠাক certificate নেই | দেখুন এর `A` আর `AAAA` record **ব্র্যান্ডিং** page-এর দেখানো address-এ point করে কিনা, আর port 80 ও 443 panel-এর server-এ পৌঁছায় কিনা। দেখুন [একটা brand-এর domain সাড়া দেয় না](/reference/troubleshooting/#the-domain-of-a-brand-does-not-answer)। |
+| নতুন domain-এ আমার passkey কাজ করে না | Passkey একটা address-এরই। Password আর two-factor code দিয়ে sign in করে এই address-এও একটা passkey যোগ করুন। |
+
+## Limit আর যা এখনো নেই
+
+- Panel-এর একটা brand, আর প্রত্যেক reseller-এর একটা করে; reseller-এর customer-রা নিজের brand রাখতে পারেন না।
+- প্রত্যেক brand-এর একটাই domain।
+- Email-এর sender address সব brand-এর জন্য notification settings-এরটাই।
+- "Website suspended" আর "Bandwidth used up" page-এ কোনো brand থাকে না।
+- **Sub-user** এখনো নেই: এটা [roadmap](/project/roadmap/)-এ phase 4e-এর পরের অংশ।
+
+## সম্পর্কিত
+
+- [Reseller](/guides/admin/resellers/): একজন reseller-কে নিজের branding-এর অনুমতি দেওয়া।
+- [Notification](/guides/admin/notifications/): Message-এ থাকে প্রাপকের panel-এর নাম, আর link-এ তাঁর brand-এর domain।
+- [Account security](/guides/security/accounts/): Passkey আর authenticator app।
+- [API reference](/reference/api/): Branding-এর endpoint।

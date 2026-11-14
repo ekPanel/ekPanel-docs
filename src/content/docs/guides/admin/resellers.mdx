@@ -1,0 +1,354 @@
+---
+title: Resellers
+description: Let someone sell hosting on your servers to their own customers, with their own packages, within totals you set; suspend them with all their customers, and limit their bandwidth.
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+A **reseller** sells hosting on your servers to their own customers. You give them limits; within
+those, they make their own [packages](/guides/admin/customers/#create-a-package) and customers,
+and see only their own customers. Use it when a web designer, an agency or a smaller host wants
+to sell hosting under their own name without running servers.
+
+<Aside type="caution" title="New after v0.1.0">
+Resellers are in the main repository's `dev` branch and come with the **next release**. A panel
+on v0.1.0 does not have the **Resellers** page yet.
+</Aside>
+
+## Before you start
+
+- You are signed in as an **administrator**. **Resellers** is under **Administration** in the
+  menu, next to **Customers** and **Packages**.
+- Read [Customers and packages](/guides/admin/customers/) first: a reseller's customers are
+  ordinary customers, with a package each.
+- Decide which servers, PHP versions and Docker images the reseller may offer.
+
+## Add a reseller
+
+<Steps>
+
+1. Open **Resellers** and click **Add reseller**.
+
+2. Enter a **Name** and an **Email**. The email address is what they sign in with.
+
+3. Fill in the three groups of limits, described below: **Totals for all their customers**,
+   **The most one package may give** and **What their packages may offer**.
+
+4. Click **Create reseller**.
+
+5. Copy the password: "A password is generated and shown once. You can reset it later." "Send
+   the reseller this address and password. They should change the password and turn on
+   two-factor after signing in."
+
+</Steps>
+
+The panel does not send the reseller an email; send the password yourself, over a safe channel.
+
+### Totals for all their customers
+
+"What all the reseller's customers may have together."
+
+| Field | What it limits | Empty or 0 means |
+| --- | --- | --- |
+| **Customers** | How many customers the reseller may have | 0 means none |
+| **Websites**, **Databases**, **Apps**, **Cron jobs** | How many of each all their customers may have together (0 to 1,000,000) | 0 means none |
+| **Mail domains**, **Mailboxes** | Mail domains and mailboxes over all their customers | 0 means none |
+| **Disk space (GB)** | Disk space used by all their customers together | Empty: **No limit** |
+| **Bandwidth per month (GB)** | What all their customers' websites and apps send in a calendar month (UTC), at least 1 GB. See [Bandwidth](#bandwidth) | Empty: **No limit** |
+| **Stop all their customers' websites and apps when it is used up** | Whether every customer's websites and app addresses stop once the bandwidth is used up | Off. Can only be ticked with a bandwidth limit |
+
+### The most one package may give
+
+"Empty means any. With a limit, every package of the reseller must have one at most this large."
+
+| Field | What it limits |
+| --- | --- |
+| **Memory (MB)** | The memory limit of each of the reseller's packages, at least 64 MB |
+| **CPU (cores)** | The CPU limit of each package, at least 5% of a core |
+| **Mailbox size (GB)** | The largest mailbox size each package may allow |
+
+These are per package, not totals: a reseller with **Memory (MB)** `1024` may have ten customers
+with 1024 MB each.
+
+### What their packages may offer
+
+| Field | What it limits | Empty means |
+| --- | --- | --- |
+| **PHP versions** | The PHP versions their packages may include | "None ticked: every PHP version." |
+| **Servers** | The servers their packages may use. "Their customers' websites, databases and apps go only on these." | "None ticked: every server." |
+| **Allowed Docker images** | The images their packages may allow. "One per line; a name ending in / allows everything under it." Shown only when **Apps** is more than 0 | "Empty: any image." |
+| **SFTP access to their websites**, **FTP (encrypted) for their websites**, **Git apps** | Whether their packages may include these | Off |
+| **Own branding** | "The reseller can give the panel their own name, logo, color and domain for their customers." The card then shows an **Own branding** badge. See [Branding](/guides/admin/branding/) | Off |
+
+### Change a reseller's limits
+
+Click **Edit reseller** on the reseller's card, change the limits and click **Save changes**. Lower
+limits stop new things. What the customers already have stays, and so do packages that are now
+above the new limits; the reseller cannot save such a package again without lowering it. A new
+bandwidth limit is checked at once (see [Bandwidth](#bandwidth)).
+
+If a number is not accepted: "Check the limits: counts are 0 or more, and sizes must be large
+enough."
+
+## How the totals are counted
+
+"Their packages may promise more; what customers actually have is counted, and new things are
+refused once a total is reached."
+
+A reseller may sell more than they have, as hosts do. A reseller with a total of 10 websites
+may sell twenty packages of 3 websites each. The panel counts the websites, databases, apps,
+cron jobs, email domains, mailboxes and disk space that all their customers **actually have**,
+and refuses a new one once a total is reached, with a message such as "The reseller's account
+allows no more websites." Each customer's own package still applies too, so whichever limit is
+reached first stops them.
+
+The same check runs for everything that adds to a reseller's customers, whoever does it:
+
+- the reseller, or the customer themselves;
+- an administrator who creates something for one of their customers (**For** on the website,
+  database or app form), or who [signs in as](/guides/admin/customers/#sign-in-as-a-customer)
+  one of them;
+- [imports](/guides/admin/import-cpanel/) for one of their customers;
+- [owner changes](/guides/admin/customers/#change-the-owner) that give one of their customers
+  something from outside the reseller.
+
+**Disk space** is measured every 30 minutes, as for
+[customers](/guides/admin/customers/#how-disk-space-is-measured). When the reseller's total is
+used up: "The disk space of the reseller's account is used up." New websites, databases, apps,
+cron jobs and mail domains are refused for all their customers, and so are file manager actions
+that add data. Nothing is deleted, and websites keep running.
+
+**Servers** limit where things go: "The reseller's account cannot use that server."
+
+In the project's test VM, a reseller had a total of 2 websites. One customer made a website,
+another customer made one, and a third was refused.
+
+## What a reseller sees and does
+
+A reseller signs in at the same address as you. Their **Dashboard** says "Your customers'
+websites, databases and apps, and what your reseller account allows." and shows **Your reseller
+account**: "What all your customers have together, against what the administrator gave you."
+
+They see:
+
+- **Websites**, **WordPress**, **Databases**, **Apps**, **Email** and **DNS**: everything their
+  customers have, and nothing else. Anything else answers "not found", as it does for customers.
+- Under **Reseller** in the menu: **Customers** and **Packages**, their own only, and
+  **Branding**, which they can use once you tick **Own branding** for them.
+- **Security**, **Notifications** and **API tokens** for their own account.
+
+They can:
+
+- make [their own packages](#a-resellers-packages), within the limits you gave them;
+- add, change and delete their customers, give them a **New password**, **Reset two-factor**,
+  **Suspend** and **Unsuspend** them, and **Sign in as** them;
+- create websites, databases, apps, email domains, DNS zones and cron jobs **for** one of their
+  customers;
+- [change the owner](/guides/admin/customers/#change-the-owner) of things between their own
+  customers.
+
+A reseller owns nothing themselves: everything they create belongs to one of their customers.
+On a form, they choose the customer under **For**. Without any customer yet, the form says "Add
+a customer first: as a reseller, everything you create belongs to one of your customers." With
+the API, leaving out the customer gives "Choose the customer this is for."
+
+### A reseller's own website
+
+To host their own website, the reseller makes a customer for themselves, with one of their
+packages, and creates the website for that customer. It counts against their totals like any
+other.
+
+### What a reseller cannot do
+
+- **Servers**, **Backups** and **Server security**: they see only the names of the servers they
+  may use, to choose from. They cannot move things to another server.
+- **Import**, **Updates** and the **Audit log**.
+- **Resellers**: they cannot make resellers of their own.
+- Connect a customer's **Cloudflare** account: "Sign in as the customer to connect their
+  Cloudflare account." Use **Sign in as** on the customer, then connect it as them.
+- Give things to the administrators with **Change owner…**: only to one of their own customers.
+- Lift a suspension an administrator made (see [Suspend a reseller](#suspend-a-reseller)).
+
+## A reseller's packages
+
+Packages belong either to the administrators or to one reseller. A reseller makes theirs on
+**Packages** the same way you do (see [Create a package](/guides/admin/customers/#create-a-package)),
+and their customers can only have one of the reseller's packages. Package names must be unique
+for each reseller, so a reseller can have a "Starter" package of their own next to yours.
+
+A reseller's package can give **no more than the reseller has**:
+
+- no count above the reseller's total (a package of 20 websites for a reseller with 10 is refused);
+- no size above the most one package may give, and no disk space or bandwidth above the
+  reseller's total;
+- where the reseller's size is limited, the package's cannot be left empty, because empty means
+  "no limit";
+- only the PHP versions, servers and images the reseller has, and SFTP, FTP or Git apps only if
+  the reseller has them.
+
+Two exceptions: the images matter only for a package with apps, and the mailbox size only for a
+package with mailboxes. A reseller whose images are limited can make a package with 0 apps
+without choosing any.
+
+If a package does not fit, the panel names the field: "This package gives more than your
+reseller account allows: …. Your limits are on the dashboard; an empty size means "no limit",
+which is more than a limited account allows."
+
+Administrators see every package. The packages table then has a **Whose** column: **Yours**, or the
+reseller's name. If you edit a reseller's package, it is checked against that reseller's limits
+too.
+
+## Suspend a reseller
+
+Suspending a reseller stops them **and all their customers** at once, without deleting anything.
+
+<Steps>
+
+1. On **Resellers**, click **Suspend** on the reseller's card.
+
+2. Read what it does: "The reseller and all their customers can no longer sign in, and every
+   customer's websites and apps show a "suspended" page, as if each was suspended."
+
+3. Optionally enter a **Reason**, up to 500 characters, for the administrators and the audit log.
+
+4. Click **Suspend**.
+
+</Steps>
+
+The card then shows "Suspended since …". While the reseller is suspended:
+
+- **The reseller cannot sign in**, and neither can any of their customers, with a password, a
+  passkey or an API token. Their open sessions end.
+- **Every customer is treated as suspended**: their websites and app addresses answer with the
+  "Website suspended" page (HTTP 503), their apps stop, and so on. See
+  [Suspend a customer](/guides/admin/customers/#suspend-a-customer) for everything that means.
+- **Nothing is deleted.**
+
+Click **Unsuspend** to put everything back. Customers who were suspended **on their own** (by
+you or by the reseller) stay suspended.
+
+A reseller can suspend and unsuspend their own customers, but cannot lift a suspension an
+administrator made: "An administrator suspended this customer, so only an administrator can lift
+it."
+
+The audit log records "Reseller suspended" (with the reason) and "Reseller unsuspended" under
+your name.
+
+In the project's test VM, suspending a reseller turned both their customers' websites into the
+"suspended" page (503) and refused the sign-in of the reseller and of both customers. A customer
+an administrator had suspended stayed suspended after the reseller was unsuspended, and the
+reseller could not lift it.
+
+## Bandwidth
+
+With **Bandwidth per month (GB)**, a reseller's bandwidth is the traffic of **all their
+customers' websites and apps added up**, per calendar month in UTC. It is counted and checked
+like a [customer's bandwidth](/guides/admin/customers/#how-bandwidth-is-counted): every 15
+minutes, when traffic is collected, and at once when you change the reseller's limits or move a
+customer between resellers.
+
+The reseller and the administrators get a [notification](/guides/admin/notifications/) at 90%
+("Bandwidth almost used up") and at 100% ("Bandwidth used up"), once a month each.
+
+At 100%:
+
+- **Without** "Stop all their customers' websites and apps when it is used up": nothing stops. It
+  is only a warning.
+- **With** it: the notification is "Bandwidth used up, websites stopped", and every customer's
+  websites and app addresses answer with the "Bandwidth used up" page (HTTP 503) until the next
+  month. The reseller's card shows "Bandwidth used up: websites stopped", and each of their
+  customers shows "Reseller's bandwidth used up: websites stopped" on the customers list.
+
+The websites start again at the first check of the next month, or at once when you raise the
+reseller's limit above what was used or untick the stop. Each customer's own package limit
+applies as well: a customer can be stopped by their own package while the reseller still has
+bandwidth left.
+
+In the project's test VM, two customers of a reseller with 1 GB served 600 MB and 457 MB, each
+under their own 1 GB package. Together, 1.06 GB stopped both websites with the bandwidth page
+and told the reseller. Raising the reseller to 5 GB brought both back within 2 seconds.
+
+## Notifications for resellers
+
+A reseller gets the alerts about their customers' things, as well as the customer: a website,
+app, database or email problem, a failed deploy or cron job, malware found, a customer's disk
+space or bandwidth, and so on. They also get their own bandwidth alerts (above), and the alerts
+about their own account (a sign-in from a new address, a recovery code used). They set up their
+own channels under **Notifications**, like everyone else. See
+[Notifications](/guides/admin/notifications/).
+
+## For administrators: resellers' customers
+
+The customers list shows every customer, with "via …" under the name of each reseller's customer.
+
+- **Show only some customers.** Choose under **Show**: **All customers**, **Your own customers**,
+  or **Customers of …** for one reseller. The **Customers** button on a reseller's card opens the
+  list for that reseller.
+- **Add a customer for a reseller.** In **Add customer**, choose the **Reseller**. "A reseller's
+  customer uses one of that reseller's packages and counts against the reseller's limits." The
+  **Package** list then shows that reseller's packages.
+- **Move a customer to another reseller, or to yourself.** Click **Edit** on the customer,
+  choose another **Reseller**, or **None (your own customer)**, and a package of theirs. Before
+  anything changes, the panel checks that the new reseller has room for one more customer and for
+  everything the customer has (websites, databases, apps, cron jobs, email, disk space and
+  servers). Nothing moves on the server. Bandwidth is checked again for both resellers.
+- **Sign in as a reseller.** Click **Sign in as** on the reseller's card to see the panel as they
+  do, as for a [customer](/guides/admin/customers/#sign-in-as-a-customer). The audit log records
+  "Signed in as reseller". While you are signed in as a reseller you cannot also sign in as one
+  of their customers ("Go back to your own account first."): go back, then use **Sign in as** on
+  the customer.
+- **New password** and **Reset two-factor** work for a reseller as for a
+  [customer](/guides/admin/customers/#reset-a-password-or-two-factor-sign-in).
+
+In the project's test VM, an owner change moved a website between a reseller's customers, and
+the website kept serving.
+
+### Delete a reseller
+
+A reseller who still has customers cannot be deleted: "This reseller still has customers. Move
+them to yourself or another reseller, or delete them, first." Move them with **Edit** on each
+customer, or delete them. Then click the delete button on the reseller's card. "The reseller's
+account and packages go."
+
+In the project's test VM, deleting a reseller was refused while they had customers; once the
+customers were gone, it removed the reseller and their package.
+
+## API tokens and the API
+
+Resellers have their own [API tokens](/guides/security/api-tokens/) under **API tokens**, with
+eight scopes: **Read**, **Websites**, **Databases**, **Apps**, **DNS**, **Email**, **Customers**
+and **Settings**. A reseller's token sees only their customers and their customers' things, like
+the reseller in the browser. With **Customers** it can manage their customers and packages and
+change owners between their customers (`/customers`, `/packages` and `/owner-changes`). With
+**Settings** it can change their [branding](/guides/admin/branding/#with-the-api) (`/brand`).
+
+Administrators manage resellers with `/api/v1/resellers` (list, add), `/api/v1/resellers/{id}`
+(read, change, delete), and `POST` to `/password`, `/2fa/reset`, `/impersonate`, `/suspend` (with
+`{"reason": "…"}`) and `/unsuspend` below it. **Own branding** is `"white_label": true` or
+`false` in the limits you send with `POST` or `PUT`. A token needs the `customers` scope; resetting
+two-factor sign-in and signing in as someone need a browser session. See the
+[API reference](/reference/api/#administrators-and-resellers).
+
+## Limits and what is not there yet
+
+- **Sub-users** are not there yet. They are the next part of phase 4e on the
+  [roadmap](/project/roadmap/).
+- Resellers cannot make resellers of their own, and there is no email to new resellers or
+  customers with their sign-in details.
+- The "Website suspended" and "Bandwidth used up" pages are in English and do not carry the
+  reseller's name.
+- Disk space is measured every 30 minutes and traffic collected every 15 minutes, so a reseller's
+  customers can go somewhat over a total before new things are refused or websites stop.
+- Totals count what customers have, so a reseller can sell more than their totals. If they do,
+  their customers may be refused before their packages are used up; that is the reseller's
+  business to manage.
+
+## Related
+
+- [Customers and packages](/guides/admin/customers/): Packages, suspending, changing owners and bandwidth for one customer.
+- [Notifications](/guides/admin/notifications/): Who gets which alert.
+- [Branding](/guides/admin/branding/): A reseller's own name, logo, color and domain.
+- [API tokens](/guides/security/api-tokens/): Tokens for resellers and their scopes.
+- [Roadmap](/project/roadmap/): Sub-users.

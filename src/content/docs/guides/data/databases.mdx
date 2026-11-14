@@ -170,6 +170,10 @@ For customers, the [package](/guides/admin/customers/#package-limits) decides:
 
 Make a [backup](/guides/data/backups/) first if you might need the data again.
 
+A database that is being [moved to another server](/guides/data/move-database/), or whose old
+copy is still on the other server, cannot be deleted: "This is being moved, or its old copy is
+still on the other server. Finish the move first."
+
 ## Backups
 
 Every database on a server is included in that server's [backups](/guides/data/backups/), dumped
@@ -192,7 +196,10 @@ backup. You can restore a database from the Backups page.
 - No remote access, and one user per database.
 - Only MariaDB and PostgreSQL, in the versions your distribution ships. For Redis, see the
   [app catalogue](/guides/apps/catalog/).
-- Moving a database to another server or owner: not yet. See the [roadmap](/project/roadmap/).
+- A database can be [moved to another server](/guides/data/move-database/), on its own or
+  together with the [website](/guides/websites/move/) that uses it. From the next release, an
+  administrator can give it to another owner with
+  [Change owner](/guides/admin/customers/#change-the-owner).
 
 ## Troubleshooting
 
@@ -210,4 +217,5 @@ Run the database the app needs inside the app instead, as the catalogue services
 ## Related
 
 - [Backups](/guides/data/backups/): Restore a database from a backup.
+- [Move a database](/guides/data/move-database/): Move a database on its own to another server.
 - [WordPress](/guides/websites/wordpress/): One-click WordPress creates its database for you.

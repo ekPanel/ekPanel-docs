@@ -119,6 +119,7 @@ Each website has its own Linux account, and its files live in that account's hom
 | `/etc/ekpanel/caddy/sites/<site id>.caddy` | The website's Caddy configuration. Written by the agent; do not edit. |
 | `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | The same for an app with a domain. |
 | `/etc/ekpanel/caddy/sites/webmail.caddy` | Webmail, when email is on. |
+| `/etc/ekpanel/caddy/sites/panel-domains.caddy` | From the next release, on the panel's own server: the domains of the panel's and resellers' [brands](/guides/admin/branding/#domain), passed on to the panel. Written by the agent; do not edit. |
 | `/var/log/caddy/site-<site id>.log` | The website's request log (JSON). |
 | `/var/log/caddy/app-<app id>.log` | An app's request log. |
 | `/etc/php/<version>/fpm/pool.d/` | PHP-FPM pools of the administrators' websites. |
@@ -127,6 +128,7 @@ Each website has its own Linux account, and its files live in that account's hom
 | `/etc/ekpanel/cron/` | Scripts of cron jobs. |
 | `/etc/ekpanel/ssh/` | SFTP keys, in root-owned files the site accounts cannot change. |
 | `/etc/ssh/sshd_config.d/ekpanel-sftp.conf` | SSH settings that lock SFTP into each site's folder. |
+| `/srv/ekpanel/incoming/<move id>/` | On the new server during a [website move](/guides/websites/move/) or an [app move](/guides/apps/move/): the copied home folder (`home.tar`) and database dumps, or the app's volumes (`vol-<volume>.tar`), until they are put in place. Deleted then, or when the move fails. Root only. |
 
 `<account>` is the website's Linux account, shown as **Linux account** on the website's page.
 The ID of a website or app is the long ID in its address in the panel.

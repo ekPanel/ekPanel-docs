@@ -143,6 +143,10 @@ SFTP, FTP ও Git app এতে আছে কিনা। Panel-এ এটা **
 **Panel**: কেন্দ্রীয় program (`ekpanel`), web UI, API আর PostgreSQL database-সহ। এটা desired state
 রাখে আর agent-দের কাছে কাজ পাঠায়। এটা একটা server-এ চলে আর অনেক server manage করতে পারে।
 
+**Passkey**: Password আর code-এর বদলে আঙুলের ছাপ, মুখ, device-এর PIN বা একটা security key দিয়ে sign in
+করার একটা উপায় (WebAuthn standard)। এটা চলে শুধু panel-এর সেই address-এ, যেখানে যোগ করা হয়েছে। আসবে পরের
+release-এ। Panel-এ এটা **পাসকি**। দেখুন [Account-এর নিরাপত্তা](/guides/security/accounts/#passkeys)।
+
 **PHP-FPM pool**: একটা website-এর জন্য PHP worker process-এর একটা দল, যা ওই website-এর Linux account
 হিসেবে চলে। প্রতিটা website-এর নিজস্ব pool আছে, তাই website-গুলো একে অপরের file পড়তে পারে না।
 
@@ -167,8 +171,12 @@ container image build করে। Dockerfile নেই এমন Git app-এর
 দেখানো হয় আর শুধু server-এ থাকে। এটা ছাড়া কেউই backup পড়তে পারবে না, আপনিও না। Panel-এ এটা
 **রিকভারি কী**।
 
-**Reseller**: Phase 4e-এর জন্য plan করা একটা role: এমন কেউ যিনি administrator-এর দেওয়া সীমার মধ্যে
-নিজের customer-দের কাছে hosting বিক্রি করেন। এটা এখনো ব্যবহার করা যায় না।
+**Recovery code**: Two-factor sign-in চালু করলে panel যে দশটা এক-বারের code দেখায়, তার একটা। প্রতিটা
+authenticator app-এর code-এর বদলে একবার sign in করায়। Backup-এর recovery key থেকে আলাদা। আসবে পরের
+release-এ। Panel-এ এটা **রিকভারি কোড**। দেখুন [Account-এর নিরাপত্তা](/guides/security/accounts/#recovery-codes)।
+
+**Reseller**: এমন কেউ যিনি administrator-এর দেওয়া সীমার মধ্যে আপনার server-এ নিজের customer-দের কাছে hosting
+বিক্রি করেন, নিজের package দিয়ে। আসছে পরের release-এ। Panel-এ এটা **রিসেলার**। দেখুন [Reseller](/guides/admin/resellers/)।
 
 **Restic repository**: যে জায়গায় backup রাখা হয়: server-এর একটা folder বা S3-compatible storage-এর
 একটা bucket। ekPanel restic ব্যবহার করে, যা encrypt আর deduplicate করে: না বদলানো data শুধু একবারই
@@ -216,6 +224,11 @@ command চালায় এমন কোনো operation নেই।
 **Website, site**: একটা domain, যা Caddy একটা server-এর একটা folder থেকে serve করে: static file, বা বাছাই
 করা version-এর PHP। প্রতিটা website-এর নিজস্ব Linux account, home folder আর PHP pool আছে। এটা
 [app](#a)-এর মতো এক জিনিস নয়।
+
+**White-label, brand**: Panel-কে আপনার নিজের নাম, রং, logo আর domain দেওয়া, যাতে customer-রা ekPanel-এর বদলে
+আপনার hosting ব্যবসাকে দেখেন। **Brand** হলো সেই সবকিছু একসাথে: panel-এর, যা একজন administrator সেট করেন, বা একজন
+[reseller](#r)-এর নিজেরটা, তাঁর আর তাঁর customer-দের জন্য। আসছে পরের release-এ। Panel-এ এটা **ব্র্যান্ডিং**। দেখুন
+[Branding](/guides/admin/branding/)।
 
 **WP-CLI**: WordPress-এর command line tool। WordPress install আর update করতে ekPanel এটা website-এর
 নিজের account হিসেবে ব্যবহার করে।

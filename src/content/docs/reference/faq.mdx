@@ -105,9 +105,10 @@ Other differences:
   runs arbitrary shell commands.
 - It is built for many languages from the start.
 
-What it does **not** have yet, compared to cPanel: resellers, importers for cPanel backups,
-moving sites between servers, a WAF, and billing integrations. These are in
-[phase 4](/project/roadmap/).
+What it does **not** have yet, compared to cPanel: a WAF and billing integrations. These are in
+[phase 4](/project/roadmap/). Moving websites, apps, databases and whole customers between
+servers, importing from cPanel, website archives and Coolify, reseller accounts and white-label
+branding come with the next release.
 
 ## Can I sell hosting with it?
 
@@ -115,15 +116,24 @@ You can give **customers** their own accounts with **packages**: limits on websi
 apps, disk, memory and CPU (memory and CPU are enforced by the kernel), PHP versions, servers,
 email and FTP. Customers sign in to the same panel and see only what they own.
 
-Not there yet: reseller accounts, white-label branding, suspending a customer, bandwidth limits,
-and billing integrations (WHMCS, Blesta, Paymenter). And ekPanel is still early software, so do not
-sell hosting on it today. See [Customers and packages](/guides/admin/customers/).
+From the next release you can also suspend a customer, give their websites and other things to
+someone else, and limit their bandwidth per month. You can also make
+[resellers](/guides/admin/resellers/), who sell hosting on your servers to their own customers,
+with their own packages, within totals you set, and give the panel your own
+[name, color, logo and domain](/guides/admin/branding/), or let a reseller give it theirs.
+
+Not there yet: sub-users and billing integrations (WHMCS, Blesta, Paymenter). And ekPanel is still early software, so do
+not sell hosting on it today. See [Customers and packages](/guides/admin/customers/).
 
 ## Can I import my sites from cPanel or another panel?
 
-Not yet. Importers for cPanel backups, aaPanel and Coolify are planned for phase 4d. Today you
-can add a website and upload its files with the file manager or SFTP, and import a database
-with your usual tools.
+Yes, with the next release. [Import from cPanel](/guides/admin/import-cpanel/) brings a whole
+cPanel account over from its full backup, with its websites, databases, email and DNS zones.
+[Import a website archive](/guides/admin/import-website/) brings one website at a time from an
+archive of its files and its database dump: aaPanel's own backups, or plain WordPress or any
+other website from another host. [Import from Coolify](/guides/admin/import-coolify/) brings
+Coolify's applications and services over through its API, as image, Git and Compose apps with
+their variables, domain and kept folders; you copy the data in their volumes yourself.
 
 ## Does it phone home?
 

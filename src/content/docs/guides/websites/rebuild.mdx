@@ -1,0 +1,284 @@
+---
+title: Rebuild from a backup
+description: When a server is gone, set its websites up again on another server from their newest S3 backup, with their databases.
+sidebar:
+  order: 10
+---
+
+import { Steps, Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+When a server is lost (its disk died, the provider deleted it, it will not start), you cannot
+[move](/guides/websites/move/) its websites: a move copies from the old server, and there is
+nothing left to copy from. Instead, you rebuild each website on another server from its
+newest [backup](/guides/data/backups/): the panel sets the website up there as it was, puts
+its files and databases back from the backup, and points the DNS it manages to the new
+server.
+
+A rebuild only works if you prepared for it **before** the server was lost. Read
+[Before you start](#before-you-start) now, while your servers still run.
+
+## Before you start
+
+Prepare these while the server is still running:
+
+- **An S3 backup location on the server.** The website and every database it uses must be
+  backed up to [S3-compatible storage](/guides/data/backups/#where-to-keep-backups), and the
+  last backups must have succeeded. A backup kept on **This server** cannot help: it was on the
+  lost server's disk and is gone with it.
+- **The recovery key, saved away from the server**, for example in a password manager. It was
+  shown once, when you created the backup location. Without it, nobody can open the backups.
+  See [The recovery key](/guides/data/backups/#the-recovery-key).
+- **An S3 access key for the bucket.** The panel does not keep the keys you gave the location;
+  only the lost server had them. Keep a copy, or be ready to create a new key at your storage
+  provider that can read and write the same bucket.
+
+When the server is lost, you also need:
+
+- To be an **administrator**. Customers do not see this; they can ask you to do it.
+- **A new server**, [added to the panel](/start/add-server/) and **Online** on the **Servers**
+  page. For a customer's website, it must be a server their package allows.
+- **The old server shows Offline.** The rebuild button appears only while the website's server
+  is offline. If the old server still runs, [move the website](/guides/websites/move/) instead:
+  a move copies everything up to the minute, a rebuild only what the newest backup has.
+- **The database names are free on the new server.** Each database keeps its name and its user,
+  so the new server must not have a database or a user of the same name (for the same engine)
+  yet.
+
+<Aside type="tip">
+Check now that your backups would be enough. Open **Backups**, open the S3 location, and look
+under **Backups**: every website and database you care about should have a recent backup.
+</Aside>
+
+## Connect the backup storage on the new server
+
+The new server needs its own connection to the same storage, opened with the recovery key.
+
+<Steps>
+
+1. Open **Backups** and click **Add backup location**.
+
+2. Choose the new server. Under **Where to keep the backups**, choose
+   **S3-compatible storage**.
+
+3. Enter the same **Endpoint**, **Bucket**, **Folder in the bucket (optional)** and
+   **Region (optional)** as the lost server's location, and an **Access key ID** and
+   **Secret access key** that can read and write the bucket.
+
+4. Give it a **Name**, and choose **How often** and **How many to keep**, as for any backup
+   location.
+
+5. Tick **Connect backups made earlier, using their recovery key** and enter the
+   **Recovery key**.
+
+6. Click **Connect**. The new server checks that the key opens the backups; a wrong key is
+   refused.
+
+</Steps>
+
+From now on, this location also backs up the new server's own websites and databases, into
+the same storage. See [Connect backups made earlier](/guides/data/backups/#connect-backups-made-earlier).
+
+## Rebuild a website
+
+<Steps>
+
+1. Open the website. Its server is offline, so the **Move to another server** card says: "_server_
+   is offline. If it is gone, rebuild this website on another server from its newest backup."
+   Click **Rebuild from a backup…**.
+
+2. In **Move to**, choose the new server. Only servers that are online are listed.
+
+3. In **Backup storage on the new server**, choose the storage you connected. Only S3 storage
+   connected on the chosen server is listed. If there is none, the dialog says: "Connect the
+   same S3 storage on the new server first (Backups → Add backup location, with its recovery
+   key)."
+
+4. Under **Databases to move with it**, tick every database the website uses. The list shows
+   all databases of the website's owner on the old server, not only this website's. Each one
+   you tick must have a backup in the storage.
+
+5. Read the warning: "Everything since the newest backup is lost. If the old server comes back,
+   its copy stays until you remove it from this page." Then click **Rebuild**.
+
+</Steps>
+
+The card now shows the rebuild like a move: its phase, the two servers (**old → new**) and when
+it started. It updates by itself. Repeat this for each website that was on the lost server.
+
+## What happens during a rebuild
+
+Nothing is copied from the old server; everything comes from the backup storage.
+
+| Phase | What happens |
+| --- | --- |
+| **Copying**, then **Switching over** | Before it starts, the new server reads the storage's list of backups and finds the newest one of the website and of each database you ticked. In the panel, the website and those databases now belong to the new server. The new server sets them up as for a new website (the same Linux account name, the PHP version, the database server if it is missing, the databases with the same users and passwords), puts the website's whole home folder back from its newest backup, and loads each database from its newest backup. |
+| **Moved** | The website runs on the new server. DNS records the panel manages now point there. |
+| **Failed** | The error is shown on the card. See [When a rebuild fails](#when-a-rebuild-fails). |
+
+In a test with two VMs and an S3 test server (SeaweedFS), a website and its MariaDB database
+were backed up from one server, that server was stopped, the storage was connected on the
+other server with the recovery key, and the website was rebuilt there in about 10 seconds,
+with the same files (checked with checksums), owners, ACLs and data.
+
+### What is restored
+
+- **Files**: the website's whole home folder (`/home/<account>`) as it was backed up:
+  `public_html`, files next to it (such as Moodle's `moodledata` folder or your own files) and
+  its logs. They replace what the new, empty account had. The files get the website's account
+  as owner, and the web server can read `public_html` again.
+- **Databases**: each database you ticked, from its newest backup, under the same name and
+  user, so the website keeps working with its current password.
+- **Settings and cron jobs**: everything the panel stores about the website (PHP version and
+  settings, extra domains, redirects, SFTP access) is applied on the new server, and its
+  [cron jobs](/guides/websites/cron/) run there.
+
+### What is not restored
+
+- **Everything since the newest backup.** Orders, comments, uploads and other changes made
+  after the last backup ran are lost. With daily backups, you can lose up to a day.
+- **The `tmp` folder and the trash** of the home folder. Backups leave them out
+  ([What is backed up](/guides/data/backups/#what-is-backed-up)), so they start empty.
+- **Databases you did not tick.** They stay on the old server in the panel.
+- **The certificate.** The new server gets a new Let's Encrypt certificate once the domain
+  points to it. Until then, HTTPS on the new server shows a certificate error.
+- **Apps.** Docker and Git apps are not backed up, so they cannot be rebuilt. See
+  [Limits](#limits-and-what-is-not-there-yet).
+
+## Point the domain to the new server
+
+If the domain is on the panel's own [name servers](/guides/dns/name-servers/) or connected
+through [Cloudflare](/guides/dns/cloudflare/), its `A` and `AAAA` records follow the website by
+themselves once the rebuild is **Moved**.
+
+If not, the card says: "If the panel does not manage this domain's DNS, point its records to …",
+with the new server's address. At your DNS provider, change the `A` record (and `AAAA`, if you
+have one) of the domain and of each extra domain, such as `www`, to that address. Moving a
+website explains [how to check the new server and how long to wait](/guides/websites/move/#point-the-domain-to-the-new-server).
+
+## When the old server comes back
+
+After a successful rebuild, the panel turns off the schedule of the old server's backup
+locations that use the same storage (they are set to **Only when I start it**). So if the old
+server comes back, it does not back up into, or remove backups from, the storage the new server
+now uses. You can [remove that old location](/guides/data/backups/#remove-a-backup-location)
+later; the backups in the storage stay.
+
+Sometimes a server you thought was gone starts again. Its copy of the website is still there,
+and the panel does not delete it by itself: the card stays at **Moved** and shows
+**Remove the old copy on _server_**. That old copy answers visitors whose DNS still points to
+the old server, with the old data.
+
+As soon as the old server is back online, remove its copy:
+
+<Steps>
+
+1. On the website's page, in the **Move to another server** card, click
+   **Remove the old copy on _server_**.
+
+2. Confirm. The old server deletes the website's Linux account, its home folder, its web server
+   and PHP settings, and its copies of the databases you ticked.
+
+</Steps>
+
+The phase changes to **Removing the old copy**, then **Done**. This cannot be undone, so first
+take from the old copy anything you still need (for example orders made after the last
+backup).
+
+If you click the button while the old server is still offline, the card shows
+**Removing the old copy** until the server connects again, and the copy is removed then. This
+was not part of the VM test.
+
+Until the old copy is removed, the website cannot be deleted, moved or rebuilt again.
+
+## When a rebuild fails
+
+A failed rebuild leaves the website where it was in the panel: the website and its databases go
+back to the old server, and the new server deletes its half-made copy. The card shows
+**Failed** and the reason, for example:
+
+- "set up the site on the new server: …" or "the new server could not set up the site": the
+  new server could not install or set up something;
+- "restore the files: …": the files could not be read from the backup or put in place;
+- "restore the database _name_: …": a database backup could not be read or loaded.
+
+Fix the cause, then click **Rebuild from a backup…** again.
+
+<Aside type="caution">
+Avoid updating or restarting the panel while a rebuild runs. A rebuild is not continued after
+the panel restarts: it is marked **Failed** ("the panel restarted during the move; it stays
+where it was"), and you can start it again.
+</Aside>
+
+## With the API or ekctl
+
+An administrator's [API token](/guides/security/api-tokens/) with the `sites` scope can rebuild
+websites. Customers' tokens cannot.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/sites/{id}/rebuild` | Start a rebuild. Body: `{"server_id": "…", "repo_id": "…", "database_ids": ["…"]}`, where `repo_id` is the backup location connected on the new server. Answers `202` with the move. |
+| `GET /api/v1/sites/{id}/moves` | The website's moves and rebuilds, newest first, with `phase` and `error`. |
+| `POST /api/v1/moves/{id}/cleanup` | Remove the old copy, once the old server is back. Answers `202` with a [task](/reference/api/#tasks-following-slow-work). |
+
+With [ekctl](/reference/cli/#any-endpoint-ekctl-api):
+
+```bash
+ekctl api GET backups | jq '.[] | {id, name, server_id}'
+ekctl api POST sites/<site id>/rebuild --data '{"server_id":"<server id>","repo_id":"<backup location id>","database_ids":["<database id>"]}'
+ekctl api GET sites/<site id>/moves | jq '.[0].phase'
+```
+
+Listing backup locations (`GET /backups`) needs the `backups` scope. The API accepts any backup location of the new server, but only an S3 location that holds the
+old server's backups has anything to restore.
+
+## Limits and what is not there yet
+
+- **Apps are not rebuilt.** Docker and Git apps, their volumes, and catalogue services are not
+  backed up, so after a lost server you set them up again yourself. Mailboxes are not backed up
+  either. See [Backups](/guides/data/backups/#what-is-backed-up).
+- One website at a time; there is no "rebuild everything that was on this server".
+- Only the newest backup of each item is used; you cannot choose an older one.
+- A database can only be rebuilt together with a website.
+- Tested with two VMs and an S3 test server (a PHP website with a MariaDB database), not yet on
+  real servers, with a real storage provider, or with PostgreSQL databases.
+
+## Troubleshooting
+
+The panel refuses to start a rebuild with one of these messages:
+
+| Message (error code) | What to do |
+| --- | --- |
+| "This backup storage has no backup of _name_." (`no_snapshot`) | The website or database named was never backed up to this storage (for example, it was created after the last backup). Untick that database, or choose the storage that has its backups. |
+| "Choose a backup storage connected on the new server." (`invalid_repo`) | [Connect the storage](#connect-the-backup-storage-on-the-new-server) on the new server, then choose it. |
+| "The new server could not read the backups." (`backup_unreadable`) | The new server could not reach the storage or list its backups. Check the endpoint, bucket and access keys of the location, and that the new server can reach the storage. |
+| "The target server already has a database or user with the same name." (`database_name_taken`) | Delete or rename that database or user on the new server, or choose another server. |
+| "The customer's package does not include this server. Add it to the package first." (`server_not_in_package`) | Add the new server to the customer's package, or choose a server it includes. |
+| "This is being moved, or its old copy is still on the other server. Finish the move first." (`move_open`) | Wait for the running move or rebuild to finish, or remove the old copy. |
+| "It is already on this server." (`same_server`) | Choose another server. |
+| "Choose a server to move to." (`invalid_server`) | Choose a server in **Move to**. Through the API, check the server ID. |
+| "The server's agent is not connected." (`agent_offline`) | The new server is offline. See [When a server goes offline](/guides/admin/servers/#when-a-server-goes-offline). |
+| "A chosen database is not on the website's server or belongs to someone else." (`invalid_database`) | Choose only databases of the website's owner on the old server. |
+| "You do not have permission to do that." (`forbidden`) | Only administrators can rebuild websites. |
+
+**There is no Rebuild from a backup… button.** The website's server is online (use
+**Move…** instead), or a move or rebuild of the website is still open: finish it or remove
+its old copy first.
+
+**The website shows a database error after the rebuild.** A database it needs was not ticked,
+so it stayed on the lost server. A database cannot be rebuilt on its own yet: create a new
+database on the new server, load its dump from the backup
+[by hand](/guides/data/backups/#restoring-by-hand), and change the website's settings (for
+example WordPress's `wp-config.php`) to the new database's name, user and password.
+
+**HTTPS shows a certificate error.** The domain does not point to the new server yet, so it
+cannot get a certificate. See [Point the domain to the new server](#point-the-domain-to-the-new-server).
+
+## Related
+
+<CardGrid>
+	<LinkCard title="Backups" href="/guides/data/backups/" description="S3 storage, the recovery key and restores." />
+	<LinkCard title="Move to another server" href="/guides/websites/move/" description="When the old server still runs." />
+	<LinkCard title="Servers" href="/guides/admin/servers/" description="Add, watch and remove servers." />
+	<LinkCard title="Built-in name servers" href="/guides/dns/name-servers/" />
+	<LinkCard title="Cloudflare DNS" href="/guides/dns/cloudflare/" />
+</CardGrid>
