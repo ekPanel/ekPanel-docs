@@ -126,7 +126,7 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
 | `backups` | Backup storage, backup আর restore | `/backups` |
 | `servers` | Server, তাদের service, firewall, security, mail server আর PHP extension | `/servers` |
 | `customers` | Customer আর package, একজন customer-এর এক server-এর সবকিছু সরানো, আর (পরের release থেকে) customer suspend করা, মালিক বদলানো ও reseller সামলানো | `/customers`, `/packages`, `/owner-changes`, `/resellers` |
-| `settings` | Notification setting, update, notification আর audit log | `/settings`, `/updates`, `/notifications`, `/audit` |
+| `settings` | Notification setting, update, notification, audit log আর (পরের release থেকে) branding | `/settings`, `/updates`, `/notifications`, `/audit`, `/brand` |
 
 নিয়মগুলো:
 
@@ -137,7 +137,7 @@ Token-এর scope ঠিক করে API-এর কোন অংশ এটা 
   আর database-এর, তাই `/moves`-এর জন্য `sites`, `apps` বা `databases` যেকোনো একটা যথেষ্ট।
 - **যেকোনো token**, scope যা-ই হোক, দেখতে পারে এটা কার (`GET /auth/me`), মালিকের usage (`GET /me/usage`)
   আর task (`GET /tasks`, `GET /tasks/{id}`)।
-- Public endpoint (`/health`, `/openapi.json`, `/setup/status`) token পাঠালেও কাজ করে, তাই কোনো client প্রতিটা
+- Public endpoint (`/health`, `/openapi.json`, `/setup/status`, আর পরের release থেকে `/branding`) token পাঠালেও কাজ করে, তাই কোনো client প্রতিটা
   request-এ token পাঠাতে পারে।
 - Scope কখনো বাড়তি অধিকার দেয় না। `sites`-ওয়ালা customer-এর token তবুও শুধু ওই customer-এর website দেখে,
   আর administrator endpoint এর জন্য `403 forbidden` উত্তর দেয়।
@@ -395,6 +395,7 @@ certificate বিশ্বাস করে।
 | `GET /setup/status`, `POST /setup` | Setup token দিয়ে প্রথম administrator। |
 | `POST /auth/login` | Sign in। |
 | `POST /auth/passkey/options`, `POST /auth/passkey/login` | <Badge text="পরের release" variant="note" /> Passkey দিয়ে sign in: প্রথমটা browser-কে তার challenge দেয় (`ceremony` আর `options`), দ্বিতীয়টা browser-এর উত্তর নেয়। Browser-এর WebAuthn-এর জন্য, script-এর জন্য নয়। |
+| `GET /branding`, `GET /branding/logo/{id}` | <Badge text="পরের release" variant="note" /> Sign-in page যে [brand](/guides/admin/branding/) দেখায়: sign in করা caller-এর, নইলে panel যে domain-এ খোলা হয়েছে তার (`name`, `color`, `logo_url`, `custom`, `url`, `source_url`); আর PNG হিসেবে একটা logo, `?v=` তার version-এর সাথে মিললে এক বছরের জন্য cache হয়। |
 | `POST /hooks/git/{id}` | GitHub, GitLab, Gitea, Forgejo আর Gogs থেকে আসা Git webhook। Session বা token নয়, app-এর webhook secret দিয়ে check করা হয়। |
 
 ### আপনার account (sign in করা যেকোনো user)
@@ -437,12 +438,13 @@ certificate বিশ্বাস করে।
 | Customer-এর two-factor sign-in reset করা | <Badge text="পরের release" variant="note" /> `POST /customers/{id}/2fa/reset` (শুধু browser session, কারও হয়ে ঢোকা অবস্থায় নয়)। |
 | Customer suspend করা | <Badge text="পরের release" variant="note" /> `POST /customers/{id}/suspend`, `{"reason": "…"}`-সহ (সর্বোচ্চ 500 অক্ষর, খালিও হতে পারে), `POST /customers/{id}/unsuspend`। Admin-এর suspend করা customer-এর suspend একজন reseller তুলতে পারেন না (`403 suspended_by_admin`)। দেখুন [Customer suspend করুন](/guides/admin/customers/#suspend-a-customer)। |
 | মালিক বদলানো | <Badge text="পরের release" variant="note" /> `POST /owner-changes`, `{"to": "…", "sites": [], "databases": [], "apps": [], "mail_domains": [], "zones": []}`-সহ (scope `customers`; `to` খালি হলে admin-রা পান, যা reseller করতে পারেন না)। দেখুন [মালিক বদলান](/guides/admin/customers/#change-the-owner)। |
+| Branding | <Badge text="পরের release" variant="note" /> `GET`, `PUT /brand`, `{"name": "…", "color": "…", "domain": "…"}`-সহ; `PUT /brand/logo`, ছবিটাই body হিসেবে (`Content-Type: application/octet-stream`), `DELETE /brand/logo` (scope `settings`)। Administrator-রা panel-এর brand সামলান, reseller-রা নিজেরটা; যে reseller-কে administrator অনুমতি দেননি তিনি পান `403 white_label_off`। Error: `invalid_brand_name`, `invalid_color`, `invalid_domain`, `409 domain_taken`, `invalid_logo`, `413 logo_too_large`, `409 brand_name_first`। দেখুন [Branding](/guides/admin/branding/#with-the-api)। |
 
 ### শুধু administrator
 
 | Group | Endpoint শুরু হয় |
 | --- | --- |
-| Reseller | <Badge text="পরের release" variant="note" /> `GET`, `POST /resellers`; `GET`, `PUT`, `DELETE /resellers/{id}`; `POST /resellers/{id}/password`, `/2fa/reset`, `/impersonate`, `/suspend` (`{"reason": "…"}`-সহ) আর `/unsuspend` (scope `customers`; `2fa/reset` আর `impersonate`-এর জন্য browser session লাগে)। দেখুন [Reseller](/guides/admin/resellers/#api-tokens-and-the-api)। |
+| Reseller | <Badge text="পরের release" variant="note" /> `GET`, `POST /resellers`; `GET`, `PUT`, `DELETE /resellers/{id}`; `POST /resellers/{id}/password`, `/2fa/reset`, `/impersonate`, `/suspend` (`{"reason": "…"}`-সহ) আর `/unsuspend` (scope `customers`; `2fa/reset` আর `impersonate`-এর জন্য browser session লাগে)। Limit-এ `"white_label": true` reseller-কে নিজের [branding](/guides/admin/branding/)-এর অনুমতি দেয়। দেখুন [Reseller](/guides/admin/resellers/#api-tokens-and-the-api)। |
 | Server | `/servers` (যোগ করা, মোছা, connection command, address, live statistics, metrics, service, terminal, PHP extension, usage, traffic) |
 | Server security | `/servers/{id}/security/...` (CrowdSec, ban, alert, automatic update, country, malware) |
 | Firewall | `/servers/{id}/firewall` |

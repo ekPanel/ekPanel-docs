@@ -2,7 +2,7 @@
 title: Notification
 description: Offline server, fail করা backup, নষ্ট website আর আরও অনেক কিছুর alert পান, panel-এ আর email, Telegram, Discord, Slack বা signed webhook-এ।
 sidebar:
-  order: 5
+  order: 6
 ---
 
 import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
@@ -51,6 +51,11 @@ address-ও এখানেই সেট হয়, যাতে message-এর 
 transactional mail service। Password panel-এর database-এ encrypt করা থাকে, আর পরে কখনো দেখানো হয় না
 ("আগেরটা রাখতে খালি রাখুন।")। Panel অন্য machine-এ unencrypted connection দিয়ে password পাঠাতে রাজি হয়
 না।
+
+<Badge text="পরের release" variant="note" /> [Branding](/guides/admin/branding/) থাকলে প্রত্যেক প্রাপকের message-এ
+থাকে তিনি যে panel দেখেন তার নাম, যেমন "কেউ … থেকে আপনার Host BD অ্যাকাউন্টে ঢুকেছেন।" আর "Host BD-এ খুলুন: …"।
+তাঁর link-এ থাকে তাঁর brand-এর domain (reseller-এর, নয়তো panel-এর), যদি থাকে; না থাকলে **প্যানেলের ঠিকানা**।
+ekPanel নিজেকে নিয়ে message, যেমন **ekPanel-এর নতুন ভার্সন**, ekPanel নামই রাখে।
 
 ## একটা channel যোগ করুন
 
@@ -188,6 +193,8 @@ ekPanel একটা JSON body-সহ `POST` পাঠায়:
 | `X-Ekpanel-Event` | Event-এর নাম, যেমন `backup_failed` |
 | `X-Ekpanel-Signature` | `sha256=` আর body-র HMAC-SHA256, channel-এর signing key দিয়ে বানানো |
 
+পরের release থেকে `params`-এ `brand`-ও থাকে: প্রাপক panel-এর যে নাম দেখেন।
+
 Webhook channel যোগ করলে ekPanel একটা signing key বানায় আর একবার দেখায় ("সই করার কী, শুধু এই একবারই
 দেখানো হচ্ছে"); অথবা 16 থেকে 200 character-এর নিজের একটা দিন। কোনো request-এ ভরসা করার আগে signature
 check করুন, যেমন Python-এ:
@@ -224,4 +231,5 @@ def valid(body: bytes, header: str, key: str) -> bool:
 - [Backup](/guides/data/backups/): Fail করা backup alert পাঠায়।
 - [Customer আর package](/guides/admin/customers/): Customer-দের জন্য disk space আর bandwidth-এর alert।
 - [Reseller](/guides/admin/resellers/): একজন reseller-এর customer আর তাঁদের bandwidth নিয়ে alert।
+- [Branding](/guides/admin/branding/): Message-এ panel-এর নাম আর domain।
 - [Cron job](/guides/websites/cron/): কখন fail করা job alert পাঠায়।

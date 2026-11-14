@@ -119,6 +119,7 @@ Each website has its own Linux account, and its files live in that account's hom
 | `/etc/ekpanel/caddy/sites/<site id>.caddy` | The website's Caddy configuration. Written by the agent; do not edit. |
 | `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | The same for an app with a domain. |
 | `/etc/ekpanel/caddy/sites/webmail.caddy` | Webmail, when email is on. |
+| `/etc/ekpanel/caddy/sites/panel-domains.caddy` | From the next release, on the panel's own server: the domains of the panel's and resellers' [brands](/guides/admin/branding/#domain), passed on to the panel. Written by the agent; do not edit. |
 | `/var/log/caddy/site-<site id>.log` | The website's request log (JSON). |
 | `/var/log/caddy/app-<app id>.log` | An app's request log. |
 | `/etc/php/<version>/fpm/pool.d/` | PHP-FPM pools of the administrators' websites. |

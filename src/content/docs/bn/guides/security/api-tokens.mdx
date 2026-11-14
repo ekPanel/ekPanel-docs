@@ -71,7 +71,7 @@ revoke করে নতুন একটা বানান। Token যার �
 | **ব্যাকআপ** (Backups) | `backups` | Backup storage manage করা, backup চালানো আর restore করা। শুধু administrator। |
 | **সার্ভার** (Servers) | `servers` | Server, তাদের service, firewall আর security manage করা। শুধু administrator। |
 | **গ্রাহক** (Customers) | `customers` | Customer আর package manage করা; পরের release থেকে customer suspend করা আর মালিক বদলানোও, আর (administrator-দের জন্য) reseller সামলানো। Administrator, আর পরের release থেকে নিজের customer-দের জন্য reseller। |
-| **সেটিংস** (Settings) | `settings` | Panel-এর setting, update, notification আর audit log। Customer-এর জন্য: তাঁর নিজের notification আর notification channel। |
+| **সেটিংস** (Settings) | `settings` | Panel-এর setting, update, notification আর audit log, আর পরের release থেকে [branding](/guides/admin/branding/#with-the-api) (`/brand`; `GET /branding` দিয়ে brand পড়তে কোনো token-ই লাগে না)। Customer-এর জন্য: তাঁর নিজের notification আর notification channel। Reseller-এর জন্য: তাঁর নিজের branding-ও। |
 
 প্রতিটা অংশের নিজের scope দিয়ে token সেই অংশটা পড়তেও পারে, তাই শুধু **ওয়েবসাইট**-ওয়ালা token website-এর
 তালিকাও দেখতে পারে।
@@ -188,6 +188,7 @@ page আছে, আটটা scope-সহ: **পড়া**, **ওয়েব�
 - **গ্রাহক** scope দিয়ে reseller-এর নিজের customer আর package সামলায়, তাঁদের suspend করে, আর তাঁদের মধ্যে মালিক বদলায়
   (`/customers`, `/packages`, `/owner-changes`)। Customer-এর হয়ে ঢোকা আর তাঁর two-factor sign-in reset করার জন্য তবুও
   browser লাগে;
+- **সেটিংস** দিয়ে reseller-এর নিজের [branding](/guides/admin/branding/) বদলায়, যদি administrator অনুমতি দিয়ে থাকেন;
 - scope যা-ই হোক, কখনো administrator page-এ (যেমন server, backup বা reseller) পৌঁছাতে পারে না;
 - reseller [suspend](/guides/admin/resellers/#suspend-a-reseller) থাকা অবস্থায় কাজ করে না। Suspend করা reseller-এর
   customer-দের token-ও তখন কাজ করে না।

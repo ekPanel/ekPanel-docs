@@ -17,8 +17,8 @@ Everything on this page is in v0.1.0, the first release, except
 customers to another server, rebuilding a website from a backup, and importing from cPanel,
 website archives and Coolify (under [Many servers](#many-servers)), recovery codes,
 passkeys and the list of signed-in devices (under [Security](#security)), and suspending
-customers, changing owners, bandwidth limits, alerts for failed cron jobs and resellers, which
-come with the next release. You can
+customers, changing owners, bandwidth limits, alerts for failed cron jobs, resellers and
+branding, which come with the next release. You can
 [install it](/start/install/) with one command.
 </Aside>
 
@@ -254,6 +254,10 @@ has not been tried yet.
   customers together (counted on what the customers have), a largest package, and the servers,
   PHP versions and images they may offer. Suspending a reseller suspends all their customers; a
   reseller's bandwidth can be limited and stopped like a customer's.
+- <Badge text="next release" variant="note" /> [Branding (white-label)](/guides/admin/branding/):
+  the panel's own name, color, logo and domain, and, if you allow it, a reseller's for them and
+  their customers. The color is adjusted to stay readable in both themes, and each domain gets
+  its own certificate and shows its brand on the sign-in page.
 
 ## Notifications
 
@@ -342,7 +346,7 @@ These are planned for phase 4 of the [roadmap](/project/roadmap/). None of them 
 | Area | What is planned |
 | --- | --- |
 | Terraform | A Terraform provider, with request and response schemas in the OpenAPI description |
-| White-label and sub-users | White-label for resellers (name, logo, colours, domain), and sub-users with chosen permissions. Resellers themselves come with the next release |
+| Sub-users | Sub-users with chosen permissions. Resellers and white-label come with the next release |
 | Security center | A web application firewall (Coraza with the OWASP Core Rule Set), rate limiting, fail2ban-style blocking for other services |
 | Billing | Modules for WHMCS, Blesta and Paymenter; maybe built-in billing later |
 

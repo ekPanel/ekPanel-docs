@@ -79,6 +79,7 @@ Panel reseller-কে কোনো email পাঠায় না; password ন
 | **সার্ভার** | তাঁর package কোন কোন server ব্যবহার করতে পারবে। "তাঁর গ্রাহকদের ওয়েবসাইট, ডেটাবেস আর অ্যাপ শুধু এগুলোতেই থাকবে।" | "কোনোটায় টিক না দিলে: সব সার্ভার।" |
 | **অনুমোদিত Docker ইমেজ** | তাঁর package কোন কোন image দিতে পারবে। "প্রতি লাইনে একটি; / দিয়ে শেষ হলে তার নিচের সব চলবে।" শুধু **অ্যাপ** 0-এর বেশি হলে দেখায় | "খালি রাখলে: যেকোনো ইমেজ।" |
 | **তাঁদের ওয়েবসাইটে SFTP**, **তাদের ওয়েবসাইটের জন্য FTP (এনক্রিপ্টেড)**, **Git অ্যাপ** | তাঁর package-এ এগুলো রাখা যাবে কিনা | বন্ধ |
+| **নিজের ব্র্যান্ডিং** (Own branding) | "রিসেলার তার গ্রাহকদের জন্য প্যানেলকে নিজের নাম, লোগো, রং আর ডোমেইন দিতে পারবে।" তখন card-এ একটা **নিজের ব্র্যান্ডিং** badge দেখায়। দেখুন [Branding](/guides/admin/branding/) | বন্ধ |
 
 ### Reseller-এর limit বদলানো
 
@@ -127,7 +128,8 @@ customer একটা, আর তৃতীয়টা নেওয়া হয
 
 - **ওয়েবসাইট**, **WordPress**, **ডাটাবেস**, **অ্যাপ**, **ইমেইল** আর **DNS**: তাঁর customer-দের যা আছে সব, আর
   কিছু না। বাকি সবকিছুর উত্তর হয় "not found", customer-দের বেলায় যেমন।
-- মেনুতে **রিসেলার** (Reseller)-এর নিচে: **গ্রাহক** আর **প্যাকেজ**, শুধু তাঁর নিজের।
+- মেনুতে **রিসেলার** (Reseller)-এর নিচে: **গ্রাহক** আর **প্যাকেজ**, শুধু তাঁর নিজের, আর **ব্র্যান্ডিং**, যা
+  আপনি তাঁর জন্য **নিজের ব্র্যান্ডিং**-এ টিক দিলে তিনি ব্যবহার করতে পারেন।
 - নিজের account-এর **নিরাপত্তা**, **নোটিফিকেশন** আর **API টোকেন**।
 
 তিনি পারেন:
@@ -287,17 +289,18 @@ package মুছে গেছে।
 Reseller-দের **API টোকেন**-এ নিজেদের [API token](/guides/security/api-tokens/) আছে, আটটা scope-সহ: **পড়া**,
 **ওয়েবসাইট**, **ডেটাবেস**, **অ্যাপ**, **DNS**, **ইমেইল**, **গ্রাহক** আর **সেটিংস**। Reseller-এর token শুধু তাঁর
 customer আর তাঁদের জিনিস দেখে, browser-এ reseller যেমন দেখেন। **গ্রাহক** scope দিয়ে এটা তাঁর customer আর package
-সামলাতে আর তাঁর customer-দের মধ্যে মালিক বদলাতে পারে (`/customers`, `/packages` আর `/owner-changes`)।
+সামলাতে আর তাঁর customer-দের মধ্যে মালিক বদলাতে পারে (`/customers`, `/packages` আর `/owner-changes`)। **সেটিংস**
+দিয়ে এটা তাঁর [branding](/guides/admin/branding/#with-the-api) বদলাতে পারে (`/brand`)।
 
 Admin-রা reseller সামলান `/api/v1/resellers` (তালিকা, যোগ), `/api/v1/resellers/{id}` (দেখা, বদল, মোছা), আর তার নিচে
-`/password`, `/2fa/reset`, `/impersonate`, `/suspend` (`{"reason": "…"}`-সহ) আর `/unsuspend`-এ `POST` দিয়ে। Token-এর
+`/password`, `/2fa/reset`, `/impersonate`, `/suspend` (`{"reason": "…"}`-সহ) আর `/unsuspend`-এ `POST` দিয়ে। `POST`
+বা `PUT`-এ পাঠানো limit-এ **নিজের ব্র্যান্ডিং** হলো `"white_label": true` বা `false`। Token-এর
 `customers` scope লাগে; two-factor sign-in reset আর কারও হয়ে ঢোকার জন্য browser session লাগে। দেখুন
 [API reference](/reference/api/#administrators-and-resellers)।
 
 ## Limit আর যা এখনো নেই
 
-- **White-label** (একজন reseller-এর জন্য panel-এর নাম, logo, রং আর domain) আর **sub-user** এখনো নেই। এগুলো
-  [roadmap](/project/roadmap/)-এ phase 4e-এর পরের অংশ।
+- **Sub-user** এখনো নেই। এটা [roadmap](/project/roadmap/)-এ phase 4e-এর পরের অংশ।
 - Reseller নিজের reseller বানাতে পারেন না, আর নতুন reseller বা customer-দের sign-in তথ্যসহ email যায় না।
 - "Website suspended" আর "Bandwidth used up" page ইংরেজিতে, আর এতে reseller-এর নাম থাকে না।
 - Disk space মাপা হয় প্রতি 30 মিনিটে আর traffic আনা হয় প্রতি 15 মিনিটে, তাই নতুন কিছু আটকানো বা website বন্ধ হওয়ার
@@ -309,5 +312,6 @@ Admin-রা reseller সামলান `/api/v1/resellers` (তালিকা
 
 - [Customer আর package](/guides/admin/customers/): একজন customer-এর package, suspend, মালিক বদল আর bandwidth।
 - [Notification](/guides/admin/notifications/): কে কোন alert পান।
+- [Branding](/guides/admin/branding/): একজন reseller-এর নিজের নাম, logo, রং আর domain।
 - [API token](/guides/security/api-tokens/): Reseller-দের token আর তার scope।
-- [Roadmap](/project/roadmap/): White-label আর sub-user।
+- [Roadmap](/project/roadmap/): Sub-user।

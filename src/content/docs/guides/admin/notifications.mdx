@@ -2,7 +2,7 @@
 title: Notifications
 description: Get alerts about offline servers, failed backups, broken websites and more, in the panel and by email, Telegram, Discord, Slack or a signed webhook.
 sidebar:
-  order: 5
+  order: 6
 ---
 
 import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
@@ -50,6 +50,12 @@ You can use any SMTP service: your own mail server, your provider's, or a transa
 service. The password is encrypted in the panel's database and never shown again ("Leave empty to
 keep the saved one"). The panel refuses to send a password over an unencrypted connection to
 another machine.
+
+<Badge text="next release" variant="note" /> With [branding](/guides/admin/branding/), each
+recipient's messages carry the name of the panel they see, such as "Someone signed in to your
+Host BD account from …" and "Open in Host BD: …". Their links use the domain of their brand
+(the reseller's, or else the panel's) when it has one, and the **Panel address** otherwise.
+Messages about ekPanel itself, such as **New ekPanel version**, keep the name ekPanel.
 
 ## Add a channel
 
@@ -188,6 +194,8 @@ and these headers:
 | `X-Ekpanel-Event` | The event name, such as `backup_failed` |
 | `X-Ekpanel-Signature` | `sha256=` and the HMAC-SHA256 of the body, made with the channel's signing key |
 
+From the next release, `params` also has `brand`: the panel's name as the recipient sees it.
+
 When you add a webhook channel, ekPanel makes a signing key and shows it once ("The signing key,
 shown only this once"); or enter your own of 16 to 200 characters. Check the signature before you
 trust a request, for example in Python:
@@ -225,4 +233,5 @@ actually connected to, so redirects and DNS tricks do not get around it. Adminis
 - [Backups](/guides/data/backups/): Backups that fail send alerts.
 - [Customers and packages](/guides/admin/customers/): Disk space and bandwidth alerts for customers.
 - [Resellers](/guides/admin/resellers/): Alerts about a reseller's customers and their bandwidth.
+- [Branding](/guides/admin/branding/): The panel's name and domain in messages.
 - [Cron jobs](/guides/websites/cron/): When a failed job sends an alert.

@@ -1,0 +1,275 @@
+---
+title: Branding (white-label)
+description: Give the panel your own name, color, logo and domain, and let a reseller give it theirs, for them and their customers.
+sidebar:
+  order: 3
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+**Branding**, also called **white-label**, gives the panel your own name, color, logo and domain,
+so your customers see your hosting business instead of ekPanel. An administrator sets the
+panel's brand for everyone. A [reseller](/guides/admin/resellers/) an administrator allows can
+set their own, which they and their customers see.
+
+<Aside type="caution" title="New after v0.1.0">
+Branding is in the main repository's `dev` branch and comes with the **next release**. A panel on
+v0.1.0 does not have the **Branding** page yet.
+</Aside>
+
+## Before you start
+
+- **Administrators:** **Branding** is under **Administration** in the menu, above **Updates**
+  (the page is `/settings/branding`). You can also open it from the command palette (`Ctrl K`).
+- **Resellers:** **Branding** is under **Reseller** in the menu, below **Customers** and
+  **Packages**. An administrator must first [allow you your own branding](#let-a-reseller-use-their-own-brand);
+  until then the page says "Branding is not turned on for you" and nothing on it can be changed.
+- **For a domain:** a DNS name you control, such as `panel.example.com`, and the server that
+  runs the panel [added to the panel](/guides/admin/servers/), with ports 80 and 443 open.
+  The panel's own server is what answers the domain.
+
+## Who sees which brand
+
+| Who | Sees |
+| --- | --- |
+| Administrators, your own customers, and resellers without their own branding and their customers | The panel's brand |
+| A reseller with their own branding, and all their customers | The reseller's brand |
+| An administrator who used **Sign in as** on a reseller or a customer | That account's brand |
+| Someone not signed in yet (the sign-in page) | The brand of the domain they opened: a reseller's domain shows the reseller's brand, any other address the panel's |
+
+Once signed in, the brand follows the **account**, not the address: a reseller's customer who
+signs in at the panel's main address still sees the reseller's brand.
+
+With nothing set, the panel looks like ekPanel.
+
+## Set the panel's brand
+
+As an administrator:
+
+<Steps>
+
+1. Open **Branding**.
+
+2. Enter a **Name**, up to 60 characters. Leave it empty to keep the name ekPanel.
+
+3. Choose a **Color** with the color picker, or type it as `#rrggbb`, such as `#1a7f4b`.
+   Leave it empty, or click **Use the default**, for ekPanel's green.
+
+4. Enter a **Domain** if the panel should answer at its own address, such as
+   `panel.example.com` (see [Domain](#domain)), or leave it empty.
+
+5. Click **Save**. The page says "Saved".
+
+6. Under **Logo**, click **Upload a logo** and choose a picture (see [Logo](#logo)).
+
+</Steps>
+
+**Preview** shows the name or logo, a button, a link and a highlight in your color, adjusted as the
+panel will use it, in the light and the dark
+theme. Saving applies it everywhere.
+
+## Let a reseller use their own brand
+
+A reseller cannot set a brand until an administrator allows it.
+
+<Steps>
+
+1. Open **Resellers** and click **Edit reseller** on the reseller's card.
+
+2. Tick **Own branding**: "The reseller can give the panel their own name, logo, color and
+   domain for their customers." It is off for new resellers.
+
+3. Click **Save changes**.
+
+</Steps>
+
+The reseller's card then shows an <Badge text="Own branding" /> badge.
+
+Untick it to take it back. The reseller and their customers then see the panel's brand again,
+and the reseller's domain is no longer served. Their settings are kept, so ticking it again
+brings everything back.
+
+## Set a reseller's brand
+
+As a reseller, once an administrator has allowed it:
+
+<Steps>
+
+1. Open **Branding**: "Your own name, logo, color and domain. You and your customers see the
+   panel this way."
+
+2. Enter a **Name**. A reseller must give one.
+
+3. Choose a **Color**, or leave it empty for the panel's color.
+
+4. Enter a **Domain** if you like: "Your customers sign in here and see your branding even before
+   signing in. Links in their emails use it too." Leave it empty to use the panel's.
+
+5. Click **Save**.
+
+6. Under **Logo**, click **Upload a logo**. You must save a name first: "Save your panel's name
+   first."
+
+</Steps>
+
+A reseller's name and logo go together. Without a logo of your own, your customers see your name
+with a tile of its first letter, **not** the panel's logo. The color and the domain fall back to
+the panel's when you leave them empty.
+
+## Name
+
+The name is shown:
+
+- in the header and on the sign-in page, next to a tile of its first letter when there is no logo;
+- in the browser tab's title;
+- in [notifications](/guides/admin/notifications/), such as "Someone signed in to your Host BD
+  account from …" and "Open in Host BD: …";
+- in the panel's texts that used to say ekPanel, such as "Host BD creates a strong password and
+  shows it once.";
+- in authenticator apps, as the account's name, when someone turns on
+  [two-factor sign-in](/guides/security/accounts/#two-factor-sign-in). Codes set up before the
+  name changed keep the old name in the app; they still work.
+
+It can be up to 60 characters, without `<` or `>`.
+
+## Color
+
+The color is used for buttons, links and highlights. "It is made darker or lighter where needed,
+so text stays readable in light and dark themes": the panel adjusts it so text keeps a contrast
+of at least 4.5:1 in both themes. The colors that show a state (green, amber and red, such as
+**Active** or **Failed**) do not change.
+
+## Logo
+
+- PNG, JPEG, GIF or WebP, up to 2 MB, at least 16×16 pixels. SVG is not accepted.
+- The panel reads the picture and saves it again as a PNG, scaled down to fit 1024×512 pixels,
+  so only plain pixels are ever served.
+- It is shown about 32 pixels high in the header and on the sign-in page, and is also the browser
+  tab's icon. "A wide logo with a transparent background reads best in both themes."
+
+Click **Change the logo** to upload another, or **Remove** to remove it.
+
+## Domain
+
+A brand's domain is an extra address for the panel, such as `panel.example.com`. The server that
+runs the panel answers it: its Caddy gets a free Let's Encrypt certificate once the domain's DNS
+points at that server, and passes the requests on to the panel. Visitors who are not signed in see
+that brand's sign-in page there.
+
+A domain is claimed like a website's: no website, app or other brand can use it at the same time.
+If one does, saving says "A website, an app or another panel already uses this domain."
+
+<Steps>
+
+1. Enter the **Domain** and click **Save**.
+
+2. The page lists the DNS records to make: "Point panel.example.com at the panel's server with
+   these DNS records:", an `A` record with the server's public IPv4 address and an `AAAA` record
+   with its IPv6 address, each with a copy button.
+
+3. Make those records where the domain's DNS is hosted.
+
+4. Wait until the badge next to the domain shows **Active**, then open the domain.
+
+</Steps>
+
+The badge shows the domain's state:
+
+| State | What it means |
+| --- | --- |
+| **Active** | The panel's server serves the domain. Its certificate comes once the domain's DNS points at the server. |
+| **Being set up** | The panel's server has not taken it up yet. The page checks again every few seconds. |
+| **Failed** | The panel's server could not set it up. Administrators see the error under the domain. |
+| **No server** | "The server that runs the panel is not added to the panel, so nothing can answer this domain yet." [Add the server](/guides/admin/servers/) first. |
+
+Some domains are treated differently:
+
+- Domains ending in `.test`, `.localhost`, `.internal`, `.example` or `.invalid` get a certificate
+  from Caddy's own authority instead of Let's Encrypt, for labs and tests. Browsers warn about it.
+- A reseller cannot use the panel's own address: the one they have the panel open at, or the
+  **Panel address** in the [notification settings](/guides/admin/notifications/#before-you-start-the-mail-server-administrators).
+- A domain you set up with the installer's `--domain` is served by the server's main Caddyfile
+  already, so the panel does not add it a second time. That address always shows the panel's
+  brand.
+
+Links in a user's notifications use their brand's domain (`https://` and the domain), or else the
+**Panel address** from the notification settings.
+
+### Passkeys and more than one address
+
+"Passkeys belong to one address: a passkey added at another of the panel's addresses does not
+work here." A [passkey](/guides/security/accounts/#passkeys) added at `panel.example.com` does not
+work at `cp.example.net`. To use passkeys at a new address, sign in there with your password and
+two-factor code, and add a passkey there as well.
+
+## What stays ekPanel
+
+- **The source code link.** A small **Source code** link stays at the bottom of the menu and of
+  the sign-in page. The panel's license, the [AGPL](/project/license/), asks it to offer its source
+  code to everyone who uses it, so it cannot be turned off.
+- **Texts about the software itself** keep the name ekPanel: [updates](/guides/admin/updates/)
+  ("ekPanel 1.2 is available"), "the ekPanel agent" in the firewall's texts, and the setup page.
+- **The "Website suspended" and "Bandwidth used up" pages** that websites show are plain pages
+  served by the web server, without any brand.
+
+## With the API
+
+| Endpoint | What for | Token scope |
+| --- | --- | --- |
+| `GET /api/v1/branding` | The brand for the caller when signed in, or for the domain otherwise: `name`, `color`, `logo_url`, `custom`, `url`, `source_url`. Public | none |
+| `GET /api/v1/branding/logo/{id}` | A logo, as a PNG. Public | none |
+| `GET /api/v1/brand` | Your settings: for an administrator the panel's, for a reseller their own, with `allowed`, `domain_state`, `addresses` and `panel` (the panel's brand they fall back to) | `settings` (or `read`) |
+| `PUT /api/v1/brand` | Save `{"name": "…", "color": "…", "domain": "…"}` | `settings` |
+| `PUT /api/v1/brand/logo` | Upload a logo: the picture is the body, sent as `application/octet-stream` | `settings` |
+| `DELETE /api/v1/brand/logo` | Remove the logo | `settings` |
+
+For example, with a token that has the **Settings** scope:
+
+```bash
+export EKP_TOKEN='ekp_…'   # from Your account → API tokens
+PANEL=https://panel.example.com/api/v1
+
+curl -sS -X PUT -H "Authorization: Bearer $EKP_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Host BD","color":"#1a7f4b","domain":""}' \
+  "$PANEL/brand"
+
+curl -sS -X PUT -H "Authorization: Bearer $EKP_TOKEN" -H 'Content-Type: application/octet-stream' \
+  --data-binary @logo.png "$PANEL/brand/logo"
+```
+
+`PUT /brand` saves all three fields at once, so send the ones you want to keep too. An
+administrator allows a reseller their own branding with `"white_label": true` in the reseller's
+limits (`POST` or `PUT /resellers`). See the [API reference](/reference/api/#administrators-and-resellers).
+
+The audit log records "Branding changed", "Logo changed" and "Logo removed"
+(`brand.updated`, `brand.logo_changed`, `brand.logo_removed`).
+
+## Troubleshooting
+
+| Message or problem | What it means and what to do |
+| --- | --- |
+| "Enter a name of up to 60 characters, without < or >." (`invalid_brand_name`) | The name is too long or has `<` or `>`. A reseller must also give a name. |
+| "Enter a color such as #1a7f4b." (`invalid_color`) | Type the color as `#` and six hexadecimal digits, or leave it empty. |
+| "Upload a PNG, JPEG, GIF or WebP picture of at least 16×16 pixels." (`invalid_logo`) | The file is not one of those formats (SVG is not accepted), or it is too small. |
+| "The logo can be up to 2 MB." (`logo_too_large`) | Make the file smaller. |
+| "Save your panel's name first." (`brand_name_first`) | A reseller must save a name before uploading a logo. |
+| "A website, an app or another panel already uses this domain." (`domain_taken`) | Another website, app or brand has it, or (for a reseller) it is the panel's own address. Choose another domain. |
+| "An administrator has not allowed you your own branding." (`white_label_off`) | Ask an administrator to tick **Own branding** for you. |
+| The domain does not answer, or has no valid certificate | Check that its `A` and `AAAA` records point at the addresses the **Branding** page lists, and that ports 80 and 443 reach the panel's server. See [The domain of a brand does not answer](/reference/troubleshooting/#the-domain-of-a-brand-does-not-answer). |
+| My passkey does not work at the new domain | Passkeys belong to one address. Sign in with your password and two-factor code, and add a passkey at this address too. |
+
+## Limits and what is not there yet
+
+- One brand for the panel and one for each reseller; a reseller's customers cannot have one of
+  their own.
+- Each brand has one domain.
+- The emails' sender address is the one in the notification settings, for every brand.
+- The "Website suspended" and "Bandwidth used up" pages carry no brand.
+- **Sub-users** are not there yet: they are the next part of phase 4e on the [roadmap](/project/roadmap/).
+
+## Related
+
+- [Resellers](/guides/admin/resellers/): Allowing a reseller their own branding.
+- [Notifications](/guides/admin/notifications/): Messages carry the recipient's panel name, and links use their brand's domain.
+- [Account security](/guides/security/accounts/): Passkeys and authenticator apps.
+- [API reference](/reference/api/): The branding endpoints.

@@ -252,6 +252,34 @@ Customer-এর app-এর address-এও একই page দেখায়।
 | "একজন রিসেলার বেছে নিন।" | Customer-এর জন্য বেছে নেওয়া reseller আর নেই। Page reload করে আবার বেছে নিন। |
 | "সীমাগুলো দেখুন: সংখ্যা ০ বা তার বেশি, আর আকার যথেষ্ট বড় হতে হবে।" | Reseller-এর কোনো limit সীমার বাইরে: memory কমপক্ষে 64 MB, CPU কমপক্ষে একটা core-এর 5%, bandwidth কমপক্ষে 1 GB। |
 
+## একটা brand-এর domain সাড়া দেয় না
+
+পরের release থেকে একটা [brand-এর domain](/guides/admin/branding/#domain) serve করে সেই server, যেখানে panel চলে।
+**ব্র্যান্ডিং** (Branding) খুলে domain-এর পাশের badge দেখুন:
+
+- **সার্ভার নেই** (No server): panel যে server-এ চলে সেটা panel-এ যোগ করা নেই, তাই কেউ domain-টা serve করে না।
+  **সার্ভার**-এ [এটা যোগ করুন](/guides/admin/servers/)।
+- **চালু হচ্ছে** (Being set up): panel-এর server এখনো domain-টা নেয়নি। Page কয়েক সেকেন্ড পরপর আবার দেখে। এভাবেই
+  থেকে গেলে দেখুন server-টা connected কিনা (দেখুন [একটা server offline দেখাচ্ছে](#a-server-shows-as-offline))।
+- **ব্যর্থ** (Failed): panel-এর server এটা সেট করতে পারেনি। Admin-রা domain-এর নিচে error দেখেন।
+- **চালু** (Active), কিন্তু browser connect করতে পারে না বা certificate নিয়ে warning দেয়: domain server-এ point করার
+  পরেই Caddy certificate নেয়। দেখুন `dig +short panel.example.com` **ব্র্যান্ডিং** page-এর দেখানো address-গুলো
+  দেখায় কিনা, আর port 80 ও 443 server-এ পৌঁছায় কিনা। তারপর panel-এর server-এ Caddy-র log পড়ুন:
+
+  ```bash
+  sudo journalctl -u caddy --since "30 min ago" | grep -i panel.example.com
+  ```
+
+  Panel-এর server-এর agent brand-গুলোর domain লেখে `/etc/ekpanel/caddy/sites/panel-domains.caddy`-এ। `.test`, `.localhost`,
+  `.internal`, `.example` বা `.invalid` দিয়ে শেষ হওয়া domain Caddy-র নিজের authority থেকে certificate পায়, যা নিয়ে
+  browser warning দেয়।
+
+আরও দুটো জিনিস ইচ্ছা করেই এভাবে কাজ করে:
+
+- Installer-এর `--domain` দিয়ে সেট করা domain-এ সবসময় panel-এর brand দেখায়, কোনো brand এটার নাম দিলেও।
+- Panel-এর এক address-এ যোগ করা passkey আরেক address-এ কাজ করে না। সেখানে password আর two-factor code দিয়ে sign in
+  করে সেখানেও একটা passkey যোগ করুন। দেখুন [Passkey](/guides/security/accounts/#passkeys)।
+
 ## Name server চালু হচ্ছে না (port 53)
 
 PowerDNS server-এর নিজের address-গুলোর port 53-এ listen করে (loopback আর network card-এর address,

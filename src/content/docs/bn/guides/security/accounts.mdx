@@ -53,6 +53,10 @@ Card-এ এখন <Badge text="চালু" variant="success" /> দেখা�
 কোডটা লিখুন।" Code প্রতি ৩০ সেকেন্ডে বদলায়; ঘড়ি সামান্য এদিক-ওদিক হলে যাতে সমস্যা না হয়, তাই এখনকার code-এর ঠিক
 আগের বা পরের code-ও মেনে নেওয়া হয়।
 
+<Badge text="পরের release" variant="note" /> [Branding](/guides/admin/branding/) থাকলে sign-in পাতায় ekPanel-এর বদলে
+আপনি যে panel দেখেন তার নাম থাকে, আর two-factor sign-in চালু করলে authenticator app-এ account-এর নামও তাই হয়। আগে
+app-এ যোগ করা account সেখানে পুরোনো নামই রাখে; তার code কাজ করতে থাকে।
+
 ### Recovery code
 
 <Badge text="পরের release" variant="note" /> Recovery code দিয়ে authenticator app ছাড়াই একবার sign in করা যায়,
@@ -165,7 +169,8 @@ passkey যোগ করতে পারেন, যেমন একটা laptop
 - Panel-টা তার **host name দিয়ে HTTPS-এ** খুলুন, যেমন `https://panel.example.com`। IP address-এ passkey চলে না,
   আর সাধারণ `http://`-তে চলে শুধু `localhost`-এ।
 - Passkey চলে **শুধু সেই address-এ, যেখানে সেটা যোগ করেছেন**। `panel.example.com`-এ যোগ করা passkey panel-টা
-  `server1.example.com` হিসেবে খুললে চলে না। যে address সবসময় ব্যবহার করেন, সেখানেই যোগ করুন।
+  `server1.example.com` হিসেবে বা একটা [brand-এর domain](/guides/admin/branding/#domain)-এ খুললে চলে না। যে address
+  সবসময় ব্যবহার করেন, সেখানেই যোগ করুন, বা যে কয়টা address ব্যবহার করেন তার প্রত্যেকটায় একটা করে।
 - আপনার browser আর device-কে passkey সমর্থন করতে হবে: যেমন Windows Hello, Touch ID বা Face ID, Android-এর screen
   lock, passkey রাখে এমন password manager, বা USB বা NFC security key। ব্যবহার করা না গেলে **পাসকি** (Passkeys)
   card-এ লেখা থাকে: "এই ব্রাউজার এখানে পাসকি ব্যবহার করতে পারে না। পাসকির জন্য HTTPS আর পাসকি সমর্থন করে এমন

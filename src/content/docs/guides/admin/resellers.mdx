@@ -80,6 +80,7 @@ with 1024 MB each.
 | **Servers** | The servers their packages may use. "Their customers' websites, databases and apps go only on these." | "None ticked: every server." |
 | **Allowed Docker images** | The images their packages may allow. "One per line; a name ending in / allows everything under it." Shown only when **Apps** is more than 0 | "Empty: any image." |
 | **SFTP access to their websites**, **FTP (encrypted) for their websites**, **Git apps** | Whether their packages may include these | Off |
+| **Own branding** | "The reseller can give the panel their own name, logo, color and domain for their customers." The card then shows an **Own branding** badge. See [Branding](/guides/admin/branding/) | Off |
 
 ### Change a reseller's limits
 
@@ -134,7 +135,8 @@ They see:
 
 - **Websites**, **WordPress**, **Databases**, **Apps**, **Email** and **DNS**: everything their
   customers have, and nothing else. Anything else answers "not found", as it does for customers.
-- Under **Reseller** in the menu: **Customers** and **Packages**, their own only.
+- Under **Reseller** in the menu: **Customers** and **Packages**, their own only, and
+  **Branding**, which they can use once you tick **Own branding** for them.
 - **Security**, **Notifications** and **API tokens** for their own account.
 
 They can:
@@ -319,18 +321,20 @@ Resellers have their own [API tokens](/guides/security/api-tokens/) under **API 
 eight scopes: **Read**, **Websites**, **Databases**, **Apps**, **DNS**, **Email**, **Customers**
 and **Settings**. A reseller's token sees only their customers and their customers' things, like
 the reseller in the browser. With **Customers** it can manage their customers and packages and
-change owners between their customers (`/customers`, `/packages` and `/owner-changes`).
+change owners between their customers (`/customers`, `/packages` and `/owner-changes`). With
+**Settings** it can change their [branding](/guides/admin/branding/#with-the-api) (`/brand`).
 
 Administrators manage resellers with `/api/v1/resellers` (list, add), `/api/v1/resellers/{id}`
 (read, change, delete), and `POST` to `/password`, `/2fa/reset`, `/impersonate`, `/suspend` (with
-`{"reason": "…"}`) and `/unsuspend` below it. A token needs the `customers` scope; resetting
+`{"reason": "…"}`) and `/unsuspend` below it. **Own branding** is `"white_label": true` or
+`false` in the limits you send with `POST` or `PUT`. A token needs the `customers` scope; resetting
 two-factor sign-in and signing in as someone need a browser session. See the
 [API reference](/reference/api/#administrators-and-resellers).
 
 ## Limits and what is not there yet
 
-- **White-label** (the panel's name, logo, colours and domain for a reseller) and **sub-users**
-  are not there yet. They are the next parts of phase 4e on the [roadmap](/project/roadmap/).
+- **Sub-users** are not there yet. They are the next part of phase 4e on the
+  [roadmap](/project/roadmap/).
 - Resellers cannot make resellers of their own, and there is no email to new resellers or
   customers with their sign-in details.
 - The "Website suspended" and "Bandwidth used up" pages are in English and do not carry the
@@ -345,5 +349,6 @@ two-factor sign-in and signing in as someone need a browser session. See the
 
 - [Customers and packages](/guides/admin/customers/): Packages, suspending, changing owners and bandwidth for one customer.
 - [Notifications](/guides/admin/notifications/): Who gets which alert.
+- [Branding](/guides/admin/branding/): A reseller's own name, logo, color and domain.
 - [API tokens](/guides/security/api-tokens/): Tokens for resellers and their scopes.
-- [Roadmap](/project/roadmap/): White-label and sub-users.
+- [Roadmap](/project/roadmap/): Sub-users.

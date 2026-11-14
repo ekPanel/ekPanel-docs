@@ -17,7 +17,7 @@ host থেকে একটা একটা করে website, তার file-�
 দিয়ে। 4e শুরু হয়েছে: এর প্রথম অংশ, account-এর নিরাপত্তা (two-factor sign-in-এর recovery code, কারও
 two-factor sign-in reset করা, sign in থাকা device-এর তালিকা, আর passkey), শেষ হয়েছে আর আসবে পরের release-এ, এর
 দ্বিতীয় অংশটাও তাই: customer suspend করা, website আর অন্য জিনিসের মালিক বদলানো, package-এ bandwidth limit, আর ব্যর্থ
-cron job-এর alert, আর এর তৃতীয় অংশ: reseller। এরপর white-label আর sub-user।
+cron job-এর alert, এর তৃতীয় অংশ: reseller, আর চতুর্থ অংশ: white-label branding। এরপর sub-user।
 প্রতিটা সিদ্ধান্ত আর test-সহ পুরো plan আছে main repository-র
 [`PLAN.md`](https://github.com/ekPanel/ekpanel/blob/HEAD/PLAN.md)-এ।
 
@@ -201,10 +201,20 @@ host-গুলোর মতো করে বানানো backup দিয়�
   - Admin-রা reseller ধরে customer দেখেন, একজন customer-কে অন্য reseller-এর কাছে সরান, আর reseller হিসেবে ঢোকেন
   - VM-এ চালিয়ে দেখা হয়েছে: website-এর মোট, suspend করা আর তোলা, bandwidth-এ বন্ধ করা, reseller-এর customer-দের মধ্যে
     মালিক বদল, আর reseller মোছা
+- [Branding (white-label)](/guides/admin/branding/) (4e-4) <Badge text="শেষ" variant="success" />:
+  - Admin-দের সেট করা panel-এর নিজের নাম, রং, logo আর domain, আর admin অনুমতি দিলে একজন reseller-এর নিজেরটা, তাঁর আর
+    তাঁর customer-দের জন্য
+  - Header, browser tab, notification আর authenticator app-এ নাম; দুই theme-এই লেখা পড়ার মতো রাখতে (4.5:1) রং বদলানো;
+    logo আবার সাধারণ PNG হিসেবে save করা
+  - প্রতিটা brand-এর domain panel-এর server serve করে, নিজের certificate-সহ, আর sign-in page-এ নিজের brand দেখায়;
+    notification-এর link-এ এটাই থাকে
+  - Source code-এর link থাকে, AGPL যেমন চায়
+  - VM-এ চালিয়ে দেখা: panel-এর আর একজন reseller-এর domain নিজেদের certificate আর brand নিয়ে একজন customer-এর
+    website-এর পাশে serve হওয়া, reseller-এর domain-এ sign in, reseller-এর branding তুলে নিয়ে আবার দেওয়া, আর installer-এর
+    Caddyfile আগে থেকেই serve করে এমন domain
 
 বাকি আছে:
 
-- White-label (4e-4): নাম, logo, রং আর panel-এর domain
 - বাছাই করা permission-সহ sub-user (4e-5)
 
 ### 4f. Security center

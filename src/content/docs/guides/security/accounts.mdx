@@ -54,6 +54,11 @@ From now on, after your email and password, the sign-in page asks: "Open your au
 and enter the 6-digit code for ekPanel." Codes change every 30 seconds; the code just before or
 after the current one is accepted too, to allow for a clock that is slightly off.
 
+<Badge text="next release" variant="note" /> With [branding](/guides/admin/branding/), the sign-in
+page names the panel you see instead of ekPanel, and so does the account in your authenticator
+app when you turn two-factor sign-in on. An account added to the app earlier keeps its old name
+there; its codes still work.
+
 ### Recovery codes
 
 <Badge text="next release" variant="note" /> A recovery code lets you sign in once without your
@@ -176,8 +181,9 @@ working. You can add several, for example one on your laptop and one on your pho
   Passkeys do not work on an IP address, and over plain `http://` they work only on
   `localhost`.
 - A passkey works **only on the address you add it on**. One added on `panel.example.com` does
-  not work when you open the panel as `server1.example.com`. Add it on the address you always
-  use.
+  not work when you open the panel as `server1.example.com`, or at a
+  [brand's domain](/guides/admin/branding/#domain). Add it on the address you always use, or one
+  on each address you use.
 - Your browser and device must support passkeys: for example Windows Hello, Touch ID or Face ID,
   Android's screen lock, a password manager that keeps passkeys, or a USB or NFC security key. If
   they cannot be used, the **Passkeys** card says: "This browser cannot use passkeys here.

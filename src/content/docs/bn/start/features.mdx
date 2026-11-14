@@ -13,7 +13,7 @@ import { Aside, Badge } from '@astrojs/starlight/components';
 
 <Aside type="note">
 এই page-এর সবকিছু আছে প্রথম release, v0.1.0-এ, শুধু [API আর command line](#api-and-command-line), website, app, database ও customer অন্য
-server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে), আর customer suspend করা, মালিক বদলানো, bandwidth limit, ব্যর্থ cron job-এর alert ও reseller ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
+server-এ সরানো, backup থেকে website আবার বানানো, cPanel, website archive ও Coolify থেকে ইমপোর্ট ([অনেক server](#many-servers)-এর নিচে), recovery code, passkey ও sign in থাকা device-এর তালিকা ([নিরাপত্তা](#security)-র নিচে), আর customer suspend করা, মালিক বদলানো, bandwidth limit, ব্যর্থ cron job-এর alert, reseller ও branding ছাড়া, যা আসবে পরের release-এ। এক command-এই আপনি [এটা install করতে](/start/install/) পারেন।
 </Aside>
 
 ## Website
@@ -247,6 +247,9 @@ Email শুধু একটা test server-এর ভেতরেই পরী�
   hosting বিক্রি করেন, নিজের package দিয়ে, আপনার ঠিক করা সীমার মধ্যে: সব customer মিলিয়ে মোট (customer-দের যা আছে তা
   গুনে), একটা package-এর সর্বোচ্চ, আর কোন server, PHP version ও image তাঁরা দিতে পারবেন। একজন reseller-কে suspend করলে
   তাঁর সব customer suspend হন; customer-এর মতোই reseller-এর bandwidth সীমিত আর বন্ধ করা যায়।
+- <Badge text="পরের release" variant="note" /> [Branding (white-label)](/guides/admin/branding/): panel-এর নিজের নাম,
+  রং, logo আর domain, আর আপনি অনুমতি দিলে একজন reseller-এর নিজেরটা, তাঁর আর তাঁর customer-দের জন্য। রংটা এমনভাবে
+  বদলানো হয় যাতে দুই theme-এই পড়া যায়, আর প্রতিটা domain নিজের certificate পায় আর sign-in page-এ নিজের brand দেখায়।
 
 ## Notification
 
@@ -325,7 +328,7 @@ release-এ।
 | বিষয় | যা plan করা আছে |
 | --- | --- |
 | Terraform | একটা Terraform provider, OpenAPI description-এ request আর response schema-সহ |
-| White-label আর sub-user | Reseller-দের জন্য white-label (নাম, logo, রং, domain), আর বেছে নেওয়া অনুমতি-সহ sub-user। Reseller নিজে আসছে পরের release-এ |
+| Sub-user | বেছে নেওয়া অনুমতি-সহ sub-user। Reseller আর white-label আসছে পরের release-এ |
 | Security center | একটা web application firewall (OWASP Core Rule Set-সহ Coraza), rate limiting, অন্য service-এর জন্য fail2ban-এর মতো blocking |
 | Billing | WHMCS, Blesta আর Paymenter-এর module; পরে হয়তো built-in billing |
 

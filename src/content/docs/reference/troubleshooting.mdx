@@ -257,6 +257,40 @@ administrator working for them may see these:
 | "Choose a reseller." | The reseller chosen for a customer does not exist any more. Reload the page and choose again. |
 | "Check the limits: counts are 0 or more, and sizes must be large enough." | A reseller's limit is out of range: memory at least 64 MB, CPU at least 5% of a core, bandwidth at least 1 GB. |
 
+## The domain of a brand does not answer
+
+From the next release, a [brand's domain](/guides/admin/branding/#domain) is served by the server
+that runs the panel. Open **Branding** and look at the badge next to the domain:
+
+- **No server**: the server that runs the panel is not added to the panel, so nothing serves the
+  domain. [Add it](/guides/admin/servers/) on **Servers**.
+- **Being set up**: the panel's server has not taken the domain up yet. The page checks again
+  every few seconds. If it stays like this, check that the server is connected (see
+  [A server shows as offline](#a-server-shows-as-offline)).
+- **Failed**: the panel's server could not set it up. Administrators see the error under the
+  domain.
+- **Active**, but the browser cannot connect or warns about the certificate: Caddy gets the
+  certificate only once the domain points at the server. Check that `dig +short panel.example.com`
+  shows the addresses the **Branding** page lists, and that ports 80 and 443 reach the server.
+  Then read Caddy's log on the panel's server:
+
+  ```bash
+  sudo journalctl -u caddy --since "30 min ago" | grep -i panel.example.com
+  ```
+
+  The agent on the panel's server writes the brands' domains to
+  `/etc/ekpanel/caddy/sites/panel-domains.caddy`.
+  Domains ending in `.test`, `.localhost`, `.internal`, `.example` or `.invalid` get a certificate
+  from Caddy's own authority, which browsers warn about.
+
+Two more things work as designed:
+
+- The domain you set up with the installer's `--domain` always shows the panel's brand, even if a
+  brand names it.
+- A passkey added at one of the panel's addresses does not work at another. Sign in there with
+  your password and two-factor code, and add a passkey there too. See
+  [Passkeys](/guides/security/accounts/#passkeys).
+
 ## The name server will not start (port 53)
 
 PowerDNS listens on port 53 of the server's own addresses (loopback and the network cards'

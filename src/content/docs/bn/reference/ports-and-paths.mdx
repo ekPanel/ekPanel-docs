@@ -119,6 +119,7 @@ Installer নিজে 80, 443 আর 7443-এর rule যোগ করে শ�
 | `/etc/ekpanel/caddy/sites/<site id>.caddy` | Website-এর Caddy configuration। Agent লেখে; edit করবেন না। |
 | `/etc/ekpanel/caddy/sites/app-<app id>.caddy` | Domain-সহ app-এর জন্য একই জিনিস। |
 | `/etc/ekpanel/caddy/sites/webmail.caddy` | Email চালু থাকলে webmail। |
+| `/etc/ekpanel/caddy/sites/panel-domains.caddy` | পরের release থেকে, panel-এর নিজের server-এ: panel-এর আর reseller-দের [brand](/guides/admin/branding/#domain)-এর domain, panel-এ পাঠানোর জন্য। Agent লেখে; edit করবেন না। |
 | `/var/log/caddy/site-<site id>.log` | Website-এর request log (JSON)। |
 | `/var/log/caddy/app-<app id>.log` | একটা app-এর request log। |
 | `/etc/php/<version>/fpm/pool.d/` | Administrator-দের website-এর PHP-FPM pool। |

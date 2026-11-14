@@ -72,7 +72,7 @@ token look at everything you can see but change nothing.
 | **Backups** | `backups` | Manage backup storage, run backups and restore. Administrators only. |
 | **Servers** | `servers` | Manage servers, their services, firewall and security. Administrators only. |
 | **Customers** | `customers` | Manage customers and packages; from the next release also suspend customers and change owners, and (for administrators) manage resellers. Administrators, and from the next release resellers for their own customers. |
-| **Settings** | `settings` | Panel settings, updates, notifications and the audit log. For a customer: their own notifications and notification channels. |
+| **Settings** | `settings` | Panel settings, updates, notifications and the audit log, and from the next release [branding](/guides/admin/branding/#with-the-api) (`/brand`; reading the brand with `GET /branding` needs no token at all). For a customer: their own notifications and notification channels. For a reseller: also their own branding. |
 
 Each area's own scope also lets the token read that area, so a token with only **Websites**
 can list websites too.
@@ -196,6 +196,8 @@ you for anything.
 - with **Customers**, manages the reseller's own customers and packages, suspends them, and
   changes owners between them (`/customers`, `/packages`, `/owner-changes`). Signing in as a
   customer and resetting their two-factor sign-in still need the browser;
+- with **Settings**, changes the reseller's own [branding](/guides/admin/branding/), if an
+  administrator allowed it;
 - can never reach administrator pages, such as servers, backups or resellers, whatever its
   scopes;
 - stops working while the reseller is [suspended](/guides/admin/resellers/#suspend-a-reseller).
